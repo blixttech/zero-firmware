@@ -1,0 +1,10 @@
+if(NOT BOARD)
+    set(BOARD bcb_v1)
+endif()
+
+if(NOT BOARD_ROOT)
+    get_filename_component(BOARD_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+endif()
+
+get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephyr" ABSOLUTE)
+set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")

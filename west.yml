@@ -1,0 +1,18 @@
+manifest:
+  defaults:
+    remote: zephyrproject
+
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject
+      path: zephyr-os/zephyr
+      revision: c6d37eba7bf82df12e41b2c4b65cc17d739ea48d
+      west-commands: scripts/west-commands.yml
+    - name: hal_nxp
+      remote: zephyrproject
+      revision: 3e3f20e7de7606d735cdeefe21d5f2a51bf06095
+      path: zephyr-os/modules/hal/nxp
