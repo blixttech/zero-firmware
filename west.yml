@@ -10,7 +10,7 @@ manifest:
     - name: zephyr
       remote: zephyrproject
       path: zephyr-os/zephyr
-      revision: c6d37eba7bf82df12e41b2c4b65cc17d739ea48d
+      revision: 9518bd19b7a736bd649fa2fc8d8d52967c0b486f
       west-commands: scripts/west-commands.yml
     - name: hal_nxp
       remote: zephyrproject
