@@ -1,0 +1,24 @@
+description: ADC channels of the Blixt Breaker
+
+# Used to map nodes to bindings
+compatible: "blixt,breaker-adc"
+
+include: base.yaml
+
+properties:
+    gpios:
+      type: phandle-array
+      required: true
+      description: The associated IO pin with the ADC channel
+    io-channels:
+      type: phandle-array
+      required: true
+      description: ADC and the channel
+    channel-mux:
+      type: int
+      required: true
+      description: ADC channel multiplexer configuration
+    label:
+      type: string
+      required: true
+      description: Human readable string describing the device (used by Zephyr for API name)

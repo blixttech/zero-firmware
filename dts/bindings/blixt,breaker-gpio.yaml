@@ -1,0 +1,14 @@
+description: Digital inputs and output of the Blixt breaker
+
+# Used to map nodes to bindings
+compatible: "blixt,breaker-gpio"
+
+properties:
+    gpios:
+      type: phandle-array
+      required: true
+      description: The associated IO pin
+    label:
+      required: true
+      type: string
+      description: Human readable string describing the device (used by Zephyr for API name)

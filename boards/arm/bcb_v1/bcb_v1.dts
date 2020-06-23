@@ -5,189 +5,239 @@
 #include <nxp/nxp_k6x.dtsi>
 
 / {
-	model = "Blixt Circuit Breaker (V1)";
-	compatible = "nxp,mk64f12", "nxp,k64f", "nxp,k6x";
+    model = "Blixt Circuit Breaker (V1)";
+    compatible = "nxp,mk64f12", "nxp,k64f", "nxp,k6x";
 
-	aliases {
-		led0 = &green_led;
-		led1 = &blue_led;
-		led2 = &red_led;
-		sw0 = &user_button_3;
-		sw1 = &user_button_2;
-		can-primary = &can0;
-	};
+    /* These aliases are provided for compatibility with the samples */
+    aliases {
+        led0 = &led_red;
+        led1 = &led_green;
+        sw1 = &button_front;
+        on-off = &on_off;
+        oc-ot-reset = &oc_ot_reset;
+        oc-test-tr-p = &oc_test_tr_p;
+        oc-test-tr-n = &oc_test_tr_n;
+        on-off-status = &on_off_status;
+        v-mains = &v_mains; 
+        i-low-gain = &i_low_gain;
+        i-high-gain = &i_high_gain;
+        t-mosfet-in = &t_mosfet_in;
+        t-mosfet-out = &t_mosfet_out;
+        t-ambient = &t_ambient;
+        ref-1v5 = &ref_1v5;
+        hw-rev-in = &hw_rev_in;
+        hw-rev-out = &hw_rev_out;
+        hw-rev-ctrl = &hw_rev_ctrl;
+    };
 
-	chosen {
-		zephyr,sram = &sram0;
-		zephyr,flash = &flash0;
-		zephyr,code-partition = &slot0_partition;
-		zephyr,console = &uart0;
-		zephyr,shell-uart = &uart0;
-		zephyr,uart-pipe = &uart0;
-	};
+    chosen {
+        zephyr,sram = &sram0;
+        zephyr,flash = &flash0;
+        zephyr,code-partition = &slot0_partition;
+        zephyr,console = &uart4;
+        zephyr,shell-uart = &uart4;
+        zephyr,uart-pipe = &uart4;
+    };
 
-	leds {
-		compatible = "gpio-leds";
-		red_led: led_0 {
-			gpios = <&gpiob 22 GPIO_ACTIVE_LOW>;
-			label = "User LD1";
-		};
-		green_led: led_1 {
-			gpios = <&gpioe 26 GPIO_ACTIVE_LOW>;
-			label = "User LD2";
-		};
-		blue_led: led_2 {
-			gpios = <&gpiob 21 GPIO_ACTIVE_LOW>;
-			label = "User LD3";
-		};
-	};
+    breaker {
+        /* LEDs */
+        led_red: led_red {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
+            label = "LED_RED";
+        };
+        led_green: led_green {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
+            label = "LED_GREEN";
+        };
 
-	gpio_keys {
-		compatible = "gpio-keys";
-		user_button_2: button_0 {
-			label = "User SW2";
-			gpios = <&gpioc 6 GPIO_ACTIVE_LOW>;
-		};
-		user_button_3: button_1 {
-			label = "User SW3";
-			gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
-		};
-	};
+        /* Buttons */
+        button_front: button_front {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
+            label = "BUTTON_FRONT";
+        };
 
-	arduino_header: connector {
-		compatible = "arduino-header-r3";
-		#gpio-cells = <2>;
-		gpio-map-mask = <0xffffffff 0xffffffc0>;
-		gpio-map-pass-thru = <0 0x3f>;
-		gpio-map = <0 0 &gpiob 2 0>,	/* A0 */
-			   <1 0 &gpiob 3 0>,	/* A1 */
-			   <2 0 &gpiob 10 0>,	/* A2 */
-			   <3 0 &gpiob 11 0>,	/* A3 */
-			   <4 0 &gpioc 11 0>,	/* A4 */
-			   <5 0 &gpioc 10 0>,	/* A5 */
-			   <6 0 &gpioc 16 0>,	/* D0 */
-			   <7 0 &gpioc 17 0>,	/* D1 */
-			   <8 0 &gpiob 9 0>,	/* D2 */
-			   <9 0 &gpioa 1 0>,	/* D3 */
-			   <10 0 &gpiob 23 0>,	/* D4 */
-			   <11 0 &gpioa 2 0>,	/* D5 */
-			   <12 0 &gpioc 2 0>,	/* D6 */
-			   <13 0 &gpioc 3 0>,	/* D7 */
-			   /* NOTE: HW Rev D and below use: */
-			   /* <14 0 &gpioa 0 0>, */
-			   /* NOTE: HW Rev E and on use: */
-			   <14 0 &gpioc 12 0>,	/* D8 */
-			   <15 0 &gpioc 4 0>,	/* D9 */
-			   <16 0 &gpiod 0 0>,	/* D10 */
-			   <17 0 &gpiod 2 0>,	/* D11 */
-			   <18 0 &gpiod 3 0>,	/* D12 */
-			   <19 0 &gpiod 1 0>,	/* D13 */
-			   <20 0 &gpioe 25 0>,	/* D14 */
-			   <21 0 &gpioe 24 0>;	/* D15 */
-	};
-};
+        /* Control lines */
+        on_off: on_off {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
+            label = "ON_OFF";
+        };
+        oc_ot_reset: oc_ot_reset {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpiod 5 GPIO_ACTIVE_LOW>;
+            label = "OC_OT_RESET";
+        };
+        oc_test_tr_p: oc_test_tr_p {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpiod 7 GPIO_ACTIVE_LOW>;
+            label = "OC_TEST_TR_P";
+        };
+        oc_test_tr_n: oc_test_tr_n {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpiod 6 GPIO_ACTIVE_LOW>;
+            label = "OC_TEST_TR_N";
+        };
 
-arduino_serial: &uart3 {
-	status = "okay";
-	current-speed = <115200>;
+        /* Status lines */
+        on_off_status: on_off_status {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpiod 0 GPIO_ACTIVE_LOW>;
+            label = "ON_OFF STATUS";
+        };
+
+        /* ADC channels */
+        /* High speed inputs */
+        v_mains: v_mains {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 2 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc0 4>;
+            channel-mux = <0>;
+            label = "V_MAINS";
+        };
+        
+        i_low_gain: i_low_gain {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 0 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc0 14>;
+            channel-mux = <0>;
+            label = "I_LOW_GAIN";
+        };
+        i_high_gain: i_high_gain {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 1 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc0 15>;
+            channel-mux = <0>;
+            label = "I_HIGH_GAIN";
+        };
+        /* Low speed inputs */
+        t_mosfet_out: t_mosfet_out {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 9 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 5>;
+            channel-mux = <1>;
+            label = "T_MOSFET_OUT";
+        };
+        t_mosfet_in: t_mosfet_in {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioe 1 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 5>;
+            channel-mux = <0>;
+            label = "T_MOSFET_IN";
+        };
+        t_ambient: t_ambient {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpiob 10 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 14>;
+            channel-mux = <0>;
+            label = "T_AMBIENT";
+        };
+        ref_1v5: ref_1v5 {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 8 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 4>;
+            channel-mux = <1>;
+            label = "REF_1V5";
+        };
+        hw_rev_in: hw_rev_in {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 10 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 6>;
+            channel-mux = <1>;
+            label = "HW_REV_IN";
+        };
+        hw_rev_out: hw_rev_out {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpioc 11 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 7>;
+            channel-mux = <1>;
+            label = "HW_REV_OUT";
+        };
+        hw_rev_ctrl: hw_rev_ctrl {
+            compatible = "blixt,breaker-adc";
+            gpios = <&gpiob 11 GPIO_ACTIVE_LOW>;
+            io-channels = <&adc1 15>;
+            channel-mux = <0>;
+            label = "HW_REV_CTRL";
+        };
+    };
 };
 
 &cpu0 {
-	clock-frequency = <120000000>;
+    clock-frequency = <120000000>;
 };
 
 &adc0 {
-	status = "okay";
+    status = "okay";
 };
 
 &adc1 {
-	status = "okay";
+    status = "okay";
 };
 
 &temp1 {
-	status = "okay";
+    status = "okay";
 };
 
-arduino_i2c: &i2c0 {
-	status = "okay";
-
-	fxos8700@1d {
-		compatible = "nxp,fxos8700";
-		reg = <0x1d>;
-		label = "FXOS8700";
-		int1-gpios = <&gpioc 6 GPIO_ACTIVE_LOW>;
-		int2-gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
-	};
+&spi2 {
+    status = "okay";
 };
 
-arduino_spi: &spi0 {
-	status = "okay";
+&pwm2 {
+    status = "okay";
 };
 
-&pwm3 {
-	status = "okay";
-};
-
-&uart0 {
-	status = "okay";
-	current-speed = <115200>;
-};
-
-&usbd {
-	compatible = "nxp,kinetis-usbd";
-	status = "okay";
-	num-bidir-endpoints = <8>;
-};
-
-&flash0 {
-	/*
-	 * For more information, see:
-	 * http://docs.zephyrproject.org/latest/guides/dts/index.html#flash-partitions
-	 */
-	partitions {
-		compatible = "fixed-partitions";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		boot_partition: partition@0 {
-			label = "mcuboot";
-			reg = <0x00000000 0x00010000>;
-			read-only;
-		};
-
-		/*
-		 * The flash starting at 0x00010000 and ending at
-		 * 0x0001ffff (sectors 16-31) is reserved for use
-		 * by the application.
-		 */
-		storage_partition: partition@1e000 {
-			label = "storage";
-			reg = <0x0001e000 0x00002000>;
-		};
-
-		slot0_partition: partition@20000 {
-			label = "image-0";
-			reg = <0x00020000 0x00060000>;
-		};
-		slot1_partition: partition@80000 {
-			label = "image-1";
-			reg = <0x00080000 0x00060000>;
-		};
-		scratch_partition: partition@e0000 {
-			label = "image-scratch";
-			reg = <0x000e0000 0x00020000>;
-		};
-	};
+&uart4 {
+    status = "okay";
+    current-speed = <115200>;
 };
 
 &eth {
-	status = "okay";
-	ptp {
-		status = "okay";
-	};
+    status = "okay";
+    ptp {
+        status = "okay";
+    };
 };
 
-&can0 {
-	status = "okay";
-	bus-speed = <125000>;
+&flash0 {
+    /*
+     * For more information, see:
+     * http://docs.zephyrproject.org/latest/guides/dts/index.html#flash-partitions
+     */
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        boot_partition: partition@0 {
+            label = "mcuboot";
+            reg = <0x00000000 0x00010000>;
+            read-only;
+        };
+
+        /*
+         * The flash starting at 0x00010000 and ending at
+         * 0x0001ffff (sectors 16-31) is reserved for use
+         * by the application.
+         */
+        storage_partition: partition@1e000 {
+            label = "storage";
+            reg = <0x0001e000 0x00002000>;
+        };
+
+        slot0_partition: partition@20000 {
+            label = "image-0";
+            reg = <0x00020000 0x00060000>;
+        };
+        slot1_partition: partition@80000 {
+            label = "image-1";
+            reg = <0x00080000 0x00060000>;
+        };
+        scratch_partition: partition@e0000 {
+            label = "image-scratch";
+            reg = <0x000e0000 0x00020000>;
+        };
+    };
 };

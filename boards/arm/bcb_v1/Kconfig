@@ -1,0 +1,3 @@
+if BOARD_BCB_V1
+
+endif # BOARD_BCB_V1
