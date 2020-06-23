@@ -20,13 +20,6 @@ config MCG_VDIV0
 config MCG_FCRDIV
     default 1
 
-if UART_MCUX
-
-config UART_MCUX_4
-    default y if UART_CONSOLE
-
-endif # UART_MCUX
-
 if PINMUX_MCUX
 
 config PINMUX_MCUX_PORTA
@@ -45,45 +38,6 @@ config PINMUX_MCUX_PORTE
     default y
 
 endif # PINMUX_MCUX
-
-if GPIO_MCUX
-
-config GPIO_MCUX_PORTA
-    default y
-
-config GPIO_MCUX_PORTB
-    default y
-
-config GPIO_MCUX_PORTC
-    default y
-
-config GPIO_MCUX_PORTD
-    default y
-
-config GPIO_MCUX_PORTE
-    default y
-
-endif # GPIO_MCUX
-
-config ADC_0
-    default y
-    depends on ADC
-
-config ADC_1
-    default y
-    depends on ADC
-
-config TEMP_KINETIS
-    default y
-    depends on SENSOR
-
-config PWM_3
-    default y
-    depends on PWM_MCUX_FTM
-
-config SPI_2
-    default y
-    depends on SPI
 
 if NETWORKING
 

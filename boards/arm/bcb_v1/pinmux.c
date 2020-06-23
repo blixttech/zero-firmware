@@ -13,44 +13,66 @@ static int frdm_k64f_pinmux_init(struct device *dev)
 {
     ARG_UNUSED(dev);
 
-#ifdef DT_ALIAS_PINMUX_A_LABEL
-    struct device *porta = device_get_binding(DT_ALIAS_PINMUX_A_LABEL);
+    /*
+      PINMUX device drivers are still registered with the name provided via Kconfig.  
+      This is probably due to the label property is not set in the dts files. 
+      Therefore, we have to depend on Kconfig and use hardcoded ports (and pins) to configure PINMUX.
+     */
+
+#ifdef CONFIG_PINMUX_MCUX_PORTA
+	struct device *porta = device_get_binding(CONFIG_PINMUX_MCUX_PORTA_NAME);
 #endif
-#ifdef DT_ALIAS_PINMUX_B_LABEL
-    struct device *portb = device_get_binding(DT_ALIAS_PINMUX_B_LABEL);
+#ifdef CONFIG_PINMUX_MCUX_PORTB
+	struct device *portb = device_get_binding(CONFIG_PINMUX_MCUX_PORTB_NAME);
 #endif
-#ifdef DT_ALIAS_PINMUX_C_LABEL
-    struct device *portc = device_get_binding(DT_ALIAS_PINMUX_C_LABEL);
+#ifdef CONFIG_PINMUX_MCUX_PORTC
+	struct device *portc = device_get_binding(CONFIG_PINMUX_MCUX_PORTC_NAME);
 #endif
-#ifdef DT_ALIAS_PINMUX_D_LABEL
-    struct device *portd = device_get_binding(DT_ALIAS_PINMUX_D_LABEL);
+#ifdef CONFIG_PINMUX_MCUX_PORTD
+	struct device *portd = device_get_binding(CONFIG_PINMUX_MCUX_PORTD_NAME);
 #endif
-#ifdef DT_ALIAS_PINMUX_E_LABEL
-    struct device *porte = device_get_binding(DT_ALIAS_PINMUX_E_LABEL);
+#ifdef CONFIG_PINMUX_MCUX_PORTE
+	struct device *porte = device_get_binding(CONFIG_PINMUX_MCUX_PORTE_NAME);
 #endif
 
-#ifdef CONFIG_UART_MCUX_4
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(uart4), okay) && CONFIG_SERIAL
     /* UART4 RX, TX */
     pinmux_pin_set(porte, 24, PORT_PCR_MUX(kPORT_MuxAlt3));
     pinmux_pin_set(porte, 25, PORT_PCR_MUX(kPORT_MuxAlt3));
 #endif
 
-#ifdef CONFIG_BUTTON_FRONT
-    /* SW1 / FRONT_BUTTON */
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(button_front), okay)
+    /* SW1 / FRONT_SW - 85, PTC13 */
     pinmux_pin_set(portc, 13, PORT_PCR_MUX(kPORT_MuxAsGpio));
 #endif
     
-#ifdef CONFIG_LED_0
-    /* Red LED */
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(led_red), okay)
+    /* Red LED - 86, PTC14 */
     pinmux_pin_set(portc, 14, PORT_PCR_MUX(kPORT_MuxAsGpio));
 #endif 
 
-#ifdef CONFIG_LED_1
-    /* Green LED */
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(led_green), okay)
+    /* Green LED - 87, PTC15 */
     pinmux_pin_set(portc, 15, PORT_PCR_MUX(kPORT_MuxAsGpio));
 #endif
 
-#ifdef CONFIG_SPI_2
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(on_off), okay)
+    /* ON_OFF - 97, PTD4/LLWU_P14 (ALT1) */
+    pinmux_pin_set(portd, 4, PORT_PCR_MUX(kPORT_MuxAsGpio));
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(oc_ot_reset), okay)
+    /* OC_OT_RESET - 98, PTD5 (ALT1)*/
+    pinmux_pin_set(portd, 5, PORT_PCR_MUX(kPORT_MuxAsGpio));
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(on_off_status), okay)
+    /* ON_OFF_STATUS - 93, PTD0/LLWU_P12 (ALT4 - FTM3_CH0)/ 94, PTD1, ADC0_SE5b (ALT1 - PTD1) */
+    pinmux_pin_set(portd, 0, PORT_PCR_MUX(kPORT_MuxAlt4));
+    pinmux_pin_set(portd, 1, PORT_PCR_MUX(kPORT_MuxAsGpio));
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(spi2), okay) && CONFIG_SPI
     /* EEPROM_WP - 65, PTB19 */
     pinmux_pin_set(portb, 19, PORT_PCR_MUX(kPORT_MuxAsGpio));
     /* EEPROM_SS - 66, PTB20 (ALT2 - SPI2_PCS0) */
@@ -63,7 +85,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     pinmux_pin_set(portd, 23, PORT_PCR_MUX(kPORT_MuxAlt2));
 #endif
 
-#if CONFIG_ADC_0
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(adc0), okay) && CONFIG_ADC
     /* I_LOW_GAIN - 70, PTC0, ADC0_SE14 */
     pinmux_pin_set(portc, 0, PORT_PCR_MUX(kPORT_PinDisabledOrAnalog));
     /* I_HIGH_GAIN - 71, PTC1/LLWU_P6, ADC0_SE15 */
@@ -72,7 +94,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     pinmux_pin_set(portc, 2, PORT_PCR_MUX(kPORT_PinDisabledOrAnalog));
 #endif
 
-#if CONFIG_ADC_1
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(adc1), okay) && CONFIG_ADC
     /* T_AMBIENT - 58, PTB10, ADC1_SE14 */
     pinmux_pin_set(portb, 10, PORT_PCR_MUX(kPORT_PinDisabledOrAnalog));
     /* HW_REV_CTRL - 59, PTB11, ADC1_SE15 */
@@ -106,7 +128,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     pinmux_pin_set(portb, 18, PORT_PCR_MUX(kPORT_MuxAlt3));
 #endif
 
-#if CONFIG_ETH_MCUX_0
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(enet), okay) && CONFIG_NET_L2_ETHERNET
     /* PHY_RXER - 39, PTA5 (ALT4 - RMII0_RXER/MII0_RXER) */
     pinmux_pin_set(porta,  5, PORT_PCR_MUX(kPORT_MuxAlt4));
     /* PHY_RXD1 - 42, PTA12 (ALT4 - RMII0_RXD1/MII0_RXD1) */

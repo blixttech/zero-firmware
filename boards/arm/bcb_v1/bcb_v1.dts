@@ -169,6 +169,26 @@
     clock-frequency = <120000000>;
 };
 
+&gpioa {
+    status = "okay";
+};
+
+&gpiob {
+    status = "okay";
+};
+
+&gpioc {
+    status = "okay";
+};
+
+&gpiod {
+    status = "okay";
+};
+
+&gpioe {
+    status = "okay";
+};
+
 &adc0 {
     status = "okay";
 };
@@ -185,16 +205,12 @@
     status = "okay";
 };
 
-&pwm2 {
-    status = "okay";
-};
-
 &uart4 {
     status = "okay";
     current-speed = <115200>;
 };
 
-&eth {
+&enet {
     status = "okay";
     ptp {
         status = "okay";

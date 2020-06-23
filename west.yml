@@ -7,12 +7,16 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
 
   projects:
+    - name: cmsis
+      remote: zephyrproject
+      revision: 542b2296e6d515b265e25c6b7208e8fea3014f90
+      path: zephyr-os/modules/hal/cmsis  
     - name: zephyr
       remote: zephyrproject
+      revision: b8c78e254ff875680e99c9f131fbe285c4575927
       path: zephyr-os/zephyr
-      revision: 9518bd19b7a736bd649fa2fc8d8d52967c0b486f
       west-commands: scripts/west-commands.yml
     - name: hal_nxp
       remote: zephyrproject
-      revision: 3e3f20e7de7606d735cdeefe21d5f2a51bf06095
+      revision: 80a337dc4cc980f80e595971147eb41458b29ae8
       path: zephyr-os/modules/hal/nxp
