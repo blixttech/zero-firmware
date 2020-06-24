@@ -3,6 +3,8 @@
 /dts-v1/;
 
 #include <nxp/nxp_k6x.dtsi>
+#include <dt-bindings/pinctrl/kinetis-pinmux.h>
+#include <dt-bindings/adc/kinetis-adc.h>
 
 / {
     model = "Blixt Circuit Breaker (V1)";
@@ -12,22 +14,7 @@
     aliases {
         led0 = &led_red;
         led1 = &led_green;
-        sw1 = &button_front;
-        on-off = &on_off;
-        oc-ot-reset = &oc_ot_reset;
-        oc-test-tr-p = &oc_test_tr_p;
-        oc-test-tr-n = &oc_test_tr_n;
-        on-off-status = &on_off_status;
-        v-mains = &v_mains; 
-        i-low-gain = &i_low_gain;
-        i-high-gain = &i_high_gain;
-        t-mosfet-in = &t_mosfet_in;
-        t-mosfet-out = &t_mosfet_out;
-        t-ambient = &t_ambient;
-        ref-1v5 = &ref_1v5;
-        hw-rev-in = &hw_rev_in;
-        hw-rev-out = &hw_rev_out;
-        hw-rev-ctrl = &hw_rev_ctrl;
+        sw1 = &sw_front;
     };
 
     chosen {
@@ -39,129 +26,93 @@
         zephyr,uart-pipe = &uart4;
     };
 
+
     breaker {
-        /* LEDs */
-        led_red: led_red {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
-            label = "LED_RED";
-        };
-        led_green: led_green {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
-            label = "LED_GREEN";
-        };
-
-        /* Buttons */
-        button_front: button_front {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
-            label = "BUTTON_FRONT";
+        pins: pins {
+            compatible = "blixt,breaker-pins";
+            pinmuxs =   <&porte 24 KINETIS_PINMUX_ALT3>, /* UART_TX */
+                        <&porte 25 KINETIS_PINMUX_ALT3>, /* UART_RX */
+                        <&portc 14 KINETIS_PINMUX_GPIO>, /* LED_RED */
+                        <&portc 15 KINETIS_PINMUX_GPIO>, /* LED_GREEN */
+                        <&portd 4  KINETIS_PINMUX_GPIO>; /* SW_FRONT */
+            pinmux-names =  "UART_TX",
+                            "UART_RX",
+                            "LED_RED",
+                            "LED_GREEN",
+                            "SW_FRONT";
+            label = "PINS";
         };
 
-        /* Control lines */
-        on_off: on_off {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
-            label = "ON_OFF";
-        };
-        oc_ot_reset: oc_ot_reset {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpiod 5 GPIO_ACTIVE_LOW>;
-            label = "OC_OT_RESET";
-        };
-        oc_test_tr_p: oc_test_tr_p {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpiod 7 GPIO_ACTIVE_LOW>;
-            label = "OC_TEST_TR_P";
-        };
-        oc_test_tr_n: oc_test_tr_n {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpiod 6 GPIO_ACTIVE_LOW>;
-            label = "OC_TEST_TR_N";
+        leds {
+            compatible = "gpio-leds";
+            led_red: led_red {
+                gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
+                label = "LED_RED";
+            };
+            led_green: led_green {
+                gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
+                label = "LED_GREEN";
+            };
         };
 
-        /* Status lines */
-        on_off_status: on_off_status {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpiod 0 GPIO_ACTIVE_LOW>;
-            label = "ON_OFF STATUS";
+        switches {
+            compatible = "gpio-keys";
+            sw_front: sw_front {
+                gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
+                label = "SW_FRONT";
+            };
         };
 
-        /* ADC channels */
-        /* High speed inputs */
-        v_mains: v_mains {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 2 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc0 4>;
-            channel-mux = <0>;
-            label = "V_MAINS";
+        dctrl: dctrl {
+            compatible = "blixt,breaker-gpio";
+            gpios = <&gpioc 13 GPIO_ACTIVE_LOW>, 
+                    <&gpiod 5  GPIO_ACTIVE_LOW>,
+                    <&gpiod 0  GPIO_ACTIVE_LOW>,
+                    <&gpiod 6  GPIO_ACTIVE_LOW>,
+                    <&gpiod 7  GPIO_ACTIVE_LOW>;
+            gpio-names =    "ON_OFF", 
+                            "OC_OT_RESET",
+                            "ON_OFF_STATUS",
+                            "OC_TEST_TR_N",
+                            "OC_TEST_TR_P";
+            label = "DCTRL_IO";
         };
-        
-        i_low_gain: i_low_gain {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 0 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc0 14>;
-            channel-mux = <0>;
-            label = "I_LOW_GAIN";
+
+        actrl: actrl {
+            /* Analog control node is not implemented yet. */
         };
-        i_high_gain: i_high_gain {
+
+        aread: aread {
             compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 1 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc0 15>;
-            channel-mux = <0>;
-            label = "I_HIGH_GAIN";
+            io-channels =   <&adc0 14 KINETIS_ADC_MUXSEL_A>, /* I_LOW_GAIN */
+                            <&adc0 15 KINETIS_ADC_MUXSEL_A>, /* I_HIGH_GAIN */
+                            <&adc0 4  KINETIS_ADC_MUXSEL_B>, /* V_MAINS */
+                            <&adc1 5  KINETIS_ADC_MUXSEL_A>, /* T_MOSFET_IN */
+                            <&adc1 5  KINETIS_ADC_MUXSEL_B>, /* T_MOSFET_OUT */
+                            <&adc1 14 KINETIS_ADC_MUXSEL_A>, /* T_AMBIENT */
+                            <&adc1 6  KINETIS_ADC_MUXSEL_B>, /* HW_REV_IN */
+                            <&adc1 7  KINETIS_ADC_MUXSEL_B>, /* HW_REV_OUT */
+                            <&adc1 15 KINETIS_ADC_MUXSEL_A>, /* HW_REV_CTRL */
+                            <&adc1 4  KINETIS_ADC_MUXSEL_A>, /* OC_TEST_ADJ */
+                            <&adc1 4  KINETIS_ADC_MUXSEL_B>; /* REF_1V5 */
+            io-channel-names =  "I_LOW_GAIN", 
+                                "I_HIGH_GAIN",
+                                "V_MAINS",
+                                "T_MOSFET_IN", 
+                                "T_MOSFET_OUT", 
+                                "T_AMBIENT",
+                                "HW_REV_IN",
+                                "HW_REV_OUT",
+                                "HW_REV_CTRL",
+                                "OC_TEST_ADJ",
+                                "REF_1V5";  
+            label = "AREAD_I";
         };
-        /* Low speed inputs */
-        t_mosfet_out: t_mosfet_out {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 9 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 5>;
-            channel-mux = <1>;
-            label = "T_MOSFET_OUT";
+
+        acmp {
+            /* Have to make DTS bingings and devicetree nodes for the comparators */
         };
-        t_mosfet_in: t_mosfet_in {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioe 1 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 5>;
-            channel-mux = <0>;
-            label = "T_MOSFET_IN";
-        };
-        t_ambient: t_ambient {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpiob 10 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 14>;
-            channel-mux = <0>;
-            label = "T_AMBIENT";
-        };
-        ref_1v5: ref_1v5 {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 8 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 4>;
-            channel-mux = <1>;
-            label = "REF_1V5";
-        };
-        hw_rev_in: hw_rev_in {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 10 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 6>;
-            channel-mux = <1>;
-            label = "HW_REV_IN";
-        };
-        hw_rev_out: hw_rev_out {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpioc 11 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 7>;
-            channel-mux = <1>;
-            label = "HW_REV_OUT";
-        };
-        hw_rev_ctrl: hw_rev_ctrl {
-            compatible = "blixt,breaker-adc";
-            gpios = <&gpiob 11 GPIO_ACTIVE_LOW>;
-            io-channels = <&adc1 15>;
-            channel-mux = <0>;
-            label = "HW_REV_CTRL";
-        };
+
     };
 };
 
@@ -169,6 +120,33 @@
     clock-frequency = <120000000>;
 };
 
+/* Overlay pinmux nodes with the label property to use use devicetree API. */
+&porta {
+    label = "porta";
+    #pinmux-cells = <2>;
+};
+
+&portb {
+    label = "portb";
+    #pinmux-cells = <2>;
+};
+
+&portc {
+    label = "portc";
+    #pinmux-cells = <2>;
+};
+
+&portd {
+    label = "portd";
+    #pinmux-cells = <2>;
+};
+
+&porte {
+    label = "porte";
+    #pinmux-cells = <2>;
+};
+
+/* Enable GPIOs */
 &gpioa {
     status = "okay";
 };
@@ -189,15 +167,23 @@
     status = "okay";
 };
 
+&temp0 {
+    io-channels = <&adc0 26 KINETIS_ADC_MUXSEL_A>, <&adc0 27 KINETIS_ADC_MUXSEL_A>;
+};
+
+&temp1 {
+    io-channels = <&adc1 26 KINETIS_ADC_MUXSEL_A>, <&adc1 27 KINETIS_ADC_MUXSEL_A>;
+};
+
 &adc0 {
+    compatible = "nxp,kinetis-adc16-pinscan";
+    #io-channel-cells = <2>;
     status = "okay";
 };
 
 &adc1 {
-    status = "okay";
-};
-
-&temp1 {
+    compatible = "nxp,kinetis-adc16-pinscan";
+    #io-channel-cells = <2>;
     status = "okay";
 };
 

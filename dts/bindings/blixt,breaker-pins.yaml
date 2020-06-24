@@ -1,15 +1,15 @@
 description: Digital inputs and output of the Blixt breaker
 
 # Used to map nodes to bindings
-compatible: "blixt,breaker-gpio"
+compatible: "blixt,breaker-pins"
 
 properties:
-    gpios:
+    pinmuxs:
       type: phandle-array
       required: true
-    gpio-names:
+    pinmux-names:
       type: string-array
       required: true
     label:
-      required: true
       type: string
+      required: true

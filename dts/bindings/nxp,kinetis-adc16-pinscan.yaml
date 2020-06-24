@@ -1,0 +1,22 @@
+# Copyright (c) 2017, NXP
+# SPDX-License-Identifier: Apache-2.0
+
+description: Kinetis ADC16
+
+compatible: "nxp,kinetis-adc16-pinscan"
+
+include: adc-controller.yaml
+
+properties:
+    reg:
+      required: true
+
+    interrupts:
+      required: true
+
+    "#io-channel-cells":
+      const: 2
+
+io-channel-cells:
+    - input
+    - muxsel
