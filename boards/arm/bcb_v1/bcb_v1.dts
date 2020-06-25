@@ -26,23 +26,102 @@
         zephyr,uart-pipe = &uart4;
     };
 
-
-    breaker {
-        pins: pins {
-            compatible = "blixt,breaker-pins";
-            pinmuxs =   <&porte 24 KINETIS_PINMUX_ALT3>, /* UART_TX */
-                        <&porte 25 KINETIS_PINMUX_ALT3>, /* UART_RX */
-                        <&portc 14 KINETIS_PINMUX_GPIO>, /* LED_RED */
-                        <&portc 15 KINETIS_PINMUX_GPIO>, /* LED_GREEN */
-                        <&portd 4  KINETIS_PINMUX_GPIO>; /* SW_FRONT */
+    pins {
+        uart4_pins: uart4_pins {
+            compatible = "blixt,pins";
+            pinmuxs =   <&porte 24 PORT_PCR_MUX(PORT_PCR_MUX_ALT3)>,    /* UART_TX */
+                        <&porte 25 PORT_PCR_MUX(PORT_PCR_MUX_ALT3)>;    /* UART_RX */
             pinmux-names =  "UART_TX",
-                            "UART_RX",
-                            "LED_RED",
-                            "LED_GREEN",
-                            "SW_FRONT";
-            label = "PINS";
+                            "UART_RX";
+            label = "UART4_PINS";
         };
 
+        enet_pins: enet_pins {
+            compatible = "blixt,pins";
+            pinmuxs =   <&porta 5  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_RXER */
+                        <&porta 12 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_RXD1 */
+                        <&porta 13 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_RXD0 */
+                        <&porta 14 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_CRS_DV */
+                        <&porta 15 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_TXEN */
+                        <&porta 16 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_TXD0 */
+                        <&porta 17 PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_TXD1 */
+                        <&portb 0  (PORT_PCR_MUX(PORT_PCR_MUX_ALT4) 
+                                    | PORT_PCR_ODE_MASK 
+                                    | PORT_PCR_PE_MASK 
+                                    | PORT_PCR_PS_MASK)>,               /* PHY_MDIO */
+                        <&portb 1  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_MDC */
+                        <&portb 2  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* PHY_RESET */
+                        <&portb 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>;    /* PHY_INTERRUPT */
+
+            pinmux-names =  "PHY_RXER",
+                            "PHY_RXD1",
+                            "PHY_RXD0",
+                            "PHY_CRS_DV",
+                            "PHY_TXEN",
+                            "PHY_TXD0",
+                            "PHY_TXD1",
+                            "PHY_MDIO",
+                            "PHY_MDC",
+                            "PHY_RESET",
+                            "PHY_INTERRUPT";
+            label = "ENET_PINS";
+        };
+
+        breaker_pins: breaker_pins {
+            compatible = "blixt,pins";
+            pinmuxs =   <&portc 14 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_RED */
+                        <&portc 15 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_GREEN */
+                        <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
+                        <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
+                        <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_OT_RESET */
+                        <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF_STATUS */
+                        <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N */
+                        <&portd 7  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P */
+                        <&portc 2  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* V_MAINS */
+                        <&portc 0  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN */
+                        <&portc 1  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN */
+                        <&portc 9  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* T_MOSFET_OUT */
+                        <&porte 1  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* T_MOSFET_IN */
+                        <&portb 10 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* T_AMBIENT */
+                        <&portc 8  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* REF_1V5 */
+                        <&portc 10 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_IN */
+                        <&portc 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_OUT */
+                        <&portb 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_CTRL */
+                        <&portd 1  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF_STATUS_M */
+                        <&portd 2  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N_M */
+                        <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P_M */
+                        <&portc 6  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN_CMP0_IN0 */
+                        <&portc 7  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN_CMP0_IN1 */
+                        <&portc 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>;    /* REF_1V5_CMP1_IN1 */
+            pinmux-names =  "LED_RED",
+                            "LED_GREEN",
+                            "SW_FRONT",
+                            "ON_OFF",
+                            "OC_OT_RESET",
+                            "ON_OFF_STATUS",
+                            "OC_TEST_TR_N",
+                            "OC_TEST_TR_P",
+                            "V_MAINS",
+                            "I_LOW_GAIN",
+                            "I_HIGH_GAIN",
+                            "T_MOSFET_OUT",
+                            "T_MOSFET_IN",
+                            "T_AMBIENT",
+                            "REF_1V5",
+                            "HW_REV_IN",
+                            "HW_REV_OUT",
+                            "HW_REV_CTRL",
+                            "ON_OFF_STATUS_M",
+                            "OC_TEST_TR_N_M",
+                            "OC_TEST_TR_P_M",
+                            "I_LOW_GAIN_CMP0_IN0",
+                            "I_HIGH_GAIN_CMP0_IN1",
+                            "REF_1V5_CMP1_IN1";
+            label = "BREAKER_PINS";
+        };
+    };
+
+    breaker {
         leds {
             compatible = "gpio-leds";
             led_red: led_red {

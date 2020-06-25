@@ -1,7 +1,7 @@
-description: Digital inputs and output of the Blixt breaker
+description: Pin multiplexing configurations
 
 # Used to map nodes to bindings
-compatible: "blixt,breaker-pins"
+compatible: "blixt,pins"
 
 properties:
     pinmuxs:
