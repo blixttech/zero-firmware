@@ -12,3 +12,7 @@ endif()
 
 get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephyr" ABSOLUTE)
 set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")
+
+# Need to specify SYSCALL_INCLUDE_DIRS here since this is an out of tree board
+get_filename_component(breaker_board_dir "${BOARD_ROOT}/boards/arm/${BOARD}" ABSOLUTE)
+list(APPEND SYSCALL_INCLUDE_DIRS ${breaker_board_dir})

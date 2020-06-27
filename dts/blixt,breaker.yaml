@@ -1,0 +1,9 @@
+description: Blixt Circuit Breaker
+
+# Used to map nodes to bindings
+compatible: "blixt,breaker"
+
+properties:
+    label:
+      type: string
+      required: true

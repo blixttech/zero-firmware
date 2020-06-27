@@ -15,6 +15,7 @@
         led0 = &led_red;
         led1 = &led_green;
         sw1 = &sw_front;
+        breaker = &breaker;
     };
 
     chosen {
@@ -121,77 +122,81 @@
         };
     };
 
-    breaker {
-        leds {
-            compatible = "gpio-leds";
-            led_red: led_red {
-                gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
-                label = "LED_RED";
+    devices {
+        breaker: breaker {
+            compatible = "blixt,breaker";
+            label = "BLIXT_BREAKER";
+            leds {
+                compatible = "gpio-leds";
+                led_red: led_red {
+                    gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
+                    label = "LED_RED";
+                };
+                led_green: led_green {
+                    gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
+                    label = "LED_GREEN";
+                };
             };
-            led_green: led_green {
-                gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
-                label = "LED_GREEN";
+
+            switches {
+                compatible = "gpio-keys";
+                sw_front: sw_front {
+                    gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
+                    label = "SW_FRONT";
+                };
             };
-        };
 
-        switches {
-            compatible = "gpio-keys";
-            sw_front: sw_front {
-                gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
-                label = "SW_FRONT";
+            dctrl: dctrl {
+                compatible = "blixt,breaker-gpio";
+                gpios = <&gpioc 13 GPIO_ACTIVE_LOW>, 
+                        <&gpiod 5  GPIO_ACTIVE_LOW>,
+                        <&gpiod 0  GPIO_ACTIVE_LOW>,
+                        <&gpiod 6  GPIO_ACTIVE_LOW>,
+                        <&gpiod 7  GPIO_ACTIVE_LOW>;
+                gpio-names =    "ON_OFF", 
+                                "OC_OT_RESET",
+                                "ON_OFF_STATUS",
+                                "OC_TEST_TR_N",
+                                "OC_TEST_TR_P";
+                label = "DCTRL_IO";
             };
-        };
 
-        dctrl: dctrl {
-            compatible = "blixt,breaker-gpio";
-            gpios = <&gpioc 13 GPIO_ACTIVE_LOW>, 
-                    <&gpiod 5  GPIO_ACTIVE_LOW>,
-                    <&gpiod 0  GPIO_ACTIVE_LOW>,
-                    <&gpiod 6  GPIO_ACTIVE_LOW>,
-                    <&gpiod 7  GPIO_ACTIVE_LOW>;
-            gpio-names =    "ON_OFF", 
-                            "OC_OT_RESET",
-                            "ON_OFF_STATUS",
-                            "OC_TEST_TR_N",
-                            "OC_TEST_TR_P";
-            label = "DCTRL_IO";
-        };
+            actrl: actrl {
+                /* Analog control node is not implemented yet. */
+            };
 
-        actrl: actrl {
-            /* Analog control node is not implemented yet. */
-        };
+            aread: aread {
+                compatible = "blixt,breaker-adc";
+                io-channels =   <&adc0 14 KINETIS_ADC_MUXSEL_A>, /* I_LOW_GAIN */
+                                <&adc0 15 KINETIS_ADC_MUXSEL_A>, /* I_HIGH_GAIN */
+                                <&adc0 4  KINETIS_ADC_MUXSEL_B>, /* V_MAINS */
+                                <&adc1 5  KINETIS_ADC_MUXSEL_A>, /* T_MOSFET_IN */
+                                <&adc1 5  KINETIS_ADC_MUXSEL_B>, /* T_MOSFET_OUT */
+                                <&adc1 14 KINETIS_ADC_MUXSEL_A>, /* T_AMBIENT */
+                                <&adc1 6  KINETIS_ADC_MUXSEL_B>, /* HW_REV_IN */
+                                <&adc1 7  KINETIS_ADC_MUXSEL_B>, /* HW_REV_OUT */
+                                <&adc1 15 KINETIS_ADC_MUXSEL_A>, /* HW_REV_CTRL */
+                                <&adc1 4  KINETIS_ADC_MUXSEL_A>, /* OC_TEST_ADJ */
+                                <&adc1 4  KINETIS_ADC_MUXSEL_B>; /* REF_1V5 */
+                io-channel-names =  "I_LOW_GAIN", 
+                                    "I_HIGH_GAIN",
+                                    "V_MAINS",
+                                    "T_MOSFET_IN", 
+                                    "T_MOSFET_OUT", 
+                                    "T_AMBIENT",
+                                    "HW_REV_IN",
+                                    "HW_REV_OUT",
+                                    "HW_REV_CTRL",
+                                    "OC_TEST_ADJ",
+                                    "REF_1V5";  
+                label = "AREAD_I";
+            };
 
-        aread: aread {
-            compatible = "blixt,breaker-adc";
-            io-channels =   <&adc0 14 KINETIS_ADC_MUXSEL_A>, /* I_LOW_GAIN */
-                            <&adc0 15 KINETIS_ADC_MUXSEL_A>, /* I_HIGH_GAIN */
-                            <&adc0 4  KINETIS_ADC_MUXSEL_B>, /* V_MAINS */
-                            <&adc1 5  KINETIS_ADC_MUXSEL_A>, /* T_MOSFET_IN */
-                            <&adc1 5  KINETIS_ADC_MUXSEL_B>, /* T_MOSFET_OUT */
-                            <&adc1 14 KINETIS_ADC_MUXSEL_A>, /* T_AMBIENT */
-                            <&adc1 6  KINETIS_ADC_MUXSEL_B>, /* HW_REV_IN */
-                            <&adc1 7  KINETIS_ADC_MUXSEL_B>, /* HW_REV_OUT */
-                            <&adc1 15 KINETIS_ADC_MUXSEL_A>, /* HW_REV_CTRL */
-                            <&adc1 4  KINETIS_ADC_MUXSEL_A>, /* OC_TEST_ADJ */
-                            <&adc1 4  KINETIS_ADC_MUXSEL_B>; /* REF_1V5 */
-            io-channel-names =  "I_LOW_GAIN", 
-                                "I_HIGH_GAIN",
-                                "V_MAINS",
-                                "T_MOSFET_IN", 
-                                "T_MOSFET_OUT", 
-                                "T_AMBIENT",
-                                "HW_REV_IN",
-                                "HW_REV_OUT",
-                                "HW_REV_CTRL",
-                                "OC_TEST_ADJ",
-                                "REF_1V5";  
-            label = "AREAD_I";
-        };
+            acmp {
+                /* Have to make DTS bingings and devicetree nodes for the comparators */
+            };
 
-        acmp {
-            /* Have to make DTS bingings and devicetree nodes for the comparators */
         };
-
     };
 };
 
