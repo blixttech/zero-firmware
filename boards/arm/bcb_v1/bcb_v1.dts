@@ -148,11 +148,11 @@
 
             dctrl: dctrl {
                 compatible = "blixt,breaker-gpio";
-                gpios = <&gpioc 13 GPIO_ACTIVE_LOW>, 
-                        <&gpiod 5  GPIO_ACTIVE_LOW>,
-                        <&gpiod 0  GPIO_ACTIVE_LOW>,
-                        <&gpiod 6  GPIO_ACTIVE_LOW>,
-                        <&gpiod 7  GPIO_ACTIVE_LOW>;
+                gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>, 
+                        <&gpiod 5  GPIO_ACTIVE_HIGH>,
+                        <&gpiod 0  GPIO_ACTIVE_HIGH>,
+                        <&gpiod 6  GPIO_ACTIVE_HIGH>,
+                        <&gpiod 7  GPIO_ACTIVE_HIGH>;
                 gpio-names =    "ON_OFF", 
                                 "OC_OT_RESET",
                                 "ON_OFF_STATUS",
