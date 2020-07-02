@@ -92,7 +92,7 @@ Clone this repository and update other modules using ``west``.
 * Special note on ``cmake`` when writing applications
 
     As this repository is an out-of-tree Zephyr repository, you need to include ``zephy.cmake`` in your project's ``CMakeLists.txt`` file.
-    Use the following ``cmake`` command to include `zephy.cmake`` file.
+    Use the following ``cmake`` command to include ``zephy.cmake`` file.
 
     ```cmake
     cmake_minimum_required(VERSION 3.13.1)
