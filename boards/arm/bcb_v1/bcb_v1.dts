@@ -72,8 +72,8 @@
             compatible = "blixt,pins";
             pinmuxs =   <&portc 14 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_RED */
                         <&portc 15 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_GREEN */
-                        <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
-                        <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
+                        <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
+                        <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
                         <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_OT_RESET */
                         <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF_STATUS */
                         <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N */
@@ -148,7 +148,7 @@
 
             dctrl: dctrl {
                 compatible = "blixt,breaker-gpio";
-                gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>, 
+                gpios = <&gpiod 4  GPIO_ACTIVE_HIGH>, 
                         <&gpiod 5  GPIO_ACTIVE_HIGH>,
                         <&gpiod 0  GPIO_ACTIVE_HIGH>,
                         <&gpiod 6  GPIO_ACTIVE_HIGH>,
