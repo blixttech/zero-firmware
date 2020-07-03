@@ -12,7 +12,7 @@
 #include <logging/log.h>
 #include <stdlib.h>
 
-#include <drivers/blixt-breaker.h>
+#include <lib/blixt-breaker.h>
 
 LOG_MODULE_REGISTER(app);
 
@@ -23,13 +23,7 @@ static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Turning off");
 
-	struct device *dev_breaker = device_get_binding(DT_LABEL(DT_NODELABEL(breaker)));
-	if (dev_breaker == NULL) {
-		shell_print(shell, "Unable to find breaker device");
-		return -1;
-	}
-
-	breaker_off(dev_breaker);
+	breaker_off();
 
 	return 0;
 }
@@ -41,13 +35,7 @@ static int cmd_on_params(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Turning on");
 
-	struct device *dev_breaker = device_get_binding(DT_LABEL(DT_NODELABEL(breaker)));
-	if (dev_breaker == NULL) {
-		shell_print(shell, "Unable to find breaker device");
-		return -1;
-	}
-
-	breaker_on(dev_breaker);
+	breaker_on();
 
 	return 0;
 }
@@ -78,13 +66,7 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
 				"Triggering OCP direction : %c", 
 				(direction == BREAKER_OCP_TRIGGER_DIR_P ? 'P' : 'N'));
 
-	struct device *dev_breaker = device_get_binding(DT_LABEL(DT_NODELABEL(breaker)));
-	if (dev_breaker == NULL) {
-		shell_print(shell, "Unable to find breaker device");
-		return -1;
-	}
-
-	breaker_ocp_trigger(dev_breaker, direction);
+	breaker_ocp_trigger(direction);
 
 	return 0;
 }
@@ -96,13 +78,7 @@ static int cmd_version(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Zephyr version %s", KERNEL_VERSION_STRING);
 
-	struct device *dev_breaker = device_get_binding(DT_LABEL(DT_NODELABEL(breaker)));
-	if (dev_breaker == NULL) {
-		shell_print(shell, "Unable to find breaker device");
-		return -1;
-	}
-
-	breaker_off(dev_breaker);
+	breaker_off();
 
 	return 0;
 }
