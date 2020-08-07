@@ -1,0 +1,3 @@
+config INPUT_CAPTURE_MCUX_FTM
+    bool "Enable the input capture driver"
+    default y

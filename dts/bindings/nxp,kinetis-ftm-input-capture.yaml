@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Kinetis FTM Input Capture
+
+compatible: "nxp,kinetis-ftm-input-capture"
+
+include: ["nxp,kinetis-ftm.yaml"]
+
+properties:
+    "#input-capture-cells":
+      type: int
+      required: true
+      const: 3
+      description: Number of items to expect in a input capture specifier
+
+input-capture-cells:
+  - channel
+  - edge
+  - mode

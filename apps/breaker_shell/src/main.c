@@ -12,9 +12,15 @@
 #include <logging/log.h>
 #include <stdlib.h>
 
-#include <lib/blixt-breaker.h>
+#include <bcb.h>
 
 LOG_MODULE_REGISTER(app);
+
+
+static void on_ocp(int32_t duration)
+{
+	printk("\nOn OCP: duration %d\n", duration);
+}
 
 static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
 {
@@ -23,7 +29,7 @@ static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Turning off");
 
-	breaker_off();
+	bcb_off();
 
 	return 0;
 }
@@ -35,7 +41,7 @@ static int cmd_on_params(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Turning on");
 
-	breaker_on();
+	bcb_on();
 
 	return 0;
 }
@@ -45,28 +51,28 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	int direction = BREAKER_OCP_TRIGGER_DIR_P;
+	int direction = BCB_OCP_TEST_TGR_DIR_P;
 	if (argc > 0) {
 		switch ((int)argv[0]) {
 			case 'p':
 			case 'P':
-				direction = BREAKER_OCP_TRIGGER_DIR_P;
+				direction = BCB_OCP_TEST_TGR_DIR_P;
 				break;
 			case 'n':
 			case 'N':
-				direction = BREAKER_OCP_TRIGGER_DIR_N;
+				direction = BCB_OCP_TEST_TGR_DIR_N;
 				break;
 			default:
-				direction = BREAKER_OCP_TRIGGER_DIR_P;
+				direction = BCB_OCP_TEST_TGR_DIR_P;
 		}
 	} else {
-		direction = BREAKER_OCP_TRIGGER_DIR_P;
+		direction = BCB_OCP_TEST_TGR_DIR_P;
 	}
 	shell_print(shell, 
 				"Triggering OCP direction : %c", 
-				(direction == BREAKER_OCP_TRIGGER_DIR_P ? 'P' : 'N'));
+				(direction == BCB_OCP_TEST_TGR_DIR_P ? 'P' : 'N'));
 
-	breaker_ocp_trigger(direction);
+	bcb_ocp_test_trigger(direction);
 
 	return 0;
 }
@@ -78,7 +84,7 @@ static int cmd_version(const struct shell *shell, size_t argc, char **argv)
 
 	shell_print(shell, "Zephyr version %s", KERNEL_VERSION_STRING);
 
-	breaker_off();
+	bcb_off();
 
 	return 0;
 }
@@ -96,4 +102,5 @@ SHELL_CMD_ARG_REGISTER(version, NULL, "Show kernel version", cmd_version, 1, 0);
 void main(void)
 {
 	printk("\nInitializing breaker..\n");
+	bcb_set_ocp_callback(on_ocp);
 }

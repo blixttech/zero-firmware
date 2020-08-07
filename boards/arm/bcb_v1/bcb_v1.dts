@@ -5,6 +5,7 @@
 #include <nxp/nxp_k6x.dtsi>
 #include <dt-bindings/pinctrl/kinetis-pinmux.h>
 #include <dt-bindings/adc/kinetis-adc.h>
+#include <dt-bindings/timer/input-capture.h>
 
 / {
     model = "Blixt Circuit Breaker (V1)";
@@ -161,8 +162,24 @@
                 label = "DCTRL_IO";
             };
 
-            actrl: actrl {
-                /* Analog control node is not implemented yet. */
+            actrl {
+                compatible = "blixt,breaker-dac";
+                io-channels =  <&dac0 0>;
+                io-channel-names = "OC_LIMIT_ADJ";
+                pwms = <&ftm2 0 1000 0>;
+                pwm-names = "OC_TEST_ADJ";
+                label = "ANALOG_CTRL";
+            };
+
+            itimestamp: itimestamp {
+                compatible = "blixt,breaker-input-timestamp";
+                input-captures =    <&ftm3 0 INPUT_CAPTURE_EDGE_BOTH INPUT_CAPTURE_MODE_CONTINOUES>,
+                                    <&ftm3 2 INPUT_CAPTURE_EDGE_RISING INPUT_CAPTURE_MODE_CONTINOUES>,
+                                    <&ftm3 3 INPUT_CAPTURE_EDGE_RISING INPUT_CAPTURE_MODE_CONTINOUES>;
+                input-capture-names =   "ON_OFF_STATUS",
+                                        "OC_TEST_TR_N",
+                                        "OC_TEST_TR_P";
+                label = "INPUT_TIMESTAMP";
             };
 
             aread: aread {
@@ -189,7 +206,7 @@
                                     "HW_REV_CTRL",
                                     "OC_TEST_ADJ",
                                     "REF_1V5";  
-                label = "AREAD_I";
+                label = "ANALOG_READ";
             };
 
             acmp {
@@ -268,6 +285,25 @@
 &adc1 {
     compatible = "nxp,kinetis-adc16-pinscan";
     #io-channel-cells = <2>;
+    status = "okay";
+};
+
+/* Used for OC limit adjustment */
+&dac0 {
+    status = "okay";
+};
+
+/* Used for measuring OCP trigger timing. */
+&ftm3 {
+    compatible = "nxp,kinetis-ftm-input-capture";
+    #input-capture-cells = <3>;
+    status = "okay";
+};
+
+/* Used for OC test adjustment. */
+&ftm2 {
+    compatible = "nxp,kinetis-ftm-pwm";
+    #pwm-cells = <3>;
     status = "okay";
 };
 
