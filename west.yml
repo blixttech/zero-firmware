@@ -18,5 +18,6 @@ manifest:
       west-commands: scripts/west-commands.yml
     - name: hal_nxp
       remote: zephyrproject
-      revision: 80a337dc4cc980f80e595971147eb41458b29ae8
+      #revision: 80a337dc4cc980f80e595971147eb41458b29ae8
+      revision: e9c948520832b251158d60b4d23f7b8f8f598bf7
       path: zephyr-os/modules/hal/nxp
