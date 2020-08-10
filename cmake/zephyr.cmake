@@ -14,14 +14,14 @@ get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephy
 set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")
 
 list(APPEND ZEPHYR_EXTRA_MODULES
-    ${CMAKE_CURRENT_LIST_DIR}/../modules/lib
-    ${CMAKE_CURRENT_LIST_DIR}/../modules/drivers
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/lib"
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/drivers"
 )
 
 list(APPEND SYSCALL_INCLUDE_DIRS
-    ${CMAKE_CURRENT_LIST_DIR}/../include
+    "${CMAKE_CURRENT_LIST_DIR}/../include"
 )
 
-find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+find_package(Zephyr REQUIRED HINTS "$ENV{ZEPHYR_BASE}")
 
 zephyr_include_directories("${CMAKE_CURRENT_LIST_DIR}/../include")

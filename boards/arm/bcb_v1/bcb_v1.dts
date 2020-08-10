@@ -76,7 +76,7 @@
                         <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
                         <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
                         <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_OT_RESET */
-                        <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF_STATUS */
+                        <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS */
                         <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N */
                         <&portd 7  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P */
                         <&portc 2  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* V_MAINS */
@@ -89,9 +89,9 @@
                         <&portc 10 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_IN */
                         <&portc 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_OUT */
                         <&portb 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_CTRL */
-                        <&portd 1  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF_STATUS_M */
-                        <&portd 2  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N_M */
-                        <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P_M */
+                        <&portd 1  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS_M (mirrored) */
+                        <&portd 2  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OC_TEST_TR_N_M (mirrored) */
+                        <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OC_TEST_TR_P_M (mirrored) */
                         <&portc 6  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN_CMP0_IN0 */
                         <&portc 7  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN_CMP0_IN1 */
                         <&portc 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>;    /* REF_1V5_CMP1_IN1 */
@@ -173,12 +173,14 @@
 
             itimestamp: itimestamp {
                 compatible = "blixt,breaker-input-timestamp";
-                input-captures =    <&ftm3 0 INPUT_CAPTURE_EDGE_BOTH INPUT_CAPTURE_MODE_CONTINOUES>,
-                                    <&ftm3 2 INPUT_CAPTURE_EDGE_RISING INPUT_CAPTURE_MODE_CONTINOUES>,
-                                    <&ftm3 3 INPUT_CAPTURE_EDGE_RISING INPUT_CAPTURE_MODE_CONTINOUES>;
-                input-capture-names =   "ON_OFF_STATUS",
-                                        "OC_TEST_TR_N",
-                                        "OC_TEST_TR_P";
+                input-captures =    <&ftm3 0 IC_EDGE_SINGLE_RISING>,
+                                    <&ftm3 1 IC_EDGE_SINGLE_FALLING>,
+                                    <&ftm3 2 IC_EDGE_SINGLE_RISING>,
+                                    <&ftm3 3 IC_EDGE_SINGLE_RISING>;
+                input-capture-names =   "ON_OFF_STATUS_R",  /* capturing the rising edge */
+                                        "ON_OFF_STATUS_F",  /* capturing the falling edge */
+                                        "OC_TEST_TR_N",     /* only rising edge */
+                                        "OC_TEST_TR_P";     /* only rising edge */
                 label = "INPUT_TIMESTAMP";
             };
 
@@ -296,7 +298,7 @@
 /* Used for measuring OCP trigger timing. */
 &ftm3 {
     compatible = "nxp,kinetis-ftm-input-capture";
-    #input-capture-cells = <3>;
+    #input-capture-cells = <2>;
     status = "okay";
 };
 

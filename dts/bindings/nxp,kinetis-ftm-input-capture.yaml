@@ -10,10 +10,9 @@ properties:
     "#input-capture-cells":
       type: int
       required: true
-      const: 3
+      const: 2
       description: Number of items to expect in a input capture specifier
 
 input-capture-cells:
   - channel
   - edge
-  - mode
