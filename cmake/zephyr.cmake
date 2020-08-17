@@ -20,6 +20,7 @@ list(APPEND ZEPHYR_EXTRA_MODULES
 
 list(APPEND SYSCALL_INCLUDE_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../include"
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/drivers/zephyr"
 )
 
 find_package(Zephyr REQUIRED HINTS "$ENV{ZEPHYR_BASE}")

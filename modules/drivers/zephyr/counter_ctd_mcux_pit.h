@@ -1,0 +1,44 @@
+/**
+ * @file
+ * @brief Header file for PIT specific APIs of the count down counter driver.
+ */
+
+#ifndef __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT__
+#define __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT__
+
+/**
+ * @ingroup io_interfaces
+ * @{
+ */
+
+#include <drivers/counter_ctd.h>
+#include <errno.h>
+#include <zephyr/types.h>
+#include <stddef.h>
+#include <device.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Enable chaining a counter in the Down Counter Array.
+ * 
+ * @param[in] dev           A pointer to the device structure for the driver instance. 
+ * @param[in] chan_id    	Channel ID.
+ * @param[in] enable        True if the counter needs to be chained.
+ * @retval 0 If successful.  
+ */
+__syscall int counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool enable);
+
+#ifdef __cplusplus
+}
+#endif
+
+/**
+ * @}
+ */
+
+#include <syscalls/counter_ctd_mcux_pit.h>
+
+#endif // __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT__

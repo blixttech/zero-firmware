@@ -1,3 +1,15 @@
 config INPUT_CAPTURE_MCUX_FTM
     bool "Enable the input capture driver"
     default y
+    depends on INPUT_CAPTURE
+
+config COUNTER_CTD_MCUX_PIT
+    bool "Enable MCUX PIT driver"
+    default y
+    depends on COUNTER_CTD
+
+
+config COUNTER_MCUX_PIT
+    bool "MCUX PIT driver"
+    default y
+    depends on COUNTER_CTD_MCUX_PIT

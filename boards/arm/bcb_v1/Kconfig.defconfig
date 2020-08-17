@@ -39,6 +39,22 @@ config PINMUX_MCUX_PORTE
 
 endif # PINMUX_MCUX
 
+
+# We have to enable PWM  for input capture since NXP HAL adds fsl_ftm.c
+# to the source files only if PWM is enabled.
+
+config PWM
+    default y
+
+config INPUT_CAPTURE
+    bool "Enable input capture"
+    default y
+    depends on PWM
+
+config COUNTER_CTD
+    bool "Enable count down counter"
+    default y
+
 if NETWORKING
 
 config NET_L2_ETHERNET

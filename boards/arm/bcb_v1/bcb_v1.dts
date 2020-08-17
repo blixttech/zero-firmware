@@ -28,6 +28,18 @@
         zephyr,uart-pipe = &uart4;
     };
 
+    /* PIT is not yet added into nxp_k6x.dtsi in the upstream zephyr-os repository. */
+    soc {
+        pit0: pit@40037000 {
+            compatible = "nxp,kinetis-pit-ctd-counter";
+            reg = <0x40037000 0x1000>;
+            clocks = <&sim KINETIS_SIM_BUS_CLK 0x103c 23>;
+            interrupts = <48 0>, <49 0>, <50 0>, <51 0>;
+            label = "PIT_0";
+            status = "okay";
+        };
+    };
+
     pins {
         uart4_pins: uart4_pins {
             compatible = "blixt,pins";
