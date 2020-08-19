@@ -40,11 +40,11 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     SET_PINMUX(breaker_pins, sw_front);
 
     SET_PINMUX(breaker_pins, on_off);
-    SET_PINMUX(breaker_pins, oc_ot_reset);
+    SET_PINMUX(breaker_pins, ocp_otp_reset);
     SET_PINMUX(breaker_pins, on_off_status);
-    SET_PINMUX(breaker_pins, oc_test_tr_n);
-    SET_PINMUX(breaker_pins, oc_test_tr_p);
-    SET_PINMUX(breaker_pins, oc_test_adj_pwm);
+    SET_PINMUX(breaker_pins, ocp_test_tr_n);
+    SET_PINMUX(breaker_pins, ocp_test_tr_p);
+    SET_PINMUX(breaker_pins, ocp_test_adj_pwm);
 
     SET_PINMUX(breaker_pins, v_mains);
     SET_PINMUX(breaker_pins, i_low_gain);
@@ -57,8 +57,8 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     SET_PINMUX(breaker_pins, hw_rev_out);
     SET_PINMUX(breaker_pins, hw_rev_ctrl);
     SET_PINMUX(breaker_pins, on_off_status_m);
-    SET_PINMUX(breaker_pins, oc_test_tr_n_m);
-    SET_PINMUX(breaker_pins, oc_test_tr_p_m);
+    SET_PINMUX(breaker_pins, ocp_test_tr_n_m);
+    SET_PINMUX(breaker_pins, ocp_test_tr_p_m);
     SET_PINMUX(breaker_pins, i_low_gain_cmp0_in0);
     SET_PINMUX(breaker_pins, i_high_gain_cmp0_in1);
     SET_PINMUX(breaker_pins, ref_1v5_cmp1_in1);

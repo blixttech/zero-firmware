@@ -87,11 +87,11 @@
                         <&portc 15 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_GREEN */
                         <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
                         <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
-                        <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_OT_RESET */
+                        <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OCP_OTP_RESET */
                         <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS */
-                        <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N */
-                        <&portd 7  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P */
-                        <&portb 18 PORT_PCR_MUX(PORT_PCR_MUX_ALT3)>,    /* OC_TEST_ADJ_PWM */
+                        <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OCP_TEST_TR_N */
+                        <&portd 7  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OCP_TEST_TR_P */
+                        <&portb 18 PORT_PCR_MUX(PORT_PCR_MUX_ALT3)>,    /* OCP_TEST_ADJ_PWM */
                         <&portc 2  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* V_MAINS */
                         <&portc 0  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN */
                         <&portc 1  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN */
@@ -103,8 +103,8 @@
                         <&portc 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_OUT */
                         <&portb 11 PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* HW_REV_CTRL */
                         <&portd 1  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS_M (mirrored) */
-                        <&portd 2  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OC_TEST_TR_N_M (mirrored) */
-                        <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OC_TEST_TR_P_M (mirrored) */
+                        <&portd 2  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OCP_TEST_TR_N_M (mirrored) */
+                        <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OCP_TEST_TR_P_M (mirrored) */
                         <&portc 6  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN_CMP0_IN0 */
                         <&portc 7  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN_CMP0_IN1 */
                         <&portc 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>;    /* REF_1V5_CMP1_IN1 */
@@ -112,11 +112,11 @@
                             "LED_GREEN",
                             "SW_FRONT",
                             "ON_OFF",
-                            "OC_OT_RESET",
+                            "OCP_OTP_RESET",
                             "ON_OFF_STATUS",
-                            "OC_TEST_TR_N",
-                            "OC_TEST_TR_P",
-                            "OC_TEST_ADJ_PWM",
+                            "OCP_TEST_TR_N",
+                            "OCP_TEST_TR_P",
+                            "OCP_TEST_ADJ_PWM",
                             "V_MAINS",
                             "I_LOW_GAIN",
                             "I_HIGH_GAIN",
@@ -128,8 +128,8 @@
                             "HW_REV_OUT",
                             "HW_REV_CTRL",
                             "ON_OFF_STATUS_M",
-                            "OC_TEST_TR_N_M",
-                            "OC_TEST_TR_P_M",
+                            "OCP_TEST_TR_N_M",
+                            "OCP_TEST_TR_P_M",
                             "I_LOW_GAIN_CMP0_IN0",
                             "I_HIGH_GAIN_CMP0_IN1",
                             "REF_1V5_CMP1_IN1";
@@ -169,20 +169,20 @@
                         <&gpiod 6  GPIO_ACTIVE_HIGH>,
                         <&gpiod 7  GPIO_ACTIVE_HIGH>;
                 gpio-names =    "ON_OFF", 
-                                "OC_OT_RESET",
+                                "OCP_OTP_RESET",
                                 "ON_OFF_STATUS",
-                                "OC_TEST_TR_N",
-                                "OC_TEST_TR_P";
+                                "OCP_TEST_TR_N",
+                                "OCP_TEST_TR_P";
                 label = "DCTRL_IO";
             };
 
             actrl: actrl {
                 compatible = "blixt,breaker-dac";
                 io-channels =  <&dac0 0>;
-                io-channel-names = "OC_LIMIT_ADJ";
+                io-channel-names = "OCP_LIMIT_ADJ";
                 /* FTM based PWM driver uses Fixed Frequency Clock of 1.5625 MHz without prescaling. */
                 pwms = <&ftm2 0 77 0>; /* FTM2_CH0, ~20khz */
-                pwm-names = "OC_TEST_ADJ";
+                pwm-names = "OCP_TEST_ADJ";
                 label = "ANALOG_CTRL";
             };
 
@@ -194,8 +194,8 @@
                                     <&ftm3 3 IC_EDGE_SINGLE_RISING>;
                 input-capture-names =   "ON_OFF_STATUS_R",  /* capturing the rising edge */
                                         "ON_OFF_STATUS_F",  /* capturing the falling edge */
-                                        "OC_TEST_TR_N",     /* only rising edge */
-                                        "OC_TEST_TR_P";     /* only rising edge */
+                                        "OCP_TEST_TR_N",     /* only rising edge */
+                                        "OCP_TEST_TR_P";     /* only rising edge */
                 label = "INPUT_TIMESTAMP";
             };
 

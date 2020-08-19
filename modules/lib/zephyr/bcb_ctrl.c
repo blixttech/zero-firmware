@@ -75,20 +75,20 @@ LOG_MODULE_REGISTER(bcb_ctrl);
 #define BCB_IC_ONOFF_TICKS_GUARD                            100 
 
 /* ---------------- Overcurrent protection test related macros ---------------- */
-#define BCB_OTA_PWM_DEV(ch_name)            (bcb_ctrl_data.pwm_##ch_name)
+#define BCB_OCPT_ADJ_PWM_DEV(ch_name)            (bcb_ctrl_data.pwm_##ch_name)
 
-#define BCB_INIT_OTA_PWM(dt_nlabel, ch_name)                                                                \
-    do {                                                                                                    \
-        BCB_OTA_PWM_DEV(ch_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_nlabel),  \
-                                                                pwms, ch_name)));                           \
-        if (BCB_OTA_PWM_DEV(ch_name) == NULL) {                                                             \
-            LOG_ERR("Could not get PWM device");                                                            \
-            return -EINVAL;                                                                                 \
-        }                                                                                                   \
+#define BCB_INIT_OCPT_ADJ_PWM(dt_nlabel, ch_name)                                                               \
+    do {                                                                                                        \
+        BCB_OCPT_ADJ_PWM_DEV(ch_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_nlabel), \
+                                                                pwms, ch_name)));                               \
+        if (BCB_OCPT_ADJ_PWM_DEV(ch_name) == NULL) {                                                            \
+            LOG_ERR("Could not get PWM device");                                                                \
+            return -EINVAL;                                                                                     \
+        }                                                                                                       \
     } while(0)
 
-#define BCB_SET_OTA_PWM(dt_nlabel, ch_name, dcycle)                                                     \
-    pwm_pin_set_cycles(BCB_OTA_PWM_DEV(ch_name),                                                        \
+#define BCB_SET_OCPT_ADJ_PWM(dt_nlabel, ch_name, dcycle)                                                \
+    pwm_pin_set_cycles(BCB_OCPT_ADJ_PWM_DEV(ch_name),                                                   \
                     DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), pwms, ch_name, channel),                    \
                     DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), pwms, ch_name, period),                     \
                     (DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), pwms, ch_name, period)*(dcycle)/100),      \
@@ -96,15 +96,15 @@ LOG_MODULE_REGISTER(bcb_ctrl);
 
 struct bcb_ctrl_data {
     struct device*  port_on_off;
-    struct device*  port_oc_ot_reset;
+    struct device*  port_ocp_otp_reset;
     struct device*  port_on_off_status;
-    struct device*  port_oc_test_tr_n;
-    struct device*  port_oc_test_tr_p;
+    struct device*  port_ocp_test_tr_n;
+    struct device*  port_ocp_test_tr_p;
     struct device*  ic_on_off_status_r;
     struct device*  ic_on_off_status_f;
-    struct device*  ic_oc_test_tr_n;
-    struct device*  ic_oc_test_tr_p;
-    struct device*  pwm_oc_test_adj;
+    struct device*  ic_ocp_test_tr_n;
+    struct device*  ic_ocp_test_tr_p;
+    struct device*  pwm_ocp_test_adj;
     bcb_ocp_callback_t ocp_callback;
     bcb_otp_callback_t otp_callback;
     bcb_ocpt_callback_t ocpt_callback;
@@ -163,9 +163,9 @@ static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, 
                     /* Read the timestamps when the OCP test has been started. */
                     uint32_t ocpt_start;
                     if (bcb_ctrl_data.ocpt_direction == BCB_OCP_TEST_TGR_DIR_P) {
-                        ocpt_start = BCB_GET_IC_VALUE(itimestamp, oc_test_tr_p);
+                        ocpt_start = BCB_GET_IC_VALUE(itimestamp, ocp_test_tr_p);
                     } else {
-                        ocpt_start = BCB_GET_IC_VALUE(itimestamp, oc_test_tr_n);
+                        ocpt_start = BCB_GET_IC_VALUE(itimestamp, ocp_test_tr_n);
                     }
                     uint32_t ocpt_duration = (ic_off < ocpt_start) 
                                                 ? ((uint32_t)UINT16_MAX - ocpt_start + ic_off) 
@@ -190,14 +190,14 @@ static int bcb_ctrl_init()
     BCB_INIT_GPIO_PIN(dctrl, on_off, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
     BCB_SET_GPIO_PIN(dctrl, on_off, 0);
 
-    BCB_INIT_GPIO_PIN(dctrl, oc_ot_reset, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
-    BCB_SET_GPIO_PIN(dctrl, oc_ot_reset, 0);
+    BCB_INIT_GPIO_PIN(dctrl, ocp_otp_reset, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
+    BCB_SET_GPIO_PIN(dctrl, ocp_otp_reset, 0);
 
-    BCB_INIT_GPIO_PIN(dctrl, oc_test_tr_n, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
-    BCB_SET_GPIO_PIN(dctrl, oc_test_tr_n, 0);
+    BCB_INIT_GPIO_PIN(dctrl, ocp_test_tr_n, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
+    BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_n, 0);
 
-    BCB_INIT_GPIO_PIN(dctrl, oc_test_tr_p, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
-    BCB_SET_GPIO_PIN(dctrl, oc_test_tr_p, 0);
+    BCB_INIT_GPIO_PIN(dctrl, ocp_test_tr_p, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
+    BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_p, 0);
 
     BCB_INIT_GPIO_PIN(dctrl, on_off_status, GPIO_INPUT);
 
@@ -217,15 +217,15 @@ static int bcb_ctrl_init()
     BCB_SET_IC_CHANNEL(itimestamp, on_off_status_f);
 
     /* Configure overcurrent test timestamping */
-    BCB_INIT_IC(itimestamp, oc_test_tr_n);
-    BCB_SET_IC_CHANNEL(itimestamp, oc_test_tr_n);
+    BCB_INIT_IC(itimestamp, ocp_test_tr_n);
+    BCB_SET_IC_CHANNEL(itimestamp, ocp_test_tr_n);
 
-    BCB_INIT_IC(itimestamp, oc_test_tr_p);
-    BCB_SET_IC_CHANNEL(itimestamp, oc_test_tr_p);
+    BCB_INIT_IC(itimestamp, ocp_test_tr_p);
+    BCB_SET_IC_CHANNEL(itimestamp, ocp_test_tr_p);
 
     /* Configure overcurrent protection test system */
-    BCB_INIT_OTA_PWM(actrl, oc_test_adj);
-    BCB_SET_OTA_PWM(actrl, oc_test_adj, 90);
+    BCB_INIT_OCPT_ADJ_PWM(actrl, ocp_test_adj);
+    BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 90);
 
     return 0;
 }
@@ -257,9 +257,9 @@ int bcb_is_on()
 int bcb_reset()
 {
     /* Generate a positive edge for the D flip-flop. */
-    BCB_SET_GPIO_PIN(dctrl, oc_ot_reset, 0);
-    BCB_SET_GPIO_PIN(dctrl, oc_ot_reset, 1);
-    BCB_SET_GPIO_PIN(dctrl, oc_ot_reset, 0);
+    BCB_SET_GPIO_PIN(dctrl, ocp_otp_reset, 0);
+    BCB_SET_GPIO_PIN(dctrl, ocp_otp_reset, 1);
+    BCB_SET_GPIO_PIN(dctrl, ocp_otp_reset, 0);
     return 0;
 }
 
@@ -301,9 +301,9 @@ int bcb_ocp_test_trigger(int direction, bool enable)
         }
 
         if (direction == BCB_OCP_TEST_TGR_DIR_P) {
-            BCB_SET_GPIO_PIN(dctrl, oc_test_tr_p, 1);
+            BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_p, 1);
         } else if (direction == BCB_OCP_TEST_TGR_DIR_N) {
-            BCB_SET_GPIO_PIN(dctrl, oc_test_tr_n, 1);
+            BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_n, 1);
         } else {
             return -1;
         }
@@ -312,8 +312,8 @@ int bcb_ocp_test_trigger(int direction, bool enable)
 
     } else {
         /* OCP test can be done only one direction at a time. So disable both anyway. */
-        BCB_SET_GPIO_PIN(dctrl, oc_test_tr_p, 0);
-        BCB_SET_GPIO_PIN(dctrl, oc_test_tr_n, 0);
+        BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_p, 0);
+        BCB_SET_GPIO_PIN(dctrl, ocp_test_tr_n, 0);
         bcb_ctrl_data.ocpt_active = false;
     }
 
