@@ -17,9 +17,9 @@
 LOG_MODULE_REGISTER(app);
 
 
-static void on_ocp(int32_t duration)
+static void on_ocp(uint64_t duration)
 {
-	printk("\nOn OCP: duration %d\n", duration);
+	printk("\nOn OCP: duration %"PRIu64"\n", duration);
 }
 
 static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)

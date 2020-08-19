@@ -1,0 +1,15 @@
+config BCB_LIB_ETIME_INIT_PRIORITY
+    int "BCB elapsed time timer initialisation priority"
+    default 50
+
+config BCB_LIB_CTRL_INIT_PRIORITY
+    int "BCB control initialisation priority"
+    default 51
+
+config BCB_LIB_ETIME_SECOND
+    int "Number of ticks for one second of the elapsed time timer"
+    default 7500000
+
+config BCB_LIB_IC_ONOFF_SECOND
+    int "Number of ticks for one second of the on/off input capture timer"
+    default 7500000

@@ -20,6 +20,8 @@ LOG_MODULE_REGISTER(counter_ctd_mcux_pit);
 
 struct counter_ctd_mcux_pit_config {
     PIT_Type* base;
+    char* clock_name;
+    clock_control_subsys_t clock_subsys;
     bool enable_in_debug;
 };
 
@@ -31,7 +33,6 @@ struct counter_ctd_alarm_data {
 };
 
 struct counter_ctd_mcux_pit_data {
-    u32_t  freq;
     struct counter_ctd_alarm_data alarm_data[MAX_CHANNELS];
 };
 
@@ -145,6 +146,25 @@ static int counter_ctd_mcux_pit_cancel_alarm(struct device* dev, u8_t chan_id)
     return 0;
 }
 
+static u32_t counter_ctd_mcux_pit_get_frequency(struct device* dev)
+{
+    const struct counter_ctd_mcux_pit_config* config = dev->config_info;
+    struct device *clock_dev;
+    u32_t clock_freq = 0;
+
+    clock_dev = device_get_binding(config->clock_name);
+    if (clock_dev == NULL) {
+        LOG_ERR("Could not get clock device");
+        return 0;
+    }
+
+    if (clock_control_get_rate(clock_dev, config->clock_subsys, &clock_freq)) {
+        LOG_ERR("Could not get clock frequency");
+        return 0;
+    }
+
+    return clock_freq;
+}
 
 int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool enable)
 {
@@ -173,6 +193,8 @@ int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool ena
 #define COUNTER_CTD_MCUX_PIT_DEVICE(n)                                                      \
     static struct counter_ctd_mcux_pit_config mcux_pit_config_##n = {                       \
         .base = (PIT_Type *)DT_INST_REG_ADDR(n),                                            \
+        .clock_name = DT_INST_CLOCKS_LABEL(n),                                              \
+        .clock_subsys = (clock_control_subsys_t)DT_INST_CLOCKS_CELL(n, name),               \
         .enable_in_debug = true,                                                            \
     };                                                                                      \
                                                                                             \
@@ -200,6 +222,7 @@ int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool ena
         .get_top_value = counter_ctd_mcux_pit_get_top_value,                                \
         .set_alarm = counter_ctd_mcux_pit_set_alarm,                                        \
         .cancel_alarm = counter_ctd_mcux_pit_cancel_alarm,                                  \
+        .get_frequency = counter_ctd_mcux_pit_get_frequency,                                \
     };                                                                                      \
                                                                                             \
     DEVICE_AND_API_INIT(counter_ctd_mcux_pit_##n,                                           \

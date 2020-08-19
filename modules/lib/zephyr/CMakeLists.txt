@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 set(breaker_lib_sources
+    bcb_etime.c
     bcb_ctrl.c
 )
 

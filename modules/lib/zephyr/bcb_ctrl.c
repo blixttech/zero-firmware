@@ -1,58 +1,77 @@
 #include <bcb_ctrl.h>
+#include <bcb_etime.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
 #include <drivers/input_capture.h>
 
-/**
- * @def BCB_OCP_TEST_TGR_DIR_P
- * Overcurrent protection test current direction positive. 
- * 
- * @def BCB_OCP_TEST_TGR_DIR_N
- * Overcurrent protection test current direction negative. 
- */
+#define LOG_LEVEL CONFIG_BCB_LIB_CTRL_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(bcb_ctrl);
+
+/* ---------------- GPIO related macros ---------------- */
 
 #define BCB_GPIO_DEV(pin_name)      (bcb_ctrl_data.port_##pin_name)
 
-#define BCB_INIT_GPIO_PIN(dt_label, pin_name, pin_flags)                                                \
+#define BCB_INIT_GPIO_PIN(dt_nlabel, pin_name, pin_flags)                                               \
     do {                                                                                                \
-        BCB_GPIO_DEV(pin_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_label), \
+        BCB_GPIO_DEV(pin_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_nlabel),\
                                                                 gpios, pin_name)));                     \
-        if (BCB_GPIO_DEV(pin_name) != NULL) {                                                           \
-            gpio_pin_configure(BCB_GPIO_DEV(pin_name),                                                  \
-                                DT_PHA_BY_NAME(DT_NODELABEL(dt_label), gpios, pin_name, pin),           \
-                                (pin_flags));                                                           \
+        if (BCB_GPIO_DEV(pin_name) == NULL) {                                                           \
+            LOG_ERR("Could not get GPIO device");                                                       \
+            return -EINVAL;                                                                             \
         }                                                                                               \
+        gpio_pin_configure(BCB_GPIO_DEV(pin_name),                                                      \
+                            DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), gpios, pin_name, pin),              \
+                            (pin_flags));                                                               \
     } while(0)                                                                              
 
-#define BCB_SET_GPIO_PIN(dt_label, pin_name, value)                                 \
+#define BCB_SET_GPIO_PIN(dt_nlabel, pin_name, value)                                \
     gpio_pin_set_raw(BCB_GPIO_DEV(pin_name),                                        \
-                    DT_PHA_BY_NAME(DT_NODELABEL(dt_label), gpios, pin_name, pin),   \
+                    DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), gpios, pin_name, pin),  \
                     (value))                     
 
-#define BCB_GET_GPIO_PIN(dt_label, pin_name)                                        \
+#define BCB_GET_GPIO_PIN(dt_nlabel, pin_name)                                       \
     gpio_pin_get_raw(BCB_GPIO_DEV(pin_name),                                        \
-                    DT_PHA_BY_NAME(DT_NODELABEL(dt_label), gpios, pin_name, pin))
+                    DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), gpios, pin_name, pin))
 
 
+/* ---------------- Input capture related macros ---------------- */
 #define BCB_IC_DEV(ch_name)         (bcb_ctrl_data.ic_##ch_name)
 
-#define BCB_INIT_IC(dt_label, ch_name)                                                                  \
+#define BCB_INIT_IC(dt_nlabel, ch_name)                                                                 \
     do {                                                                                                \
-        BCB_IC_DEV(ch_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_label),    \
+        BCB_IC_DEV(ch_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_nlabel),   \
                                                                 input_captures, ch_name)));             \
+        if (BCB_IC_DEV(ch_name) == NULL) {                                                              \
+            LOG_ERR("Could not get IC device");                                                         \
+            return -EINVAL;                                                                             \
+        }                                                                                               \
     } while(0)
 
-#define BCB_SET_IC_CHANNEL(dt_label, ch_name)                                                           \
+#define BCB_SET_IC_CHANNEL(dt_nlabel, ch_name)                                                          \
     input_capture_set_channel(BCB_IC_DEV(ch_name),                                                      \
-                            DT_PHA_BY_NAME(DT_NODELABEL(dt_label), input_captures, ch_name, channel),   \
-                            DT_PHA_BY_NAME(DT_NODELABEL(dt_label), input_captures, ch_name, edge))
+                            DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), input_captures, ch_name, channel),  \
+                            DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), input_captures, ch_name, edge))
 
-#define BCB_GET_IC_VALUE(dt_label, ch_name)                                                             \
+#define BCB_GET_IC_VALUE(dt_nlabel, ch_name)                                                            \
     input_capture_get_value(BCB_IC_DEV(ch_name),                                                        \
-                            DT_PHA_BY_NAME(DT_NODELABEL(dt_label), input_captures, ch_name, channel))
+                            DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), input_captures, ch_name, channel))
 
 #define BCB_GET_IC_COUNTER(ch_name)     input_capture_get_counter(BCB_IC_DEV(ch_name))
+
+/* ---------------- On/off event timestamping related macros ---------------- */
+
+#if (CONFIG_BCB_LIB_ETIME_SECOND != CONFIG_BCB_LIB_IC_ONOFF_SECOND)
+#warning  BCB_LIB_ETIME_SECOND != BCB_LIB_IC_ONOFF_SECOND
+#define BCB_IC_ONOFF_ETIME_COMP_HT(ic_ticks, etime_ticks)   (((ic_ticks) * CONFIG_BCB_LIB_ETIME_SECOND) > ((etime_ticks) * CONFIG_BCB_LIB_IC_ONOFF_SECOND))
+#define BCB_ETIME_TICKS_TO_IC_ONOFF(etime_ticks)            ((etime_ticks) * CONFIG_BCB_LIB_IC_ONOFF_SECOND / CONFIG_BCB_LIB_ETIME_SECOND)
+#else
+#define BCB_IC_ONOFF_ETIME_COMP_HT(ic_ticks, etime_ticks)   ((ic_ticks) > (etime_ticks))
+#define BCB_ETIME_TICKS_TO_IC_ONOFF(etime_ticks)            (etime_ticks)
+#endif
+
+#define BCB_IC_ONOFF_TICKS_GUARD                            100 
 
 struct bcb_ctrl_data {
     struct device*  port_on_off;
@@ -66,27 +85,56 @@ struct bcb_ctrl_data {
     struct device*  ic_oc_test_tr_p;
     bcb_ocp_callback_t ocp_callback;
     bcb_otp_callback_t otp_callback;
+    volatile uint64_t etime_on;
 };
 
 struct bcb_ctrl_data bcb_ctrl_data;
 static struct gpio_callback on_off_cb_data;
 
-static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, u32_t pins)
+static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, uint32_t pins)
 {
+    /* Timer used for capturing of/off status (FTM) is 16-bit.
+     * Therefore, we cannot measure time durations longer than (2^16)*ftm_tick_time.
+     * Due to this limitation, we use the elapsed time timer (PIT) which is 64-bit to measure 
+     * longer durations than (2^16)*ftm_tick_time.
+     * To be most accurate, we have to read the elapsed time before doing anything else.
+     */
+    uint64_t etime_now = bcb_etime_get_now();
+    uint32_t ic_on = BCB_GET_IC_VALUE(itimestamp, on_off_status_r);
+    uint32_t ic_off = BCB_GET_IC_VALUE(itimestamp, on_off_status_f);
     int on_off_status = BCB_GET_GPIO_PIN(dctrl, on_off_status);
     int on_off = BCB_GET_GPIO_PIN(dctrl, on_off);
+    uint64_t onoff_duration = 0;
 
-    u32_t c = BCB_GET_IC_COUNTER(on_off_status_r);
-    u32_t c0 = BCB_GET_IC_VALUE(itimestamp, on_off_status_r);
-    u32_t c1 = BCB_GET_IC_VALUE(itimestamp, on_off_status_f);
+    if (on_off_status) {
+        /* ON event */
+        bcb_ctrl_data.etime_on = etime_now;
+    } else {
+        /* OFF event */
 
-    printk("\non_off_status_changed: status %d, on_off %d, c %d, c0 %d, c1 %d\n", on_off_status, on_off, c, c0, c1);
+        /* Calculate time duration between ON and OFF events. */
+        onoff_duration = etime_now - bcb_ctrl_data.etime_on;
+        if (BCB_IC_ONOFF_ETIME_COMP_HT((uint64_t)(UINT16_MAX-BCB_IC_ONOFF_TICKS_GUARD), onoff_duration)) {
+            /* We can use the input capture timer to measure the duration between ON and OFF events
+             * more accurately.
+             */
+            onoff_duration = (ic_off < ic_on) ? ((uint32_t)UINT16_MAX - ic_on + ic_off) : (ic_off - ic_on);
+        } else {
+            /* Duration between ON event and OFF event is higher than what can be measured with the
+             * input capture timer.
+             */
+            onoff_duration = BCB_ETIME_TICKS_TO_IC_ONOFF(onoff_duration);
+        }
 
-    if (on_off == 1 && on_off_status == 0) {
-        /* OCP or OTP has been triggered. */
-        /* TODO: Check the MOSFET temperature to see if the OTP is triggered. */
-        if (bcb_ctrl_data.ocp_callback) {
-            bcb_ctrl_data.ocp_callback(0);
+        if (on_off) {
+            /* OFF event happened while the ON signal is still active.
+             * Something caused the main switch to go off. 
+             * For example, an inrush current situation or MOSFET over temperature situation. 
+             */
+            /* TODO: Check the MOSFET temperature to see if the OTP is triggered. */
+            if (bcb_ctrl_data.ocp_callback) {
+                bcb_ctrl_data.ocp_callback(onoff_duration);
+            }
         }
     }
 }
@@ -132,62 +180,30 @@ static int bcb_ctrl_init()
     return 0;
 }
 
-/**
- * @brief Turn on the breaker.
- * 
- * If the breaker is already on, this function simply returns 0.
- * Inside this function, a reset for the overcurrent and overtemperature protection 
- * is done before the actual turn on happens. @sa bcb_reset()
- * 
- * @return 0 if successful.  
- */
 int bcb_on()
 {
     if (bcb_is_on()) {
         return 0;
     }
-    /*  We need to reset before tuning on since overcurrent/overtemperature may have been
-        triggered already.
+    /* We need to reset before tuning on since overcurrent/overtemperature may have been
+     * triggered already.
      */
     bcb_reset();
-    /* TODO: Configure FTM3-CH0 in dual capture mode and start FTM3 1 MHz.  */
     BCB_SET_GPIO_PIN(dctrl, on_off, 1);
     return 0;
 }
 
-/**
- * @brief Turn off the breaker.
- * 
- * @return 0 if successful. 
- */
 int bcb_off()
 {
     BCB_SET_GPIO_PIN(dctrl, on_off, 0);
     return 0;
 }
 
-/**
- * @brief Check if the breaker is turned on.
- * 
- * @return 1 if the breaker is turned on.
- */
 int bcb_is_on()
 {
     return BCB_GET_GPIO_PIN(dctrl, on_off_status) == 1;
 }
 
-/**
- * @brief Reset the overcurrent and the overtemperature protection.
- * 
- * If the overcurrent or the overtemperature protection is already triggered,
- * this function can be used to reset the trigger status.
- * Note that this fuction does not turn off the breaker. 
- * The breaker will be turned on again if this function is called just after the   
- * overcurrent or the overtemperature protection triggered.
- * If the breaker needs to be turned off, call @sa bcb_off() explicitly. 
- * 
- * @return Only for future use. Can be ignored. 
- */
 int bcb_reset()
 {
     /* Generate a positive edge for the D flip-flop. */
@@ -197,54 +213,28 @@ int bcb_reset()
     return 0;
 }
 
-/**
- * @brief Set the overcurrent protection limit.
- * 
- * @param i_ma Current limit in milliamperes.
- * @return 0 if successfull. 
- */
 int bcb_set_ocp_limit(uint32_t i_ma)
 {
     return 0;
 }
 
-/**
- * @brief Set the callback function for overcurrent protection trigger.
- * 
- * @param callback A valid handler function pointer.
- */
+
 void bcb_set_ocp_callback(bcb_ocp_callback_t callback)
 {
     bcb_ctrl_data.ocp_callback = callback;
 }
 
-/**
- * @brief Set the callback function for overtemperature protection trigger.
- * 
- * @param callback A valid handler function pointer.
- */
+
 void bcb_set_otp_callback(bcb_otp_callback_t callback)
 {
     bcb_ctrl_data.otp_callback = callback;
 }
 
-/**
- * @brief Set the test current used for overcurrent protection test.
- * 
- * @param i_ma The current in milliamperes.
- * @return 0 if successfull. 
- */
 int bcb_ocp_set_test_current(uint32_t i_ma)
 {
     return 0;
 }
 
-/**
- * @brief Trigger the overcurrent protection test.
- * 
- * @param direction The direction of the current flow
- * @return 0 if the function id called with correct parameters.
- */
 int bcb_ocp_test_trigger(int direction)
 {
     if (direction == BCB_OCP_TEST_TGR_DIR_P) {
@@ -262,5 +252,4 @@ int bcb_ocp_test_trigger(int direction)
     return 0;
 }
 
-#define BCB_CTRL_INIT_PRIORITY    50
-SYS_INIT(bcb_ctrl_init, APPLICATION, BCB_CTRL_INIT_PRIORITY);
+SYS_INIT(bcb_ctrl_init, APPLICATION, CONFIG_BCB_LIB_CTRL_INIT_PRIORITY);

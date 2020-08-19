@@ -3,7 +3,7 @@
 
 description: NXP MCUX Periodic Interrupt Timer (PIT)
 
-compatible: "nxp,kinetis-pit"
+compatible: "nxp,kinetis-pit-ctd-counter"
 
 include: base.yaml
 
