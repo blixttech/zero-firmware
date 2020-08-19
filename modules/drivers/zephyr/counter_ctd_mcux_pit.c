@@ -177,7 +177,7 @@ int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool ena
     const struct counter_ctd_mcux_pit_config* config = dev->config_info;
     PIT_SetTimerChainMode(config->base, chan_id, enable);
 
-	return 0;
+    return 0;
 }
 
 #define MCUX_PIT_INIT_IRQ(n, channel)                                           \

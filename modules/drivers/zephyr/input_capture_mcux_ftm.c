@@ -18,18 +18,18 @@ LOG_MODULE_REGISTER(input_capture_mcux_ftm);
 #define MAX_CHANNELS    ARRAY_SIZE(FTM0->CONTROLS)
 
 struct ic_mcux_ftm_config {
-	FTM_Type* base;
-	char* clock_name;
-	clock_control_subsys_t clock_subsys;
-	ftm_clock_source_t ftm_clock_source;
-	ftm_clock_prescale_t prescale;
-	u8_t channel_count;
+    FTM_Type* base;
+    char* clock_name;
+    clock_control_subsys_t clock_subsys;
+    ftm_clock_source_t ftm_clock_source;
+    ftm_clock_prescale_t prescale;
+    u8_t channel_count;
 };
 
 struct ic_mcux_ftm_data {
     bool started;
     u32_t ticks_per_sec;
-	u32_t edge[MAX_CHANNELS];
+    u32_t edge[MAX_CHANNELS];
 };
 
 #if 0
@@ -130,9 +130,9 @@ static u32_t ic_mcux_ftm_get_value(struct device* dev, u32_t channel)
 static int ic_mcux_ftm_init(struct device* dev)
 {
     const struct ic_mcux_ftm_config* config = dev->config_info;
-	struct ic_mcux_ftm_data* data = dev->driver_data;
-	struct device* clock_dev;
-	ftm_config_t ftm_config;
+    struct ic_mcux_ftm_data* data = dev->driver_data;
+    struct device* clock_dev;
+    ftm_config_t ftm_config;
     u32_t clock_freq;
     int i;
 
@@ -143,16 +143,16 @@ static int ic_mcux_ftm_init(struct device* dev)
         return -EINVAL;
     }
 
-	clock_dev = device_get_binding(config->clock_name);
+    clock_dev = device_get_binding(config->clock_name);
     if (clock_dev == NULL) {
         LOG_ERR("Could not get clock device");
         return -EINVAL;
     }
 
-	if (clock_control_get_rate(clock_dev, config->clock_subsys, &clock_freq)) {
+    if (clock_control_get_rate(clock_dev, config->clock_subsys, &clock_freq)) {
         LOG_ERR("Could not get clock frequency");
         return -EINVAL;
-	}
+    }
 
     data->ticks_per_sec = clock_freq >> config->prescale;
 
@@ -176,7 +176,7 @@ static int ic_mcux_ftm_init(struct device* dev)
     irq_enable(DT_IRQ(DT_NODELABEL(ftm3), irq));
 #endif
 
-	return 0;
+    return 0;
 }
 
 static const struct input_capture_driver_api ic_mcux_ftm_driver_api = {

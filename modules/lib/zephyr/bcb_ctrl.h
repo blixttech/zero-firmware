@@ -13,13 +13,13 @@ extern "C" {
  * @def BCB_OCP_TEST_TGR_DIR_P
  * Overcurrent protection test current direction positive.  
  */
-#define	BCB_OCP_TEST_TGR_DIR_P	0
+#define BCB_OCP_TEST_TGR_DIR_P    0
 /**
  * @def BCB_OCP_TEST_TGR_DIR_N
  * Overcurrent protection test current direction negative. 
  */
 
-#define	BCB_OCP_TEST_TGR_DIR_N	1
+#define BCB_OCP_TEST_TGR_DIR_N    1
 
 /**
  * @brief Convert ON/OFF duration time ticks to microseconds

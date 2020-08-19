@@ -46,7 +46,7 @@ typedef u32_t (*input_capture_get_value_t)(struct device *dev, u32_t channel);
 
 /** @brief Input Capture driver API definition. */
 __subsystem struct input_capture_driver_api {
-	input_capture_get_counter_t get_counter;
+    input_capture_get_counter_t get_counter;
     input_capture_set_channel_t set_channel;
     input_capture_get_value_t get_value;
 };
@@ -59,10 +59,10 @@ __subsystem struct input_capture_driver_api {
 __syscall u32_t input_capture_get_counter(struct device* dev);
 static inline u32_t z_impl_input_capture_get_counter(struct device* dev)
 {
-	struct input_capture_driver_api *api;
+    struct input_capture_driver_api *api;
 
-	api = (struct input_capture_driver_api *)dev->driver_api;
-	return api->get_counter(dev);
+    api = (struct input_capture_driver_api *)dev->driver_api;
+    return api->get_counter(dev);
 }
 
 /**
@@ -75,10 +75,10 @@ static inline u32_t z_impl_input_capture_get_counter(struct device* dev)
 __syscall int input_capture_set_channel(struct device* dev, u32_t channel, u32_t edge);
 static inline int z_impl_input_capture_set_channel(struct device* dev, u32_t channel, u32_t edge)
 {
-	struct input_capture_driver_api *api;
+    struct input_capture_driver_api *api;
 
-	api = (struct input_capture_driver_api *)dev->driver_api;
-	return api->set_channel(dev, channel, edge);
+    api = (struct input_capture_driver_api *)dev->driver_api;
+    return api->set_channel(dev, channel, edge);
 }
 
 /**
@@ -90,10 +90,10 @@ static inline int z_impl_input_capture_set_channel(struct device* dev, u32_t cha
 __syscall u32_t input_capture_get_value(struct device* dev, u32_t channel);
 static inline u32_t z_impl_input_capture_get_value(struct device* dev, u32_t channel)
 {
-	struct input_capture_driver_api *api;
+    struct input_capture_driver_api *api;
 
-	api = (struct input_capture_driver_api *)dev->driver_api;
-	return api->get_value(dev, channel);
+    api = (struct input_capture_driver_api *)dev->driver_api;
+    return api->get_value(dev, channel);
 }
 
 #ifdef __cplusplus

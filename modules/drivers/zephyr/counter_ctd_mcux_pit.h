@@ -25,7 +25,7 @@ extern "C" {
  * @brief Enable chaining a counter in the Down Counter Array.
  * 
  * @param[in] dev           A pointer to the device structure for the driver instance. 
- * @param[in] chan_id    	Channel ID.
+ * @param[in] chan_id       Channel ID.
  * @param[in] enable        True if the counter needs to be chained.
  * @retval 0 If successful.  
  */
