@@ -8,6 +8,7 @@ if BOARD_BCB_V1
 config BOARD
     default "bcb_v1"
 
+# This 50 MHz coming from the reference clock output of the Ethernet PHY 
 config OSC_XTAL0_FREQ
     default 50000000
 

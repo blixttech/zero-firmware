@@ -91,6 +91,7 @@
                         <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS */
                         <&portd 6  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_N */
                         <&portd 7  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OC_TEST_TR_P */
+                        <&portb 18 PORT_PCR_MUX(PORT_PCR_MUX_ALT3)>,    /* OC_TEST_ADJ_PWM */
                         <&portc 2  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* V_MAINS */
                         <&portc 0  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN */
                         <&portc 1  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN */
@@ -115,6 +116,7 @@
                             "ON_OFF_STATUS",
                             "OC_TEST_TR_N",
                             "OC_TEST_TR_P",
+                            "OC_TEST_ADJ_PWM",
                             "V_MAINS",
                             "I_LOW_GAIN",
                             "I_HIGH_GAIN",
@@ -174,11 +176,12 @@
                 label = "DCTRL_IO";
             };
 
-            actrl {
+            actrl: actrl {
                 compatible = "blixt,breaker-dac";
                 io-channels =  <&dac0 0>;
                 io-channel-names = "OC_LIMIT_ADJ";
-                pwms = <&ftm2 0 1000 0>;
+                /* FTM based PWM driver uses Fixed Frequency Clock of 1.5625 MHz without prescaling. */
+                pwms = <&ftm2 0 77 0>; /* FTM2_CH0, ~20khz */
                 pwm-names = "OC_TEST_ADJ";
                 label = "ANALOG_CTRL";
             };
@@ -315,8 +318,13 @@
 };
 
 /* Used for OC test adjustment. */
+/* FTM based PWM driver uses Fixed Frequency Clock (MCGFFCLK)
+ * CLOCK_SetInternalRefClkConfig() call in soc.c causes the MCGFFCLK to be 1.5625 MHz (50 MHz/32)
+ * Have a look at the implementation of CLOCK_SetInternalRefClkConfig() in fsl_clock.c 
+ */
 &ftm2 {
     compatible = "nxp,kinetis-ftm-pwm";
+    prescaler = <1>;
     #pwm-cells = <3>;
     status = "okay";
 };

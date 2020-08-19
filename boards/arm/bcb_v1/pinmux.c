@@ -44,6 +44,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     SET_PINMUX(breaker_pins, on_off_status);
     SET_PINMUX(breaker_pins, oc_test_tr_n);
     SET_PINMUX(breaker_pins, oc_test_tr_p);
+    SET_PINMUX(breaker_pins, oc_test_adj_pwm);
 
     SET_PINMUX(breaker_pins, v_mains);
     SET_PINMUX(breaker_pins, i_low_gain);

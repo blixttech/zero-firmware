@@ -34,13 +34,22 @@ extern "C" {
 
 /**
  * @brief Callback function to be used when overcurrent protection is activated.
- * @param onoff_ticks   Time duration between ON and OFF events in time ticks.
+ * @param onoff_duration   Time duration between ON and OFF events in time ticks.
  */
-typedef void (*bcb_ocp_callback_t)(uint64_t onoff_ticks);
+typedef void (*bcb_ocp_callback_t)(uint64_t onoff_duration);
+
 /**
  * @brief Callback function to be used when over temperation protection is activated.
  */
 typedef void (*bcb_otp_callback_t)();
+
+/**
+ * @brief Callback function to be used when overcurrent protection test is activated.
+ * @param reponse_time  Time to trigger the OFF event from when the trigger signal is activated
+ *                      in time ticks.
+ * @param direction     Direction of the activated test.
+ */
+typedef void (*bcb_ocpt_callback_t)(uint32_t reponse_time, int direction);
 
 /**
  * @brief Turn on the breaker.
@@ -103,21 +112,31 @@ void bcb_set_ocp_callback(bcb_ocp_callback_t callback);
  */
 void bcb_set_otp_callback(bcb_otp_callback_t callback);
 
+
+/**
+ * @brief Set the callback function for overcurrent protection test trigger.
+ * 
+ * @param callback A valid handler function pointer.
+ */
+void bcb_set_ocpt_callback(bcb_ocpt_callback_t callback);
+
 /**
  * @brief Set the test current used for overcurrent protection test.
  * 
  * @param i_ma The current in milliamperes.
  * @return 0 if successfull. 
  */
-int bcb_ocp_set_test_current(uint32_t i_ma);
+int bcb_set_ocpt_current(uint32_t i_ma);
 
 /**
  * @brief Trigger the overcurrent protection test.
  * 
  * @param direction The direction of the current flow
+ * @param enable    Set to true to activate the trigger. Set false to cancel an
+ *                  already activated trigger.
  * @return 0 if the function id called with correct parameters.
  */
-int bcb_ocp_test_trigger(int direction);
+int bcb_ocp_test_trigger(int direction, bool enable);
 
 #ifdef __cplusplus
 }
