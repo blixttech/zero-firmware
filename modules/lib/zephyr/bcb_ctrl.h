@@ -136,7 +136,7 @@ int bcb_set_ocpt_current(uint32_t i_ma);
  *                  already activated trigger.
  * @return 0 if the function id called with correct parameters.
  */
-int bcb_ocp_test_trigger(int direction, bool enable);
+int bcb_ocpt_trigger(int direction, bool enable);
 
 #ifdef __cplusplus
 }

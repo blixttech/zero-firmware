@@ -156,8 +156,8 @@ static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, 
             if (bcb_ctrl_data.ocpt_active) {
                 /* OCP test is on going. */
                 /* Disable the OCP test in both directions to allow capacitor recharging. */
-                bcb_ocp_test_trigger(BCB_OCP_TEST_TGR_DIR_P, false);
-                bcb_ocp_test_trigger(BCB_OCP_TEST_TGR_DIR_N, false);
+                bcb_ocpt_trigger(BCB_OCP_TEST_TGR_DIR_P, false);
+                bcb_ocpt_trigger(BCB_OCP_TEST_TGR_DIR_N, false);
 
                 if (bcb_ctrl_data.ocpt_callback) {
                     /* Read the timestamps when the OCP test has been started. */
@@ -225,7 +225,7 @@ static int bcb_ctrl_init()
 
     /* Configure overcurrent protection test system */
     BCB_INIT_OCPT_ADJ_PWM(actrl, ocp_test_adj);
-    BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 90);
+    BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 30);
 
     return 0;
 }
@@ -245,6 +245,14 @@ int bcb_on()
 
 int bcb_off()
 {
+    if (bcb_ctrl_data.ocpt_active) {
+        /* Disable already active OCP test since there is no point of running it after the
+         * breaker is turned off.
+         */
+        bcb_ocpt_trigger(BCB_OCP_TEST_TGR_DIR_P, false);
+        bcb_ocpt_trigger(BCB_OCP_TEST_TGR_DIR_N, false);
+    }
+    
     BCB_SET_GPIO_PIN(dctrl, on_off, 0);
     return 0;
 }
@@ -292,7 +300,7 @@ int bcb_set_ocpt_current(uint32_t i_ma)
     return 0;
 }
 
-int bcb_ocp_test_trigger(int direction, bool enable)
+int bcb_ocpt_trigger(int direction, bool enable)
 {
     if (enable) {
         if (!bcb_is_on()) {

@@ -71,7 +71,7 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
         direction = BCB_OCP_TEST_TGR_DIR_P;
     }
 
-    bcb_ocp_test_trigger(direction, true);
+    bcb_ocpt_trigger(direction, true);
 
     return 0;
 }
