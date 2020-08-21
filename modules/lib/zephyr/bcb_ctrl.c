@@ -225,7 +225,7 @@ static int bcb_ctrl_init()
 
     /* Configure overcurrent protection test system */
     BCB_INIT_OCPT_ADJ_PWM(actrl, ocp_test_adj);
-    BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 30);
+    BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 50);
 
     return 0;
 }

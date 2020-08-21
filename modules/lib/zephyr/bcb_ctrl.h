@@ -33,6 +33,17 @@ extern "C" {
 #define BCB_ONOFF_US_TO_TICKS(us)        ((us) * CONFIG_BCB_LIB_IC_ONOFF_SECOND / USEC_PER_SEC)
 
 /**
+ * @brief Convert ON/OFF duration time ticks to nanoseconds
+ * @param ticks Ticks    
+ */
+#define BCB_ONOFF_TICKS_TO_NS(ticks)     ((ticks) * NSEC_PER_SEC / CONFIG_BCB_LIB_IC_ONOFF_SECOND)
+/**
+ * @brief Convert nanoseconds to ON/OFF duration time ticks
+ * @param us    Time in nanoseconds
+ */
+#define BCB_ONOFF_NS_TO_TICKS(ns)        ((ns) * CONFIG_BCB_LIB_IC_ONOFF_SECOND / NSEC_PER_SEC)
+
+/**
  * @brief Callback function to be used when overcurrent protection is activated.
  * @param onoff_duration   Time duration between ON and OFF events in time ticks.
  */

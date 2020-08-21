@@ -23,9 +23,9 @@ static void on_ocp(uint64_t duration)
 
 static void on_ocpt(uint32_t reponse_time, int direction)
 {
-    LOG_INF("[OCPT] direction %c, response time: %"PRIu32"",
+    LOG_INF("[OCPT] direction %c, response time: %"PRIu32" ns",
             (direction == BCB_OCP_TEST_TGR_DIR_P ? 'P' : 'N'),  
-            reponse_time);
+            BCB_ONOFF_TICKS_TO_NS(reponse_time));
 }
 
 static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
