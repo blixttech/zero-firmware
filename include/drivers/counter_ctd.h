@@ -3,8 +3,8 @@
  * @brief Public API header file for count down counter driver.
  */
 
-#ifndef __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD__
-#define __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD__
+#ifndef _ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_H_
+#define _ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_H_
 
 /**
  * @brief Count Down Counter Interface.
@@ -234,4 +234,4 @@ static inline u32_t z_impl_counter_ctd_get_frequency(struct device *dev)
 
 #include <syscalls/counter_ctd.h>
 
-#endif // __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD__
+#endif // _ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_H_

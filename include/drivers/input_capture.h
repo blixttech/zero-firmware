@@ -3,8 +3,8 @@
  * @brief Public API header file for input capture driver
  */
 
-#ifndef __ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE__
-#define __ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE__
+#ifndef _ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE_H_
+#define _ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE_H_
 
 /**
  * @brief Input Capture Interface
@@ -106,4 +106,4 @@ static inline u32_t z_impl_input_capture_get_value(struct device* dev, u32_t cha
 
 #include <syscalls/input_capture.h>
 
-#endif // __ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE__
+#endif // _ZEPHYR_INCLUDE_DRIVERS_INPUT_CAPTURE_H_
