@@ -3,8 +3,8 @@
  * @brief Header file for PIT specific APIs of the count down counter driver.
  */
 
-#ifndef __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT__
-#define __ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT__
+#ifndef _ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT_H_
+#define _ZEPHYR_INCLUDE_DRIVERS_COUNTER_CTD_MCUX_PIT_H_
 
 /**
  * @ingroup io_interfaces

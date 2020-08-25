@@ -1,5 +1,5 @@
-#ifndef _KINETIS_PINMUX_H_
-#define _KINETIS_PINMUX_H_
+#ifndef _ZEPHYR_INCLUDE_DT_BINDINGS_KINETIS_PINMUX_H_
+#define _ZEPHYR_INCLUDE_DT_BINDINGS_KINETIS_PINMUX_H_
 
 #define PORT_PCR_MUX_DISABLED_OR_ANALOG   0U  /*!< Corresponding pin is disabled, but is used as an analog pin. */
 #define PORT_PCR_MUX_GPIO                 1U  /*!< Corresponding pin is configured as GPIO. */
@@ -121,4 +121,4 @@
 #define PORT_PCR_COUNT                           (32U)
 
 
-#endif // _KINETIS_PINMUX_H_
+#endif // _ZEPHYR_INCLUDE_DT_BINDINGS_KINETIS_PINMUX_H_
