@@ -11,11 +11,11 @@
  * @{
  */
 
-#include <drivers/counter_ctd.h>
-#include <errno.h>
-#include <zephyr/types.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <device.h>
+#include <errno.h>
+#include <drivers/counter_ctd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ extern "C" {
  * @param[in] enable        True if the counter needs to be chained.
  * @retval 0 If successful.  
  */
-__syscall int counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool enable);
+__syscall int counter_ctd_mcux_pit_chain(struct device* dev, uint8_t chan_id, bool enable);
 
 #ifdef __cplusplus
 }

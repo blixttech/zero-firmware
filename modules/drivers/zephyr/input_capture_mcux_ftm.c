@@ -23,13 +23,13 @@ struct ic_mcux_ftm_config {
     clock_control_subsys_t clock_subsys;
     ftm_clock_source_t ftm_clock_source;
     ftm_clock_prescale_t prescale;
-    u8_t channel_count;
+    uint8_t channel_count;
 };
 
 struct ic_mcux_ftm_data {
     bool started;
-    u32_t ticks_per_sec;
-    u32_t edge[MAX_CHANNELS];
+    uint32_t ticks_per_sec;
+    uint32_t edge[MAX_CHANNELS];
 };
 
 #if 0
@@ -39,7 +39,7 @@ static void ftm3_irq_handler(void* arg)
 }
 #endif
 
-static u32_t ic_mcux_ftm_get_counter(struct device* dev)
+static uint32_t ic_mcux_ftm_get_counter(struct device* dev)
 {
     if (dev == NULL) {
         LOG_ERR("Invalid device");
@@ -50,7 +50,7 @@ static u32_t ic_mcux_ftm_get_counter(struct device* dev)
     return FTM_GetCurrentTimerCount(config->base);
 }
 
-static int ic_mcux_ftm_set_channel(struct device* dev, u32_t channel, u32_t edge)
+static int ic_mcux_ftm_set_channel(struct device* dev, uint32_t channel, uint32_t edge)
 {
     if (dev == NULL) {
         LOG_ERR("Invalid device");
@@ -111,7 +111,7 @@ static int ic_mcux_ftm_set_channel(struct device* dev, u32_t channel, u32_t edge
     return 0;
 }
 
-static u32_t ic_mcux_ftm_get_value(struct device* dev, u32_t channel)
+static uint32_t ic_mcux_ftm_get_value(struct device* dev, uint32_t channel)
 {
     if (dev == NULL) {
         LOG_ERR("Invalid device");
@@ -133,7 +133,7 @@ static int ic_mcux_ftm_init(struct device* dev)
     struct ic_mcux_ftm_data* data = dev->driver_data;
     struct device* clock_dev;
     ftm_config_t ftm_config;
-    u32_t clock_freq;
+    uint32_t clock_freq;
     int i;
 
     data->started = false;

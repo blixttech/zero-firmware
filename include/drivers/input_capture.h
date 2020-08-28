@@ -28,21 +28,21 @@ extern "C" {
  * @brief Callback API upon getting counter
  * See @a input_capture_get_counter() for argument description
  */
-typedef u32_t (*input_capture_get_counter_t)(struct device *dev);
+typedef uint32_t (*input_capture_get_counter_t)(struct device *dev);
 
 /**
  * @typedef input_capture_set_channel_t
  * @brief Callback API upon setting the channel
  * See @a input_capture_set_channel() for argument description
  */
-typedef int (*input_capture_set_channel_t)(struct device *dev, u32_t channel, u32_t edge);
+typedef int (*input_capture_set_channel_t)(struct device *dev, uint32_t channel, uint32_t edge);
 
 /**
  * @typedef input_capture_get_value_t
  * @brief Callback API upon getting the captured value
  * See @a input_capture_get_value() for argument description
  */
-typedef u32_t (*input_capture_get_value_t)(struct device *dev, u32_t channel);
+typedef uint32_t (*input_capture_get_value_t)(struct device *dev, uint32_t channel);
 
 /** @brief Input Capture driver API definition. */
 __subsystem struct input_capture_driver_api {
@@ -56,8 +56,8 @@ __subsystem struct input_capture_driver_api {
  * @param[in]  dev    Pointer to the device structure for the driver instance.
  * @retval the counter value.
  */
-__syscall u32_t input_capture_get_counter(struct device* dev);
-static inline u32_t z_impl_input_capture_get_counter(struct device* dev)
+__syscall uint32_t input_capture_get_counter(struct device* dev);
+static inline uint32_t z_impl_input_capture_get_counter(struct device* dev)
 {
     struct input_capture_driver_api *api;
 
@@ -72,8 +72,8 @@ static inline u32_t z_impl_input_capture_get_counter(struct device* dev)
  * @param[in]   edge    The edge to be captured.
  * @retval 0 If successful.
  */
-__syscall int input_capture_set_channel(struct device* dev, u32_t channel, u32_t edge);
-static inline int z_impl_input_capture_set_channel(struct device* dev, u32_t channel, u32_t edge)
+__syscall int input_capture_set_channel(struct device* dev, uint32_t channel, uint32_t edge);
+static inline int z_impl_input_capture_set_channel(struct device* dev, uint32_t channel, uint32_t edge)
 {
     struct input_capture_driver_api *api;
 
@@ -87,8 +87,8 @@ static inline int z_impl_input_capture_set_channel(struct device* dev, u32_t cha
  * @param[in]   channel Channel number.
  * @retval the captured counter value.
  */
-__syscall u32_t input_capture_get_value(struct device* dev, u32_t channel);
-static inline u32_t z_impl_input_capture_get_value(struct device* dev, u32_t channel)
+__syscall uint32_t input_capture_get_value(struct device* dev, uint32_t channel);
+static inline uint32_t z_impl_input_capture_get_value(struct device* dev, uint32_t channel)
 {
     struct input_capture_driver_api *api;
 

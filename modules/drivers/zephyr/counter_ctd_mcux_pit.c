@@ -29,7 +29,7 @@ struct counter_ctd_alarm_data {
     struct device* dev;
     ctd_alarm_callback_t callback;
     void* user_data;
-    u8_t chan_id;
+    uint8_t chan_id;
 };
 
 struct counter_ctd_mcux_pit_data {
@@ -54,7 +54,7 @@ static void pit_irq_handler(void* arg)
     }
 }
 
-static int counter_ctd_mcux_pit_start(struct device* dev, u8_t chan_id)
+static int counter_ctd_mcux_pit_start(struct device* dev, uint8_t chan_id)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -67,7 +67,7 @@ static int counter_ctd_mcux_pit_start(struct device* dev, u8_t chan_id)
     return 0;
 }
 
-static int counter_ctd_mcux_pit_stop(struct device* dev, u8_t chan_id)
+static int counter_ctd_mcux_pit_stop(struct device* dev, uint8_t chan_id)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -80,7 +80,7 @@ static int counter_ctd_mcux_pit_stop(struct device* dev, u8_t chan_id)
     return 0;
 }
 
-static u32_t counter_ctd_mcux_pit_get_value(struct device* dev, u8_t chan_id)
+static uint32_t counter_ctd_mcux_pit_get_value(struct device* dev, uint8_t chan_id)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -91,7 +91,7 @@ static u32_t counter_ctd_mcux_pit_get_value(struct device* dev, u8_t chan_id)
     return PIT_GetCurrentTimerCount(config->base, chan_id);
 }
 
-static int counter_ctd_mcux_pit_set_top_value(struct device* dev, u8_t chan_id, u32_t ticks)
+static int counter_ctd_mcux_pit_set_top_value(struct device* dev, uint8_t chan_id, uint32_t ticks)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -104,7 +104,7 @@ static int counter_ctd_mcux_pit_set_top_value(struct device* dev, u8_t chan_id, 
     return 0;
 }
 
-static u32_t counter_ctd_mcux_pit_get_top_value(struct device* dev, u8_t chan_id)
+static uint32_t counter_ctd_mcux_pit_get_top_value(struct device* dev, uint8_t chan_id)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -115,7 +115,7 @@ static u32_t counter_ctd_mcux_pit_get_top_value(struct device* dev, u8_t chan_id
     return config->base->CHANNEL[chan_id].LDVAL;
 }
 
-static int counter_ctd_mcux_pit_set_alarm(struct device* dev, u8_t chan_id, 
+static int counter_ctd_mcux_pit_set_alarm(struct device* dev, uint8_t chan_id, 
                                             const struct ctd_alarm_cfg* cfg)
 {
     if (chan_id >= MAX_CHANNELS) {
@@ -133,7 +133,7 @@ static int counter_ctd_mcux_pit_set_alarm(struct device* dev, u8_t chan_id,
     return 0;
 }
 
-static int counter_ctd_mcux_pit_cancel_alarm(struct device* dev, u8_t chan_id)
+static int counter_ctd_mcux_pit_cancel_alarm(struct device* dev, uint8_t chan_id)
 {
     if (chan_id >= MAX_CHANNELS) {
         LOG_ERR("Invalid channel id");
@@ -146,11 +146,11 @@ static int counter_ctd_mcux_pit_cancel_alarm(struct device* dev, u8_t chan_id)
     return 0;
 }
 
-static u32_t counter_ctd_mcux_pit_get_frequency(struct device* dev)
+static uint32_t counter_ctd_mcux_pit_get_frequency(struct device* dev)
 {
     const struct counter_ctd_mcux_pit_config* config = dev->config_info;
     struct device *clock_dev;
-    u32_t clock_freq = 0;
+    uint32_t clock_freq = 0;
 
     clock_dev = device_get_binding(config->clock_name);
     if (clock_dev == NULL) {
@@ -166,7 +166,7 @@ static u32_t counter_ctd_mcux_pit_get_frequency(struct device* dev)
     return clock_freq;
 }
 
-int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, u8_t chan_id, bool enable)
+int z_impl_counter_ctd_mcux_pit_chain(struct device* dev, uint8_t chan_id, bool enable)
 {
     /* As in the datasheet timer 0 cannot be chained */
     if (chan_id >= MAX_CHANNELS || chan_id == 0) {
