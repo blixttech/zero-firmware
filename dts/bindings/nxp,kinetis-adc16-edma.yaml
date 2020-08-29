@@ -3,7 +3,7 @@
 
 description: Kinetis ADC16
 
-compatible: "nxp,kinetis-adc16-pinscan"
+compatible: "nxp,kinetis-adc16-edma"
 
 include: adc-controller.yaml
 
@@ -13,6 +13,21 @@ properties:
 
     interrupts:
       required: true
+
+    timer:
+      required: true
+      type: phandle
+      description: FTM to be used
+
+    max-channels:
+      required: true
+      type: int
+      description: Maximum number of ADC channels to be used by the driver
+
+    dma-channels:
+      required: true
+      type: array
+      description: DMA channels to be used
 
     "#io-channel-cells":
       const: 2

@@ -13,3 +13,16 @@ config COUNTER_MCUX_PIT
     bool "MCUX PIT driver"
     default y
     depends on COUNTER_CTD_MCUX_PIT
+
+config ADC_MCUX_EDMA
+    bool "DMA based ADC driver"
+    default y
+    depends on DMA_MCUX_EDMA && ADC_MCUX_ADC16
+
+config DMA_MCUX_EDMA
+    bool "Enable EDMA"
+    default y
+
+config ADC_MCUX_ADC16
+    bool "MCUX ADC16 driver"
+    default y

@@ -7,6 +7,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/zephyr.cmake")
 project(zperf)
 
 target_sources(app PRIVATE
+  src/breaker_shell.c
   src/shell_utils.c
   src/zperf_session.c
   src/zperf_shell.c

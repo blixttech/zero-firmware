@@ -24,6 +24,8 @@ LOG_MODULE_REGISTER(net_zperf_sample, LOG_LEVEL_DBG);
 #include "shell_utils.h"
 #include "zperf_session.h"
 
+#include "breaker_shell.h"
+
 /* Get some useful debug routings from net_private.h, requires
  * that NET_LOG_ENABLED is set.
  */
@@ -1257,4 +1259,6 @@ void main(void)
     iface = net_if_get_default();
 
     net_dhcpv4_start(iface);
+
+	init_breaker_shell();
 }

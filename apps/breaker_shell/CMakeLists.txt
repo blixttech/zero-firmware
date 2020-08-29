@@ -5,4 +5,5 @@ cmake_minimum_required(VERSION 3.13.1)
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/zephyr.cmake")
 
 project(breaker_shell)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 target_sources(app PRIVATE src/main.c)

@@ -28,8 +28,9 @@
         zephyr,uart-pipe = &uart4;
     };
 
-    /* PIT is not yet added into nxp_k6x.dtsi in the upstream zephyr-os repository. */
+    
     soc {
+        /* PIT is not in nxp_k6x.dtsi. */
         pit0: pit@40037000 {
             compatible = "nxp,kinetis-pit-ctd-counter";
             reg = <0x40037000 0x1000>;
@@ -294,19 +295,35 @@
 };
 
 &adc0 {
-    compatible = "nxp,kinetis-adc16-pinscan";
+    compatible = "nxp,kinetis-adc16-edma";
+    timer = <&ftm0>;
+    max-channels = <3>;
+    dma-channels = <0 1 2>;
     #io-channel-cells = <2>;
     status = "okay";
 };
 
 &adc1 {
-    compatible = "nxp,kinetis-adc16-pinscan";
+    compatible = "nxp,kinetis-adc16-edma";
+    timer = <&ftm1>;
+    max-channels = <8>;
+    dma-channels = <3 4 5>;
     #io-channel-cells = <2>;
     status = "okay";
 };
 
 /* Used for OC limit adjustment */
 &dac0 {
+    status = "okay";
+};
+
+/* Used to generate ADC0 trigger */
+&ftm0 {
+    status = "okay";
+};
+
+/* Used to generate ADC1 trigger */
+&ftm1 {
     status = "okay";
 };
 
