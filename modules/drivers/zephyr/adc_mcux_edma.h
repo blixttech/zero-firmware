@@ -81,9 +81,9 @@ typedef int (*adc_mcux_api_channel_setup)(struct device* dev,
                                             uint8_t seq_idx,
 				                            const struct adc_mcux_channel_config* ch_cfg);
 
-typedef int (*adc_mcux_api_set_sequence_last)(struct device* dev, uint8_t seq_idx);
+typedef int (*adc_mcux_api_set_sequence_len)(struct device* dev, uint8_t seq_len);
 
-typedef uint8_t (*adc_mcux_api_get_sequence_last)(struct device* dev);
+typedef uint8_t (*adc_mcux_api_get_sequence_len)(struct device* dev);
 
 /**
  * @brief ADC driver API
@@ -93,8 +93,8 @@ typedef uint8_t (*adc_mcux_api_get_sequence_last)(struct device* dev);
 __subsystem struct adc_mcux_driver_api {
     adc_mcux_api_read               read;
     adc_mcux_api_channel_setup      channel_setup;
-    adc_mcux_api_set_sequence_last  set_sequence_last;
-    adc_mcux_api_get_sequence_last  get_sequence_last;
+    adc_mcux_api_set_sequence_len   set_sequence_len;
+    adc_mcux_api_get_sequence_len   get_sequence_len;
 };
 
 __syscall int adc_mcux_read(struct device* dev, 
@@ -119,22 +119,22 @@ static inline int z_impl_adc_mcux_channel_setup(struct device* dev, uint8_t seq_
     return api->channel_setup(dev, seq_idx, ch_cfg);
 }
 
-__syscall int adc_mcux_set_sequence_last(struct device* dev, uint8_t seq_idx);
+__syscall int adc_mcux_set_sequence_len(struct device* dev, uint8_t seq_len);
 
-static inline int z_impl_adc_mcux_set_sequence_last(struct device* dev, uint8_t seq_idx)
+static inline int z_impl_adc_mcux_set_sequence_len(struct device* dev, uint8_t seq_len)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
-    return api->set_sequence_last(dev, seq_idx);
+    return api->set_sequence_len(dev, seq_len);
 }
 
-__syscall uint8_t adc_mcux_get_sequence_last(struct device* dev);
+__syscall uint8_t adc_mcux_get_sequence_len(struct device* dev);
 
-static inline uint8_t z_impl_adc_mcux_get_sequence_last(struct device* dev)
+static inline uint8_t z_impl_adc_mcux_get_sequence_len(struct device* dev)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
-    return api->get_sequence_last(dev);
+    return api->get_sequence_len(dev);
 }
 
 /**

@@ -24,10 +24,15 @@ properties:
       type: int
       description: Maximum number of ADC channels to be used by the driver
 
-    dma-channels:
+    dmas:
       required: true
-      type: array
-      description: DMA channels to be used
+      type: phandle-array
+      description: DMA and MUX to be used
+
+    dma-names:
+      required: false
+      type: string-array
+      description: name of each DMA MUX selection
 
     "#io-channel-cells":
       const: 2

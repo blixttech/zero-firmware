@@ -39,6 +39,29 @@
             label = "PIT_0";
             status = "okay";
         };
+
+        /* Due to the driver API limitations, a partially implemented DMA driver is used.
+         * This driver only initialises the DMA and DMAMUX. 
+         */
+        edma0: dma-controller@40008000 {
+            compatible = "nxp,kinetis-edma-partial";
+            dma-channels = <16>;
+            dma-requests = <64>;
+            reg = <0x40008000 0x1000>, <0x40021000 0x1000>;
+            reg-names = "DMA", "MUX";
+            interrupts =    <0 0>,  <1 0>,  <2 0>,  <3 0>,
+                            <4 0>,  <5 0>,  <6 0>,  <7 0>,
+                            <8 0>,  <9 0>,  <10 0>, <11 0>,
+                            <12 0>, <13 0>, <14 0>, <15 0>,
+                            <16 0>;
+            clocks =    <&sim KINETIS_SIM_CORESYS_CLK 0x1040 0x00000002>,   /* DMA clock */
+                        <&sim KINETIS_SIM_BUS_CLK 0x103C 0x00000002>;       /* DMAMUX clock */
+            clock-names = "DMA", "MUX";
+            label = "EDMA0";
+            #dma-cells = <3>;
+            status = "okay";
+        };
+
     };
 
     pins {
@@ -298,7 +321,8 @@
     compatible = "nxp,kinetis-adc16-edma";
     timer = <&ftm0>;
     max-channels = <3>;
-    dma-channels = <0 1 2>;
+    dmas =  <&edma0 0 20 0>, <&edma0 0 60 1>, <&edma0 0 60 2>;
+    dma-names = "RESULT", "CH", "ALT_CH";
     #io-channel-cells = <2>;
     status = "okay";
 };
@@ -307,7 +331,8 @@
     compatible = "nxp,kinetis-adc16-edma";
     timer = <&ftm1>;
     max-channels = <8>;
-    dma-channels = <3 4 5>;
+    dmas =  <&edma0 0 28 3>, <&edma0 0 61 4>, <&edma0 0 61 5>;
+    dma-names = "RESULT", "CH", "ALT_CH";
     #io-channel-cells = <2>;
     status = "okay";
 };
