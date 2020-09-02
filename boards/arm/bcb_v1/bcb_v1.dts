@@ -6,6 +6,7 @@
 #include <dt-bindings/pinctrl/kinetis-pinmux.h>
 #include <dt-bindings/adc/kinetis-adc.h>
 #include <dt-bindings/timer/input-capture.h>
+#include <dt-bindings/timer/kinetis-ftm.h>
 
 / {
     model = "Blixt Circuit Breaker (V1)";
@@ -319,9 +320,9 @@
 
 &adc0 {
     compatible = "nxp,kinetis-adc16-edma";
-    timer = <&ftm0>;
+    triggers = <&ftm0 0>;
     max-channels = <3>;
-    dmas =  <&edma0 0 20 0>, <&edma0 0 60 1>, <&edma0 0 60 2>;
+    dmas =  <&edma0 0 40 2>, <&edma0 0 60 1>, <&edma0 0 61 0>;
     dma-names = "RESULT", "CH", "ALT_CH";
     #io-channel-cells = <2>;
     status = "okay";
@@ -329,9 +330,9 @@
 
 &adc1 {
     compatible = "nxp,kinetis-adc16-edma";
-    timer = <&ftm1>;
+    triggers = <&ftm1 0>;
     max-channels = <8>;
-    dmas =  <&edma0 0 28 3>, <&edma0 0 61 4>, <&edma0 0 61 5>;
+    dmas =  <&edma0 0 41 3>, <&edma0 0 62 4>, <&edma0 0 63 5>;
     dma-names = "RESULT", "CH", "ALT_CH";
     #io-channel-cells = <2>;
     status = "okay";
@@ -344,11 +345,19 @@
 
 /* Used to generate ADC0 trigger */
 &ftm0 {
+    compatible = "nxp,kinetis-ftm-trigger";
+    clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
+    prescaler = <32>;
+    #trigger-cells = <1>;
     status = "okay";
 };
 
 /* Used to generate ADC1 trigger */
 &ftm1 {
+    compatible = "nxp,kinetis-ftm-trigger";
+    clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
+    prescaler = <32>;
+    #trigger-cells = <1>;
     status = "okay";
 };
 

@@ -3,6 +3,7 @@
 set(breaker_lib_sources
     bcb_etime.c
     bcb_ctrl.c
+    bcb_msmnt.c
 )
 
 zephyr_library()

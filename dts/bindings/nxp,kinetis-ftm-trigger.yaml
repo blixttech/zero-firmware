@@ -1,0 +1,21 @@
+# Copyright (c) 2017, NXP
+# SPDX-License-Identifier: Apache-2.0
+
+description: Kinetis FTM
+
+compatible: "nxp,kinetis-ftm-trigger"
+
+include: nxp,kinetis-ftm.yaml
+
+properties:
+  clock-source:
+    type: int
+    required: true
+    description: Clock source of the FTM
+
+  "#trigger-cells":
+    type: int
+    description: Number of items to expect in a trigger specifier
+
+trigger-cells:
+  - channel

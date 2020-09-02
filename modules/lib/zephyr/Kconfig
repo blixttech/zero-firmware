@@ -2,9 +2,13 @@ config BCB_LIB_ETIME_INIT_PRIORITY
     int "BCB elapsed time timer initialisation priority"
     default 50
 
+config BCB_LIB_MSMNT_INIT_PRIORITY
+    int "BCB measurement initialisation priority"
+    default 51
+
 config BCB_LIB_CTRL_INIT_PRIORITY
     int "BCB control initialisation priority"
-    default 51
+    default 52
 
 config BCB_LIB_ETIME_SECOND
     int "Number of ticks for one second of the elapsed time timer"
