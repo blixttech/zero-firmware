@@ -46,7 +46,7 @@ struct adc_mcux_sequence_config {
      * Pointer to a buffer where the samples are to be written.
      * Though the samples are written in 16-bit words.
      */
-    void* buffer;
+    volatile void* buffer;
 
     /**
      * Specifies the size of the buffer pointed by the "buffer" in bytes.
