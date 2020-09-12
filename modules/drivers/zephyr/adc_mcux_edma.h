@@ -13,12 +13,6 @@
 extern "C" {
 #endif
 
-#define ADC_MCUX_CHNLS_A            (2LLU)
-#define ADC_MCUX_CHNL_BIT(c, a)     ((1LLU) << (((uint64_t)(c)*ADC_MCUX_CHNLS_A)+(uint64_t)(a)))
-
-#define ADC_MCUX_GET_CHNL(idx)      ((uint64_t)(idx) / ADC_MCUX_CHNLS_A)
-#define ADC_MCUX_GET_CHNL_A(idx)    ((uint64_t)(idx) % ADC_MCUX_CHNLS_A)
-
 /**
  * @brief Driver APIs for DMA based minimalistic ADC driver for NXP K64F
  * @defgroup adc_interface ADC driver APIs
@@ -36,23 +30,19 @@ enum adc_mcux_ref {
  * @brief Structure defining an ADC sampling sequence configuration.
  */
 struct adc_mcux_sequence_config {
-
     /**
      * Interval between consecutive samplings (in microseconds). Should not be zero.
      */
     uint32_t interval_us;
-
     /**
      * Pointer to a buffer where the samples are to be written.
-     * Though the samples are written in 16-bit words.
+     * Samples are written in 16-bit words.
      */
     volatile void* buffer;
-
     /**
      * Specifies the size of the buffer pointed by the "buffer" in bytes.
      */
     size_t buffer_size;
-
     /** Reference selection. */
     enum adc_mcux_ref reference;
 };
