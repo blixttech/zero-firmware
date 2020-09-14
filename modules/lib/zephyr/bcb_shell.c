@@ -1,29 +1,22 @@
-/*
- * Copyright (c) 2015 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
+#include <stdlib.h>
 #include <zephyr.h>
-#include <sys/printk.h>
+#include <device.h>
 #include <shell/shell.h>
 #include <shell/shell_uart.h>
-#include <version.h>
-#include <logging/log.h>
-#include <stdlib.h>
-
 #include <bcb.h>
 
-LOG_MODULE_REGISTER(breaker_shell);
+#define LOG_LEVEL LOG_LEVEL_DBG
+#include <logging/log.h>
+LOG_MODULE_REGISTER(bcb_shell);
 
 static void on_ocp(uint64_t duration)
 {
-    LOG_INF("[OCP] on->off duration: %"PRIu64"", duration);
+    LOG_INF("[OCP] on->off duration: %" PRIu64, duration);
 }
 
 static void on_ocpt(uint32_t reponse_time, int direction)
 {
-    LOG_INF("[OCPT] direction %c, response time: %"PRIu32" ns",
+    LOG_INF("[OCPT] direction %c, response time: %" PRIu32 " ns",
             (direction == BCB_OCP_TEST_TGR_DIR_P ? 'P' : 'N'),  
             BCB_ONOFF_TICKS_TO_NS(reponse_time));
 }
@@ -34,7 +27,6 @@ static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
     ARG_UNUSED(argv);
 
     bcb_off();
-
     return 0;
 }
 
@@ -44,15 +36,11 @@ static int cmd_on_params(const struct shell *shell, size_t argc, char **argv)
     ARG_UNUSED(argv);
 
     bcb_on();
-
     return 0;
 }
 
 static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char **argv)
 {
-    ARG_UNUSED(argc);
-    ARG_UNUSED(argv);
-
     int direction = BCB_OCP_TEST_TGR_DIR_P;
     if (argc > 1) {
         switch ((int)argv[1][0]) {
@@ -72,17 +60,6 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
     }
 
     bcb_ocpt_trigger(direction, true);
-
-    return 0;
-}
-
-static int cmd_version(const struct shell *shell, size_t argc, char **argv)
-{
-    ARG_UNUSED(argc);
-    ARG_UNUSED(argv);
-
-    shell_print(shell, "Zephyr version %s", KERNEL_VERSION_STRING);
-
     return 0;
 }
 
@@ -94,10 +71,12 @@ SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
 );
 SHELL_CMD_REGISTER(breaker, &breaker_sub, "Breaker commands", NULL);
 
-SHELL_CMD_ARG_REGISTER(version, NULL, "Show kernel version", cmd_version, 1, 0);
-
-void init_breaker_shell(void)
+static int init_breaker_shell()
 {
     bcb_set_ocp_callback(on_ocp);
     bcb_set_ocpt_callback(on_ocpt);
+
+    return 0;
 }
+
+SYS_INIT(init_breaker_shell, APPLICATION, CONFIG_BCB_LIB_SHELL_INIT_PRIORITY);

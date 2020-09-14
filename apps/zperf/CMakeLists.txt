@@ -7,7 +7,6 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/zephyr.cmake")
 project(zperf)
 
 target_sources(app PRIVATE
-  src/breaker_shell.c
   src/shell_utils.c
   src/zperf_session.c
   src/zperf_shell.c
@@ -15,8 +14,9 @@ target_sources(app PRIVATE
   src/zperf_udp_uploader.c
   src/zperf_tcp_receiver.c
   src/zperf_tcp_uploader.c
+  src/main.c
   )
 
 target_include_directories(app PRIVATE
   ${ZEPHYR_BASE}/subsys/net/ip
-)
+  )

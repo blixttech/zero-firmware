@@ -131,7 +131,7 @@ static int bcb_msmnt_init()
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg, false);
 
     k_timer_init(&bcb_msmnt_data.stat_timer, on_stat_timer_expired, NULL);
-    k_timer_start(&bcb_msmnt_data.stat_timer, K_SECONDS(1), K_SECONDS(1));
+    //k_timer_start(&bcb_msmnt_data.stat_timer, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
 }
