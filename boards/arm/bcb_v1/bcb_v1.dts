@@ -232,6 +232,7 @@
                                 <&adc1 5  KINETIS_ADC_MUXSEL_A>, /* T_MOSFET_IN */
                                 <&adc1 5  KINETIS_ADC_MUXSEL_B>, /* T_MOSFET_OUT */
                                 <&adc1 14 KINETIS_ADC_MUXSEL_A>, /* T_AMBIENT */
+                                <&adc1 26 KINETIS_ADC_MUXSEL_A>, /* T_MCU */
                                 <&adc1 6  KINETIS_ADC_MUXSEL_B>, /* HW_REV_IN */
                                 <&adc1 7  KINETIS_ADC_MUXSEL_B>, /* HW_REV_OUT */
                                 <&adc1 15 KINETIS_ADC_MUXSEL_A>, /* HW_REV_CTRL */
@@ -243,6 +244,7 @@
                                     "T_MOSFET_IN", 
                                     "T_MOSFET_OUT", 
                                     "T_AMBIENT",
+                                    "T_MCU",
                                     "HW_REV_IN",
                                     "HW_REV_OUT",
                                     "HW_REV_CTRL",
@@ -331,7 +333,7 @@
 &adc1 {
     compatible = "nxp,kinetis-adc16-edma";
     triggers = <&ftm1 0>;
-    max-channels = <8>;
+    max-channels = <9>;
     dmas =  <&edma0 0 41 2>, <&edma0 0 61 3>;
     dma-names = "RESULT", "CH";
     #io-channel-cells = <2>;
