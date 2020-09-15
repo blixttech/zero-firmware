@@ -8,8 +8,8 @@ LOG_MODULE_REGISTER(main);
 
 void main(void)
 {	
-    LOG_INF("Run dhcpv4 client");
+    LOG_INF("Zperf Application");
 
-    struct net_if * iface = net_if_get_default();
-    net_dhcpv4_start(iface);
+    //struct net_if * iface = net_if_get_default();
+    //net_dhcpv4_start(iface);
 }
