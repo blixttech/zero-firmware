@@ -13,3 +13,6 @@ CONFIG_OSC_EXTERNAL=y
 
 # Enable MPU
 CONFIG_ARM_MPU=y
+
+# Library options
+CONFIG_NEWLIB_LIBC=y
