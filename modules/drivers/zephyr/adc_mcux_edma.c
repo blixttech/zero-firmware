@@ -330,6 +330,12 @@ static int adc_mcux_read_impl(struct device* dev,
 
     uint32_t period = (((uint64_t)seq_cfg->interval_us * (uint64_t)data->ftm_ticks_per_sec) / (uint64_t)1e6);
     LOG_DBG("FTM period: %" PRIu32 "", period);
+
+    if (period < 2) {
+        LOG_ERR("FTM period too small: %" PRIu32 "", period);
+        return -EINVAL;
+    }
+
     FTM_SetTimerPeriod(config->ftm_base, period);
     FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
 
