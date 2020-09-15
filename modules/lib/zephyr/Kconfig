@@ -22,6 +22,10 @@ config BCB_LIB_IC_ONOFF_SECOND
     int "Number of ticks for one second of the on/off input capture timer"
     default 7500000
 
+config BCB_LIB_MSMNT_RMS_SAMPLES
+    int "Number of samples used for RMS calculation as the power of two. Eg. if 4 used, 16 (2^4) samples"
+    default 4
+
 config BCB_SHELL
     bool "Enable BCB shell"
     default n

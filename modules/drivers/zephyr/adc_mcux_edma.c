@@ -320,7 +320,9 @@ static int adc_mcux_read_impl(struct device* dev,
     LOG_DBG("TCD[ch] BITER 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].BITER_ELINKNO);
     LOG_DBG("TCD[ch] ATTR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].ATTR);
     LOG_DBG("TCD[ch] CSR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].CSR);
+#endif
 
+#if 1
     LOG_DBG("ADC SC1  0x%" PRIx32, config->adc_base->SC1[0]);
     LOG_DBG("ADC CFG1 0x%" PRIx32, config->adc_base->CFG1);
     LOG_DBG("ADC CFG2 0x%" PRIx32, config->adc_base->CFG2);
@@ -337,7 +339,7 @@ static int adc_mcux_read_impl(struct device* dev,
     }
 
     FTM_SetTimerPeriod(config->ftm_base, period);
-    FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
+    //FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
 
     return 0;
 }
@@ -379,31 +381,45 @@ static int adc_mcux_init(struct device* dev)
     struct adc_mcux_data* data = dev->driver_data;
 
     /* ---------------- ADC configuration ---------------- */
-    /*
-     * adc16ConfigStruct.referenceVoltageSource = kADC16_ReferenceVoltageSourceVref;
-     * adc16ConfigStruct.clockSource = kADC16_ClockSourceAsynchronousClock;
-     * adc16ConfigStruct.enableAsynchronousClock = true;
-     * adc16ConfigStruct.clockDivider = kADC16_ClockDivider8;
-     * adc16ConfigStruct.resolution = kADC16_ResolutionSE12Bit;
-     * adc16ConfigStruct.longSampleMode = kADC16_LongSampleDisabled;
-     * adc16ConfigStruct.enableHighSpeed = false;
-     * adc16ConfigStruct.enableLowPower = false;
-     * adc16ConfigStruct.enableContinuousConversion = false;
+
+    /* Sample time (T_sample) calculation
+     * T_sample     = SFCAdder + AverageNum * (BCT + LSTAdder + HSCAdder)
+     * 
+     * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
+     * AverageNum   = 8
+     * BCT          = 25 ADCK cycles
+     * LSTAdder     = 6 ADCK cycles
+     * HSCAdder     = 2 ADCK cycles
+     * f_ADCK       = 12 MHz
+     * f_BUS        = 60 MHz
+     * 
+     * T_sample     = (3/12) + (5/60) + (8 * (25 + 6 + 2) / 12)
+     *              = 22.33 us
      */
     ADC16_GetDefaultConfig(&data->adc_config);
-    data->adc_config.resolution = kADC16_Resolution16Bit;
-    data->adc_config.referenceVoltageSource = kADC16_ReferenceVoltageSourceValt;
+    data->adc_config.referenceVoltageSource = kADC16_ReferenceVoltageSourceVref;
+    data->adc_config.clockSource = kADC16_ClockSourceAsynchronousClock; // Select ADACK = 12 MHz
+    data->adc_config.enableAsynchronousClock = true; // Pre-enable to avoid startup delay
+    data->adc_config.clockDivider = kADC16_ClockDivider1; // For maximum clock frequency 
+    data->adc_config.resolution = kADC16_ResolutionSE16Bit; // For maximum accuracy
+    data->adc_config.longSampleMode = kADC16_LongSampleCycle10; // Reasonable compromise for conversion time
+    data->adc_config.enableHighSpeed = true; // This setting is needed for maximum sample rate
+    data->adc_config.enableLowPower = false; // This setting is needed for maximum sample rate
+    data->adc_config.enableContinuousConversion = false;
     ADC16_Init(config->adc_base, &data->adc_config);
 
+    ADC16_SetHardwareAverage(config->adc_base, kADC16_HardwareAverageCount8);
     ADC16_DoAutoCalibration(config->adc_base);
     ADC16_EnableHardwareTrigger(config->adc_base, true);
     ADC16_EnableDMA(config->adc_base, true);
 
+#if 0
     adc16_channel_config_t adc_ch_cfg;
     adc_ch_cfg.channelNumber = 0; /* Set to channel zero by default. */
     adc_ch_cfg.enableInterruptOnConversionCompleted = false;
     adc_ch_cfg.enableDifferentialConversion = false;
     ADC16_SetChannelConfig(config->adc_base, 0, &adc_ch_cfg);
+#endif
 
     /* ---------------- FTM configuration ---------------- */
 
