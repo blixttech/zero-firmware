@@ -339,7 +339,7 @@ static int adc_mcux_read_impl(struct device* dev,
     }
 
     FTM_SetTimerPeriod(config->ftm_base, period);
-    //FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
+    FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
 
     return 0;
 }
