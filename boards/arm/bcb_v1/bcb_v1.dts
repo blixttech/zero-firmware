@@ -349,7 +349,7 @@
 &ftm0 {
     compatible = "nxp,kinetis-ftm-trigger";
     clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
-    prescaler = <32>;
+    prescaler = <4>;
     #trigger-cells = <1>;
     status = "okay";
 };

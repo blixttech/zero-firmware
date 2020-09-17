@@ -3,6 +3,7 @@
 #include <device.h>
 #include <devicetree.h>
 #include <arm_math.h>
+#include <math.h>
 
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
@@ -59,14 +60,14 @@ struct bcb_msmnt_data {
     uint16_t                val_i_high_gain_zero;
     uint16_t                val_v_mains_zero;
 
-    uint32_t                val_i_low_gain_acc;
-    uint32_t                val_i_high_gain_acc;
-    uint32_t                val_v_mains_acc;
+    uint32_t                diff_i_low_gain_2_acc;
+    uint32_t                diff_i_high_gain_2_acc;
+    uint32_t                diff_v_mains_2_acc;
     uint8_t                 n_samples_rms;
 
-    uint16_t                val_i_low_gain_rms;
-    uint16_t                val_i_high_gain_rms;
-    uint16_t                val_v_mains_rms;
+    uint16_t                diff_i_low_gain_rms;
+    uint16_t                diff_i_high_gain_rms;
+    uint16_t                diff_v_mains_rms;
 
     struct k_timer timer_stat;
     struct k_timer timer_rms;
@@ -91,13 +92,13 @@ static struct bcb_msmnt_data bcb_msmnt_data = {
     .val_i_high_gain_zero = 0,
     .val_v_mains_zero = 0,
     /* RMS calculation */
-    .val_i_low_gain_acc = 0,
-    .val_i_high_gain_acc = 0,
-    .val_v_mains_acc = 0,
+    .diff_i_low_gain_2_acc = 0,
+    .diff_i_high_gain_2_acc = 0,
+    .diff_v_mains_2_acc = 0,
     .n_samples_rms = 0,
-    .val_i_low_gain_rms = 0,
-    .val_i_high_gain_rms = 0,
-    .val_v_mains_rms = 0,
+    .diff_i_low_gain_rms = 0,
+    .diff_i_high_gain_rms = 0,
+    .diff_v_mains_rms = 0,
 };
 
 static float get_temp(uint32_t adc_ntc) 
@@ -106,7 +107,7 @@ static float get_temp(uint32_t adc_ntc)
     uint32_t r_tnc = v_ntc * 56000U / (3300 - v_ntc);
 
     float temp_k = (298.15f * 4308.0f);
-    temp_k /= 4308.0f + (298.15f * (log((float)r_tnc) - log((100000.0f))));
+    temp_k /= 4308.0f + (298.15f * (logf(r_tnc) - logf((100000.0f))));
     return (temp_k - 273.15f) * 100.0f; 
 }
 
@@ -125,10 +126,10 @@ int32_t bcb_msmnt_get_current_l()
    * So current I = ADC_DIFF * (V_REF/2^16) / (R_SHUNT * G)
    * I (in mA) = ADC_DIFF * 3 * 10^5 / 2^18
    */
-    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.val_i_low_gain)
-                        //- (int64_t)(bcb_msmnt_data.val_i_low_gain_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
-    return (int32_t)((adc_diff * 300000) >> 18);
+    int16_t adc_diff = (int16_t)*(bcb_msmnt_data.val_i_low_gain)
+                        - (int16_t)(bcb_msmnt_data.val_i_low_gain_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    return (int32_t)(((int64_t)adc_diff * 300000LL) >> 18ULL);
 }
 
 int32_t bcb_msmnt_get_current_h()
@@ -141,8 +142,8 @@ int32_t bcb_msmnt_get_current_h()
    * I (in mA) = ADC_DIFF * 3 * 10^4 / 2^18
    */
     int64_t adc_diff = (int64_t)*(bcb_msmnt_data.val_i_high_gain)
-                        //- (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+                        - (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
     return (int32_t)((adc_diff * 30000) >> 18);
 }
 
@@ -164,10 +165,7 @@ int32_t bcb_msmnt_get_current_l_rms()
    * So current I = ADC_DIFF * (V_REF/2^16) / (R_SHUNT * G)
    * I (in mA) = ADC_DIFF * 3 * 10^5 / 2^18
    */
-    int64_t adc_diff = (int64_t)bcb_msmnt_data.val_i_low_gain_rms
-                        //- (int64_t)(bcb_msmnt_data.val_i_low_gain_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
-    return (int32_t)((adc_diff * 300000) >> 18);
+    return (int32_t)(((uint64_t)bcb_msmnt_data.diff_i_low_gain_rms * 300000ULL) >> 18ULL);
 }
 
 int32_t bcb_msmnt_get_current_h_rms()
@@ -179,18 +177,20 @@ int32_t bcb_msmnt_get_current_h_rms()
    * So current I = ADC_DIFF * (V_REF/2^16) / (R_SHUNT * G)
    * I (in mA) = ADC_DIFF * 3 * 10^4 / 2^18
    */
-    int64_t adc_diff = (int64_t)bcb_msmnt_data.val_i_high_gain_rms
-                        //- (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
-    return (int32_t)((adc_diff * 30000) >> 18);
+    //int64_t adc_diff = (int64_t)bcb_msmnt_data.diff_i_high_gain_rms
+    //                    - (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    //return (int32_t)((adc_diff * 30000) >> 18);
+
+    return (int32_t)(((uint64_t)bcb_msmnt_data.diff_i_high_gain_rms * 30000ULL) >> 18ULL);
 }
 
 int32_t bcb_msmnt_get_voltage_rms()
 {
     /* TODO: Explain how the calculation is done. */
-    int64_t adc_diff = (int64_t)bcb_msmnt_data.val_v_mains_rms
-                        //- (int64_t)(bcb_msmnt_data.val_v_mains_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    int64_t adc_diff = (int64_t)bcb_msmnt_data.diff_v_mains_rms
+                        - (int64_t)(bcb_msmnt_data.val_v_mains_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
     return (int32_t)(((adc_diff * 3 * 2000360) / 360) >> 16);
 }
 
@@ -212,7 +212,7 @@ void on_stat_timer_expired(struct k_timer* timer)
         bcb_msmnt_get_temp(BCB_MSMNT_TEMP_MCU));
 #endif
 
-    LOG_DBG("current: h: %06" PRId32 "[%06" PRId32 "], l: %06" PRId32 "[%06" PRId32 "]", 
+    LOG_DBG("current: l: %06" PRId32 "[%06" PRId32 "], h: %06" PRId32 "[%06" PRId32 "]", 
         bcb_msmnt_get_current_l(),
         bcb_msmnt_get_current_l_rms(), 
         bcb_msmnt_get_current_h(),
@@ -225,38 +225,35 @@ static void on_rms_timer_expired(struct k_timer* timer)
     int32_t adc_diff = (int32_t)*(bcb_msmnt_data.val_i_low_gain)
                     - (int32_t)(bcb_msmnt_data.val_i_low_gain_zero);
                     //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
-    bcb_msmnt_data.val_i_low_gain_acc += (uint32_t)(adc_diff * adc_diff);
+
+    bcb_msmnt_data.diff_i_low_gain_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     adc_diff = (int32_t)*(bcb_msmnt_data.val_i_high_gain)
                     - (int32_t)(bcb_msmnt_data.val_i_high_gain_zero);
                     //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
-    bcb_msmnt_data.val_i_high_gain_acc += (uint32_t)(adc_diff * adc_diff);
+    bcb_msmnt_data.diff_i_high_gain_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     adc_diff = (int32_t)*(bcb_msmnt_data.val_v_mains)
                     - (int32_t)(bcb_msmnt_data.val_v_mains_zero);
                     //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
-    bcb_msmnt_data.val_v_mains_acc += (uint32_t)(adc_diff * adc_diff);
+    bcb_msmnt_data.diff_v_mains_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     bcb_msmnt_data.n_samples_rms++;
 
     if (bcb_msmnt_data.n_samples_rms == BCB_MSMNT_RMS_SAMPLES) {
 
-        bcb_msmnt_data.val_i_low_gain_acc = bcb_msmnt_data.val_i_low_gain_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
-        bcb_msmnt_data.val_i_high_gain_acc = bcb_msmnt_data.val_i_high_gain_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
-        bcb_msmnt_data.val_v_mains_acc = bcb_msmnt_data.val_v_mains_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        bcb_msmnt_data.diff_i_low_gain_2_acc = bcb_msmnt_data.diff_i_low_gain_2_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        bcb_msmnt_data.diff_i_high_gain_2_acc = bcb_msmnt_data.diff_i_high_gain_2_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        bcb_msmnt_data.diff_v_mains_2_acc = bcb_msmnt_data.diff_v_mains_2_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
         
-        int32_t adc_sqrt;
-        arm_sqrt_q31(bcb_msmnt_data.val_i_low_gain_acc, &adc_sqrt);
-        bcb_msmnt_data.val_i_low_gain_rms = (uint16_t)adc_sqrt;
-        arm_sqrt_q31(bcb_msmnt_data.val_i_high_gain_acc, &adc_sqrt);
-        bcb_msmnt_data.val_i_low_gain_rms = (uint16_t)adc_sqrt;
-        arm_sqrt_q31(bcb_msmnt_data.val_v_mains_acc, &adc_sqrt);
-        bcb_msmnt_data.val_v_mains_rms = (uint16_t)adc_sqrt;
+        bcb_msmnt_data.diff_i_low_gain_rms = (uint16_t)sqrtf((float)bcb_msmnt_data.diff_i_low_gain_2_acc);
+        bcb_msmnt_data.diff_i_high_gain_rms = (uint16_t)sqrtf((float)bcb_msmnt_data.diff_i_high_gain_2_acc);
+        bcb_msmnt_data.diff_v_mains_rms = (uint16_t)sqrtf((float)bcb_msmnt_data.diff_v_mains_2_acc);
 
         bcb_msmnt_data.n_samples_rms = 0;
-        bcb_msmnt_data.val_i_low_gain_acc = 0;
-        bcb_msmnt_data.val_i_high_gain_acc = 0;
-        bcb_msmnt_data.val_v_mains_acc = 0;
+        bcb_msmnt_data.diff_i_low_gain_2_acc = 0;
+        bcb_msmnt_data.diff_i_high_gain_2_acc = 0;
+        bcb_msmnt_data.diff_v_mains_2_acc = 0;
     }
 }
 
@@ -265,6 +262,10 @@ static inline void update_adc_zero()
     bcb_msmnt_data.val_i_low_gain_zero = *(bcb_msmnt_data.val_i_low_gain);
     bcb_msmnt_data.val_i_high_gain_zero = *(bcb_msmnt_data.val_i_high_gain);
     bcb_msmnt_data.val_v_mains_zero = *(bcb_msmnt_data.val_v_mains);
+
+    LOG_DBG("low_gain_zero %" PRIu16, bcb_msmnt_data.val_i_low_gain_zero);
+    LOG_DBG("high_gain_zero %" PRIu16, bcb_msmnt_data.val_i_high_gain_zero);
+    LOG_DBG("v_mains_zero %" PRIu16, bcb_msmnt_data.val_v_mains_zero);
 }
 
 int32_t bcb_msmnt_get_temp(bcb_msmnt_temp_t sensor)
@@ -316,21 +317,21 @@ static int bcb_msmnt_init()
     struct adc_mcux_sequence_config adc_seq_cfg;
 
     adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_0, bcb_msmnt_data.seq_len_adc_0);
-    adc_seq_cfg.interval_us = 50;
+    adc_seq_cfg.interval_us = 12;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_0;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_0;
     adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_0, &adc_seq_cfg, false);
 
     adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_1, bcb_msmnt_data.seq_len_adc_1);
-    adc_seq_cfg.interval_us = 125;
+    adc_seq_cfg.interval_us = 912;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_1;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_1;
     adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg, false);
 
-    /* Wait for 1ms until ADC conversions started to measure offset errors. */
-    k_usleep(1000);
+    /* Wait for 10ms until ADC conversions started to measure offset errors. */
+    k_msleep(10);
     update_adc_zero();
 
     /* Start RMS calculation timer. */

@@ -386,40 +386,32 @@ static int adc_mcux_init(struct device* dev)
      * T_sample     = SFCAdder + AverageNum * (BCT + LSTAdder + HSCAdder)
      * 
      * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
-     * AverageNum   = 8
-     * BCT          = 25 ADCK cycles
-     * LSTAdder     = 6 ADCK cycles
-     * HSCAdder     = 2 ADCK cycles
+     * AverageNum   = 32
+     * BCT          = 25 ADCK cycles (16b single-ended)
+     * LSTAdder     = 6 ADCK cycles (long sample mode)
+     * HSCAdder     = 2 ADCK cycles (high speed conversion)
      * f_ADCK       = 12 MHz
      * f_BUS        = 60 MHz
      * 
-     * T_sample     = (3/12) + (5/60) + (8 * (25 + 6 + 2) / 12)
-     *              = 22.33 us
+     * T_sample     = ((3/12) + (5/60)) + (32 * (25 + 6 + 2) / 12)
+     *              = 88.33 us
      */
     ADC16_GetDefaultConfig(&data->adc_config);
     data->adc_config.referenceVoltageSource = kADC16_ReferenceVoltageSourceVref;
     data->adc_config.clockSource = kADC16_ClockSourceAsynchronousClock; // Select ADACK = 12 MHz
     data->adc_config.enableAsynchronousClock = true; // Pre-enable to avoid startup delay
-    data->adc_config.clockDivider = kADC16_ClockDivider1; // For maximum clock frequency 
-    data->adc_config.resolution = kADC16_ResolutionSE16Bit; // For maximum accuracy
-    data->adc_config.longSampleMode = kADC16_LongSampleCycle10; // Reasonable compromise for conversion time
-    data->adc_config.enableHighSpeed = true; // This setting is needed for maximum sample rate
-    data->adc_config.enableLowPower = false; // This setting is needed for maximum sample rate
+    data->adc_config.clockDivider = kADC16_ClockDivider1; // For maximum clock frequency (12 MHz) 
+    data->adc_config.resolution = kADC16_ResolutionSE16Bit; // 25 ADCK cycles
+    data->adc_config.longSampleMode = kADC16_LongSampleCycle10; // 6 ADCK cycles
+    data->adc_config.enableHighSpeed = true; // 2 ADCK cycles
+    data->adc_config.enableLowPower = false; // Should disabled for high-speed mode 
     data->adc_config.enableContinuousConversion = false;
     ADC16_Init(config->adc_base, &data->adc_config);
 
-    ADC16_SetHardwareAverage(config->adc_base, kADC16_HardwareAverageCount8);
+    ADC16_SetHardwareAverage(config->adc_base, kADC16_HardwareAverageCount32);
     ADC16_DoAutoCalibration(config->adc_base);
     ADC16_EnableHardwareTrigger(config->adc_base, true);
     ADC16_EnableDMA(config->adc_base, true);
-
-#if 0
-    adc16_channel_config_t adc_ch_cfg;
-    adc_ch_cfg.channelNumber = 0; /* Set to channel zero by default. */
-    adc_ch_cfg.enableInterruptOnConversionCompleted = false;
-    adc_ch_cfg.enableDifferentialConversion = false;
-    ADC16_SetChannelConfig(config->adc_base, 0, &adc_ch_cfg);
-#endif
 
     /* ---------------- FTM configuration ---------------- */
 

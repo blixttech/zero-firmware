@@ -23,8 +23,8 @@ config BCB_LIB_IC_ONOFF_SECOND
     default 7500000
 
 config BCB_LIB_MSMNT_RMS_SAMPLES
-    int "Number of samples used for RMS calculation as the power of two. Eg. if 4 used, 16 (2^4) samples"
-    default 4
+    int "Number of samples used for RMS calculation as the power of two. Eg. if 5 used, 32 (2^5) samples"
+    default 5
 
 config BCB_SHELL
     bool "Enable BCB shell"

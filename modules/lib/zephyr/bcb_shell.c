@@ -11,7 +11,7 @@ LOG_MODULE_REGISTER(bcb_shell);
 
 static void on_ocp(uint64_t duration)
 {
-    LOG_INF("[OCP] on->off duration: %" PRIu64, duration);
+    LOG_INF("[OCP] on->off duration: %" PRIu32, (uint32_t)duration);
 }
 
 static void on_ocpt(uint32_t reponse_time, int direction)
