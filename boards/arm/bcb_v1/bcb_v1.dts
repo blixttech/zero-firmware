@@ -349,6 +349,9 @@
 &ftm0 {
     compatible = "nxp,kinetis-ftm-trigger";
     clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
+    /* FTM prescaler is a 7-bit counter.
+     * So multiply the value of here by two to get the actual precaler value.
+     */
     prescaler = <4>;
     #trigger-cells = <1>;
     status = "okay";
@@ -358,6 +361,9 @@
 &ftm1 {
     compatible = "nxp,kinetis-ftm-trigger";
     clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
+    /* FTM prescaler is a 7-bit counter.
+     * So multiply the value of here by two to get the actual precaler value.
+     */
     prescaler = <32>;
     #trigger-cells = <1>;
     status = "okay";
@@ -366,6 +372,11 @@
 /* Used for measuring OCP trigger timing. */
 &ftm3 {
     compatible = "nxp,kinetis-ftm-input-capture";
+    clocks = <&sim KINETIS_SIM_CORESYS_CLK 0x1030 25>;
+    /* FTM prescaler is a 7-bit counter.
+     * So multiply the value of here by two to get the actual precaler value.
+     */
+    prescaler = <2>;
     #input-capture-cells = <2>;
     status = "okay";
 };
@@ -377,6 +388,9 @@
  */
 &ftm2 {
     compatible = "nxp,kinetis-ftm-pwm";
+    /* FTM prescaler is a 7-bit counter.
+     * So multiply the value of here by two to get the actual precaler value.
+     */
     prescaler = <1>;
     #pwm-cells = <3>;
     status = "okay";
