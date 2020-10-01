@@ -6,7 +6,7 @@
 #include <drivers/input_capture.h>
 #include <drivers/pwm.h>
 
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_BCB_CTRL_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_ctrl);
 

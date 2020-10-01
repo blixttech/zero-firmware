@@ -11,7 +11,7 @@
 #include <fsl_ftm.h>
 #include <fsl_clock.h>
 
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_IC_MCUX_FTM_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(input_capture_mcux_ftm);
 
