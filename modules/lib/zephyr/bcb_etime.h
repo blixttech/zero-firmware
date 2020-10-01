@@ -24,6 +24,7 @@ extern "C" {
 #define BCB_ETIME_US_TO_TICKS(us)       ((us) * CONFIG_BCB_LIB_ETIME_SECOND / USEC_PER_SEC)
 
 uint64_t bcb_etime_get_now();
+uint32_t bcb_etime_get_frequency();
 
 #ifdef __cplusplus
 }
