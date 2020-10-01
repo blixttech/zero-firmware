@@ -8,11 +8,10 @@
 #include <fsl_edma.h>
 #include <fsl_ftm.h>
 #include <fsl_clock.h>
+#include <fsl_rcm.h>
 #include <drivers/clock_control.h>
 
-#include <fsl_rcm.h>
-
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_ADC_MCUX_EDMA_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(adc_mcux_edma);
 
@@ -322,7 +321,7 @@ static int adc_mcux_read_impl(struct device* dev,
     LOG_DBG("TCD[ch] CSR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].CSR);
 #endif
 
-#if 1
+#if 0
     LOG_DBG("ADC SC1  0x%" PRIx32, config->adc_base->SC1[0]);
     LOG_DBG("ADC CFG1 0x%" PRIx32, config->adc_base->CFG1);
     LOG_DBG("ADC CFG2 0x%" PRIx32, config->adc_base->CFG2);
