@@ -6,7 +6,7 @@
 #include <drivers/input_capture.h>
 #include <drivers/pwm.h>
 
-#define LOG_LEVEL CONFIG_BCB_LIB_CTRL_LOG_LEVEL
+#define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_ctrl);
 
@@ -136,7 +136,9 @@ static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, 
 
         uint32_t ic_on = BCB_GET_IC_VALUE(itimestamp, on_off_status_r);
         uint32_t ic_off = BCB_GET_IC_VALUE(itimestamp, on_off_status_f);
-        uint64_t onoff_duration = etime_now - bcb_ctrl_data.etime_on;
+        uint64_t onoff_duration =  (etime_now < bcb_ctrl_data.etime_on) ? 
+                                    ((UINT64_MAX - bcb_ctrl_data.etime_on) + etime_now) : 
+                                    (etime_now - bcb_ctrl_data.etime_on);
 
         /* Calculate time duration between ON and OFF events. */
         if (BCB_IC_ONOFF_ETIME_COMP_HT((uint64_t)(UINT16_MAX-BCB_IC_ONOFF_TICKS_GUARD), onoff_duration)) {
@@ -167,9 +169,9 @@ static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, 
                     } else {
                         ocpt_start = BCB_GET_IC_VALUE(itimestamp, ocp_test_tr_n);
                     }
-                    uint32_t ocpt_duration = (ic_off < ocpt_start) 
+                    uint64_t ocpt_duration = (ic_off < ocpt_start) 
                                                 ? ((uint32_t)UINT16_MAX - ocpt_start + ic_off) 
-                                                : (ic_off - ocpt_start);;
+                                                : (ic_off - ocpt_start);
                     bcb_ctrl_data.ocpt_callback(ocpt_duration, bcb_ctrl_data.ocpt_direction);
                 }
             } else {

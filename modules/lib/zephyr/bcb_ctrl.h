@@ -60,7 +60,7 @@ typedef void (*bcb_otp_callback_t)();
  *                      in time ticks.
  * @param direction     Direction of the activated test.
  */
-typedef void (*bcb_ocpt_callback_t)(uint32_t reponse_time, int direction);
+typedef void (*bcb_ocpt_callback_t)(uint64_t reponse_time, int direction);
 
 /**
  * @brief Turn on the breaker.
