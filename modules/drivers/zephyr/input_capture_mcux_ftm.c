@@ -11,7 +11,7 @@
 #include <fsl_ftm.h>
 #include <fsl_clock.h>
 
-#define LOG_LEVEL CONFIG_INPUT_CAPTURE_LOG_LEVEL
+#define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
 LOG_MODULE_REGISTER(input_capture_mcux_ftm);
 
@@ -127,6 +127,17 @@ static uint32_t ic_mcux_ftm_get_value(struct device* dev, uint32_t channel)
     return config->base->CONTROLS[channel].CnV;
 }
 
+static uint32_t ic_mcux_ftm_get_frequency(struct device* dev)
+{
+    if (dev == NULL) {
+        LOG_ERR("Invalid device");
+        return 0;
+    }
+    struct ic_mcux_ftm_data* data = dev->driver_data;
+    
+    return data->ticks_per_sec;
+}
+
 static int ic_mcux_ftm_init(struct device* dev)
 {
     const struct ic_mcux_ftm_config* config = dev->config_info;
@@ -154,7 +165,8 @@ static int ic_mcux_ftm_init(struct device* dev)
         return -EINVAL;
     }
 
-    data->ticks_per_sec = clock_freq >> config->prescale;
+    data->ticks_per_sec = (clock_freq >> config->prescale) >> 1;
+    LOG_DBG("ticks_per_sec %" PRIu32, data->ticks_per_sec);
 
     for (i = 0; i < config->channel_count; i++) {
         data->edge[i] = IC_EDGE_NONE;
@@ -183,6 +195,7 @@ static const struct input_capture_driver_api ic_mcux_ftm_driver_api = {
     .get_counter = ic_mcux_ftm_get_counter,
     .set_channel = ic_mcux_ftm_set_channel,
     .get_value = ic_mcux_ftm_get_value,
+    .get_frequency = ic_mcux_ftm_get_frequency,
 };
 
 #define TO_FTM_PRESCALE_DIVIDE(val) _DO_CONCAT(kFTM_Prescale_Divide_, val)

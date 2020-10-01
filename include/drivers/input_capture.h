@@ -44,11 +44,19 @@ typedef int (*input_capture_set_channel_t)(struct device *dev, uint32_t channel,
  */
 typedef uint32_t (*input_capture_get_value_t)(struct device *dev, uint32_t channel);
 
+/**
+ * @typedef input_capture_get_counter_t
+ * @brief Callback API upon getting the counter frequency
+ * See @a input_capture_get_frequency() for argument description
+ */
+typedef uint32_t (*input_capture_get_frequency_t)(struct device *dev);
+
 /** @brief Input Capture driver API definition. */
 __subsystem struct input_capture_driver_api {
     input_capture_get_counter_t get_counter;
     input_capture_set_channel_t set_channel;
     input_capture_get_value_t get_value;
+    input_capture_get_frequency_t get_frequency;
 };
 
 /**
@@ -94,6 +102,20 @@ static inline uint32_t z_impl_input_capture_get_value(struct device* dev, uint32
 
     api = (struct input_capture_driver_api *)dev->driver_api;
     return api->get_value(dev, channel);
+}
+
+/**
+ * @brief Function to get the frequency of the counter.
+ * @param[in]  dev    Pointer to the device structure for the driver instance.
+ * @retval the frequency in hertz.
+ */
+__syscall uint32_t input_capture_get_frequency(struct device* dev);
+static inline uint32_t z_impl_input_capture_get_frequency(struct device* dev)
+{
+    struct input_capture_driver_api *api;
+
+    api = (struct input_capture_driver_api *)dev->driver_api;
+    return api->get_frequency(dev);
 }
 
 #ifdef __cplusplus
