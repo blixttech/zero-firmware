@@ -6,7 +6,11 @@
 
 #include <zephyr.h>
 
+#define LOG_LEVEL LOG_LEVEL_INF
+#include <logging/log.h>
+LOG_MODULE_REGISTER(bcb_shell_app);
+
 void main(void)
 {
-    printk("BCB Shell Application");
+    LOG_INF("BCB Shell Application");
 }
