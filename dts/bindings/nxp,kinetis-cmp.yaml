@@ -1,0 +1,26 @@
+# Copyright (c) 2020, Blixt Tech
+# SPDX-License-Identifier: Apache-2.0
+
+description: Kinetis CMP
+
+compatible: "nxp,kinetis-cmp"
+
+include: base.yaml
+
+properties:
+    reg:
+      required: true
+
+    interrupts:
+      required: true
+
+    "#comparator-cells":
+      type: int
+      required: true
+      const: 3
+      description: Number of items to expect in a comparator specifier
+
+comparator-cells:
+  - inp
+  - inn
+  - edge
