@@ -1,0 +1,17 @@
+description: Comparator channels of the Blixt Breaker
+
+# Used to map nodes to bindings
+compatible: "blixt,breaker-cmp"
+
+include: base.yaml
+
+properties:
+    comparators:
+      type: phandle-array
+      required: true
+    comparator-names:
+      type: string-array
+      required: true
+    label:
+      type: string
+      required: true

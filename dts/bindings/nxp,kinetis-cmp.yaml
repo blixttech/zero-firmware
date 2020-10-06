@@ -14,6 +14,18 @@ properties:
     interrupts:
       required: true
 
+    filter_count:
+      type: int
+      required: true
+
+    filter_period:
+      type: int
+      required: true
+
+    hysteresis:
+      type: int
+      required: true
+
     "#comparator-cells":
       type: int
       required: true

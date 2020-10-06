@@ -26,3 +26,7 @@ config DMA_MCUX_EDMA
 config ADC_MCUX_ADC16
     bool "MCUX ADC16 driver"
     default y
+
+config CMP_MCUX
+    bool "Enable Comparator"
+    default y

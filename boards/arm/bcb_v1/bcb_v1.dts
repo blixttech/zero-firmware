@@ -7,6 +7,7 @@
 #include <dt-bindings/adc/kinetis-adc.h>
 #include <dt-bindings/timer/input-capture.h>
 #include <dt-bindings/timer/kinetis-ftm.h>
+#include <dt-bindings/cmp/kinetis-cmp.h>
 
 / {
     model = "Blixt Circuit Breaker (V1)";
@@ -68,9 +69,12 @@
             reg = <0x40073000 0x6>;
             clocks = <&sim KINETIS_SIM_BUS_CLK 0x1034 19>;
             interrupts = <40 0>;
+            filter_count = <7>;
+            filter_period = <32>;
+            hysteresis = <KINETIS_CMP_HYSTERESIS_L0>;
             label = "CMP_0";
             #comparator-cells = <3>;
-            status = "disabled";
+            status = "okay";
         };
 
         cmp1: cmp@40073008 {
@@ -78,9 +82,12 @@
             reg = <0x40073008 0x6>;
             clocks = <&sim KINETIS_SIM_BUS_CLK 0x1034 19>;
             interrupts = <41 0>;
+            filter_count = <7>;
+            filter_period = <32>;
+            hysteresis = <KINETIS_CMP_HYSTERESIS_L0>;
             label = "CMP_1";
             #comparator-cells = <3>;
-            status = "disabled";
+            status = "okay";
         };
 
         cmp2: cmp@40073010 {
@@ -88,6 +95,9 @@
             reg = <0x40073010 0x6>;
             clocks = <&sim KINETIS_SIM_BUS_CLK 0x1034 19>;
             interrupts = <70 0>;
+            filter_count = <7>;
+            filter_period = <32>;
+            hysteresis = <KINETIS_CMP_HYSTERESIS_L0>;
             label = "CMP_2";
             #comparator-cells = <3>;
             status = "disabled";
@@ -282,8 +292,13 @@
                 label = "ANALOG_READ";
             };
 
-            acmp {
+            acmp: acmp {
                 /* Have to make DTS bingings and devicetree nodes for the comparators */
+                compatible = "blixt,breaker-cmp";
+                comparators =   <&cmp1 0 1 KINETIS_CMP_EDGE_RISING>,
+                                <&cmp0 1 2 KINETIS_CMP_EDGE_RISING>;
+                comparator-names =  "V_ZD", "I_ZD";
+                label = "ANALOG_CMP";
             };
 
         };

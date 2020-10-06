@@ -65,6 +65,10 @@ struct bcb_msmnt_data {
     uint32_t                diff_v_mains_2_acc;
     uint8_t                 n_samples_rms;
 
+    uint32_t                diff_i_low_gain_2_acc_last;
+    uint32_t                diff_i_high_gain_2_acc_last;
+    uint32_t                diff_v_mains_2_acc_last;
+
     uint16_t                diff_i_low_gain_rms;
     uint16_t                diff_i_high_gain_rms;
     uint16_t                diff_v_mains_rms;
@@ -72,6 +76,11 @@ struct bcb_msmnt_data {
     struct k_timer timer_stat;
     struct k_timer timer_rms;
 };
+
+typedef struct bcb_msmnt_ntc_tbl {
+    uint32_t r; /* Resistance in milliohm */
+    uint32_t b;
+} bcb_msmnt_ntc_tbl_t;
 
 static uint16_t buffer_adc_0[DT_PROP(DT_NODELABEL(adc0), max_channels)] __attribute__ ((aligned (2)));
 static uint16_t buffer_adc_1[DT_PROP(DT_NODELABEL(adc1), max_channels)] __attribute__ ((aligned (2)));
@@ -101,20 +110,50 @@ static struct bcb_msmnt_data bcb_msmnt_data = {
     .diff_v_mains_rms = 0,
 };
 
-static float get_temp(uint32_t adc_ntc) 
-{
-    uint32_t v_ntc = (3000U * adc_ntc) >> 16;
-    uint32_t r_tnc = v_ntc * 56000U / (3300 - v_ntc);
+static bcb_msmnt_ntc_tbl_t bcb_msmnt_ntc_tbl_data[] = {
+    {1135000U,   4075U}, /* -20C */
+    {355600U,    4133U}, /* 0C */
+    {127000U,    4185U}, /* 20C */
+    {100000U,    4197U}, /* 25C */
+    {50680U,     4230U}, /* 40C */
+    {22220U,     4269U}, /* 60C */
+    {10580U,     4301U}, /* 80C */
+    {5410U,      4327U}, /* 100C */
+};
 
-    float temp_k = (298.15f * 4308.0f);
-    temp_k /= 4308.0f + (298.15f * (logf(r_tnc) - logf((100000.0f))));
-    return (temp_k - 273.15f) * 100.0f; 
+static int32_t get_temp(uint32_t adc_ntc) 
+{
+    /* ADC is referenced to 3V (3000 millivolt). */
+    uint32_t v_ntc = (3000 * adc_ntc) >> 16;
+    /* NTC is connected to 3V3 (3300 millivolt) rail via a 56k (56000 milliohm) resistor. */
+    uint32_t r_tnc = v_ntc * 56000 / (3300 - v_ntc);
+    uint32_t b_ntc = 4197U;
+    int i;
+    /* Find the best value for beta (B) */
+    for (i = 0; i < sizeof(bcb_msmnt_ntc_tbl_data)/sizeof(bcb_msmnt_ntc_tbl_t); i++) {
+        if (r_tnc > bcb_msmnt_ntc_tbl_data[i].r) {
+            b_ntc = bcb_msmnt_ntc_tbl_data[i].b;
+            break;
+        }
+    }
+    /* 
+     * T = (T_0 * B)/(B + (T_0 * ln(R/R_0)))
+     * ln(R/R_0) = ln(R) - ln(R_0)
+     *
+     * T_0 = 298.15 K (25C)
+     * R_0 = 100000 ohm
+     * ln(R_0) = 11.5130
+     */
+    float temp_k = (298.15f * ((float)b_ntc));
+    temp_k /= ((float)b_ntc) + (298.15f * (logf(r_tnc) - 11.5130f));
+    /* Convert the value back to celsius and into integer */
+    return (int32_t)((temp_k - 273.15f) * 100.0f); 
 }
 
-static float get_temp_mcu(uint32_t adc_ntc)
+static int32_t get_temp_mcu(uint32_t adc_ntc)
 {
     uint32_t v_ntc = (3000U * adc_ntc) >> 16;
-    return (25.0f - (((float)v_ntc - 716.0f) / 1.62f)) * 100.0f;
+    return (int32_t)((25.0f - (((float)v_ntc - 716.0f) / 1.62f)) * 100.0f);
 }
 
 int32_t bcb_msmnt_get_current_l()
@@ -151,8 +190,8 @@ int32_t bcb_msmnt_get_voltage()
 {
     /* TODO: Explain how the calculation is done. */
     int64_t adc_diff = (int64_t)*(bcb_msmnt_data.val_v_mains)
-                        //- (int64_t)(bcb_msmnt_data.val_v_mains_zero)
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+                        - (int64_t)(bcb_msmnt_data.val_v_mains_zero);
+                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
     return (int32_t)(((adc_diff * 3 * 2000360) / 360) >> 16);
 }
 
@@ -212,11 +251,35 @@ void on_stat_timer_expired(struct k_timer* timer)
         bcb_msmnt_get_temp(BCB_MSMNT_TEMP_MCU));
 #endif
 
+#if 1
     LOG_DBG("current: l: %06" PRId32 "[%06" PRId32 "], h: %06" PRId32 "[%06" PRId32 "]", 
         bcb_msmnt_get_current_l(),
         bcb_msmnt_get_current_l_rms(), 
         bcb_msmnt_get_current_h(),
-        bcb_msmnt_get_current_h_rms()); 
+        bcb_msmnt_get_current_h_rms());
+#endif 
+
+#if 0
+    LOG_DBG("ref_1v5: %" PRIu16, *(bcb_msmnt_data.val_ref_1v5));
+
+    int16_t adc_diff;
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_i_low_gain)
+                //- (int32_t)(bcb_msmnt_data.val_i_low_gain_zero)); 
+                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    LOG_DBG("adc_diff c_lg: %" PRId16, adc_diff);
+
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_i_high_gain)
+                //- (int32_t)(bcb_msmnt_data.val_i_high_gain_zero)); 
+                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    LOG_DBG("adc_diff c_hg: %" PRId16, adc_diff);
+
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_v_mains)
+                //- (int32_t)(bcb_msmnt_data.val_v_mains_zero)); 
+                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    LOG_DBG("adc_diff v: %" PRId16, adc_diff);
+
+#endif 
+
 }
 
 static void on_rms_timer_expired(struct k_timer* timer)
@@ -285,6 +348,23 @@ int32_t bcb_msmnt_get_temp(bcb_msmnt_temp_t sensor)
     return 0;
 }
 
+uint16_t bcb_msmnt_get_temp_raw(bcb_msmnt_temp_t sensor)
+{
+    switch (sensor) {
+        case BCB_MSMNT_TEMP_PWR_IN:
+            return *(bcb_msmnt_data.val_t_mosfet_in);
+        case BCB_MSMNT_TEMP_PWR_OUT:
+            return *(bcb_msmnt_data.val_t_mosfet_out);
+        case BCB_MSMNT_TEMP_AMB:
+            return *(bcb_msmnt_data.val_t_ambient);
+        case BCB_MSMNT_TEMP_MCU:
+            return *(bcb_msmnt_data.val_t_mcu);
+        default:
+            LOG_ERR("Invalid sensor");
+    }
+    return 0;
+}
+
 static int bcb_msmnt_init()
 {
     bcb_msmnt_data.dev_adc_0 = device_get_binding(DT_LABEL(DT_NODELABEL(adc0)));
@@ -317,18 +397,22 @@ static int bcb_msmnt_init()
     struct adc_mcux_sequence_config adc_seq_cfg;
 
     adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_0, bcb_msmnt_data.seq_len_adc_0);
-    adc_seq_cfg.interval_us = 12;
+    adc_seq_cfg.interval_us = 100;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_0;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_0;
     adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_0, &adc_seq_cfg, false);
 
     adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_1, bcb_msmnt_data.seq_len_adc_1);
-    adc_seq_cfg.interval_us = 912;
+    adc_seq_cfg.interval_us = 1000;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_1;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_1;
     adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg, false);
+
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
     /* Wait for 10ms until ADC conversions started to measure offset errors. */
     k_msleep(10);
