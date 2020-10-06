@@ -5,6 +5,8 @@ manifest:
   remotes:
     - name: zephyrproject
       url-base: https://github.com/zephyrproject-rtos
+    - name: blixttech
+      url-base: https://github.com/blixttech
 
   projects:
     - name: cmsis
@@ -17,8 +19,8 @@ manifest:
       path: zephyr-os/zephyr
       west-commands: scripts/west-commands.yml
     - name: hal_nxp
-      remote: zephyrproject
-      revision: 727b36cfe9e2f2aa5eb88d608e6334c8d548cee9
+      remote: blixttech
+      revision: 274f6a6e68f81de8730253407448444caa4ef542
       path: zephyr-os/modules/hal/nxp
 
   self:
