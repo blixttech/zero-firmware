@@ -99,3 +99,27 @@ Clone this repository and update other modules using ``west``.
     # Use the following line before using other cmake commands.
     include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/zephyr.cmake")
     ```   
+
+### Renode
+
+#### Setup the DHCP server
+* Create a bridge
+    ```bridge
+    brctl addbr renode_br
+    ```
+
+* Add tap0 to it
+    ```Add tap0 to it
+    brctl addif renode_br tap0
+    ```
+
+* Bring it up
+    ```Bring it up
+    ifconfig tap0 up
+    ifconfig renode_br up
+    ```
+
+* Run dnsmasq as DHCP server
+    ```Run dnsmasq
+    dnsmasq --no-daemon --log-queries --no-hosts --no-resolv --leasefile-ro --interface=renode_br  -p0 --log-dhcp --dhcp-range=192.168.1.2,192.168.1.10
+    ```
