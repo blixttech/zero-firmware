@@ -26,10 +26,40 @@ enum adc_mcux_ref {
     ADC_MCUX_REF_INTERNAL,  /**< Internal 1.2V. */
 };
 
+/** @brief ADC performance level  */
+enum adc_mcux_perf_lvl {
+    ADC_MCUX_PERF_LVL_0,    /**< Least performace level - best DC accuracy. */
+    ADC_MCUX_PERF_LVL_1,    /**< Medium performance level - better compromise for the DC accuracy. */
+    ADC_MCUX_PERF_LVL_2,    /**< Maximum performance level - least DC accuracy. */
+};
+
+/**
+ * @brief Structure defining an ADC calibration parameters.
+ */
+typedef struct adc_mcux_cal_params {
+    uint16_t ofs;   /**< ADC Offset Correction Register */
+    uint16_t pg;    /**< ADC Plus-Side Gain Register */
+    uint16_t mg;    /**< ADC Minus-Side Gain Register */
+    uint16_t clpd;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clps;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clp4;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clp3;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clp2;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clp1;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clp0;  /**< ADC Plus-Side General Calibration Value Register */
+    uint16_t clmd;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clms;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clm4;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clm3;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clm2;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clm1;  /**< ADC Minus-Side General Calibration Value Register */
+    uint16_t clm0;  /**< ADC Minus-Side General Calibration Value Register */
+} adc_mcux_cal_params_t;
+
 /**
  * @brief Structure defining an ADC sampling sequence configuration.
  */
-struct adc_mcux_sequence_config {
+typedef struct adc_mcux_sequence_config {
     /**
      * Interval between consecutive samplings (in microseconds). Should not be zero.
      */
@@ -45,13 +75,13 @@ struct adc_mcux_sequence_config {
     size_t buffer_size;
     /** Reference selection. */
     enum adc_mcux_ref reference;
-};
+} adc_mcux_sequence_config_t;
 
 /**
  * @brief Structure defining ADC channel configuration.
  * 
  */
-struct adc_mcux_channel_config {
+typedef struct adc_mcux_channel_config {
     /**
      * ADC channel.
      */
@@ -61,7 +91,7 @@ struct adc_mcux_channel_config {
      * alternate channels.
      */
     uint8_t alt_channel;
-};
+} adc_mcux_channel_config_t;
 
 typedef int (*adc_mcux_api_read)(struct device* dev,
 				                const struct adc_mcux_sequence_config* seq_cfg,
@@ -75,6 +105,14 @@ typedef int (*adc_mcux_api_set_sequence_len)(struct device* dev, uint8_t seq_len
 
 typedef uint8_t (*adc_mcux_api_get_sequence_len)(struct device* dev);
 
+typedef int (*adc_mcux_api_set_perf_level)(struct device* dev, uint8_t level);
+
+typedef int (*adc_mcux_api_calibrate)(struct device* dev);
+
+typedef int (*adc_mcux_api_set_cal_params)(struct device* dev, adc_mcux_cal_params_t* params);
+
+typedef int (*adc_mcux_api_get_cal_params)(struct device* dev, adc_mcux_cal_params_t* params);
+
 /**
  * @brief ADC driver API
  *
@@ -85,6 +123,10 @@ __subsystem struct adc_mcux_driver_api {
     adc_mcux_api_channel_setup      channel_setup;
     adc_mcux_api_set_sequence_len   set_sequence_len;
     adc_mcux_api_get_sequence_len   get_sequence_len;
+    adc_mcux_api_set_perf_level     set_perf_level;
+    adc_mcux_api_calibrate          calibrate;
+    adc_mcux_api_set_cal_params     set_cal_params;
+    adc_mcux_api_get_cal_params     get_cal_params;
 };
 
 __syscall int adc_mcux_read(struct device* dev, 
@@ -125,6 +167,42 @@ static inline uint8_t z_impl_adc_mcux_get_sequence_len(struct device* dev)
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->get_sequence_len(dev);
+}
+
+__syscall int adc_mcux_set_perf_level(struct device* dev, uint8_t level);
+
+static inline int z_impl_adc_mcux_set_perf_level(struct device* dev, uint8_t level)
+{
+    struct adc_mcux_driver_api *api;
+    api = (struct adc_mcux_driver_api *)dev->driver_api;
+    return api->set_perf_level(dev, level);
+}
+
+__syscall int adc_mcux_calibrate(struct device* dev);
+
+static inline int z_impl_adc_mcux_calibrate(struct device* dev)
+{
+    struct adc_mcux_driver_api *api;
+    api = (struct adc_mcux_driver_api *)dev->driver_api;
+    return api->calibrate(dev);
+}
+
+__syscall int adc_mcux_set_cal_params(struct device* dev, adc_mcux_cal_params_t* params);
+
+static inline int z_impl_adc_mcux_set_cal_params(struct device* dev, adc_mcux_cal_params_t* params)
+{
+    struct adc_mcux_driver_api *api;
+    api = (struct adc_mcux_driver_api *)dev->driver_api;
+    return api->set_cal_params(dev, params);
+}
+
+__syscall int adc_mcux_get_cal_params(struct device* dev, adc_mcux_cal_params_t* params);
+
+static inline int z_impl_adc_mcux_get_cal_params(struct device* dev, adc_mcux_cal_params_t* params)
+{
+    struct adc_mcux_driver_api *api;
+    api = (struct adc_mcux_driver_api *)dev->driver_api;
+    return api->get_cal_params(dev, params);
 }
 
 /**

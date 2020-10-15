@@ -15,8 +15,8 @@
 
     /* These aliases are provided for compatibility with the samples */
     aliases {
-        led0 = &led_red;
-        led1 = &led_green;
+        //led0 = &led_red;
+        //led1 = &led_green;
         sw1 = &sw_front;
         breaker = &breaker;
     };
@@ -70,7 +70,7 @@
             clocks = <&sim KINETIS_SIM_BUS_CLK 0x1034 19>;
             interrupts = <40 0>;
             filter_count = <7>;
-            filter_period = <32>;
+            filter_period = <255>;
             hysteresis = <KINETIS_CMP_HYSTERESIS_L0>;
             label = "CMP_0";
             #comparator-cells = <3>;
@@ -83,8 +83,8 @@
             clocks = <&sim KINETIS_SIM_BUS_CLK 0x1034 19>;
             interrupts = <41 0>;
             filter_count = <7>;
-            filter_period = <32>;
-            hysteresis = <KINETIS_CMP_HYSTERESIS_L0>;
+            filter_period = <255>;
+            hysteresis = <KINETIS_CMP_HYSTERESIS_L3>;
             label = "CMP_1";
             #comparator-cells = <3>;
             status = "okay";
@@ -217,6 +217,17 @@
                 };
             };
 
+            user_iface: user_iface {
+                compatible = "blixt,breaker-gpio";
+                gpios = <&gpioc 14 GPIO_ACTIVE_LOW>, 
+                        <&gpioc 15 GPIO_ACTIVE_LOW>,
+                        <&gpiod 4 GPIO_ACTIVE_LOW>;
+                gpio-names =    "LED_RED", 
+                                "LED_GREEN", 
+                                "SW_FRONT";
+                label = "USER_IFACE";
+            };
+
             switches {
                 compatible = "gpio-keys";
                 sw_front: sw_front {
@@ -295,7 +306,7 @@
             acmp: acmp {
                 /* Have to make DTS bingings and devicetree nodes for the comparators */
                 compatible = "blixt,breaker-cmp";
-                comparators =   <&cmp1 0 1 KINETIS_CMP_EDGE_RISING>,
+                comparators =   <&cmp1 0 1 (KINETIS_CMP_EDGE_RISING | KINETIS_CMP_EDGE_FALLING)>,
                                 <&cmp0 1 2 KINETIS_CMP_EDGE_RISING>;
                 comparator-names =  "V_ZD", "I_ZD";
                 label = "ANALOG_CMP";

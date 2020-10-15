@@ -2,6 +2,7 @@
 #include <cmp_mcux.h>
 #include <device.h>
 #include <devicetree.h>
+#include <bcb_leds.h>
 
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
@@ -26,21 +27,46 @@ do {                                                                            
 struct bcb_zd_data {
     struct device* dev_cmp_v_zd;
     struct device* dev_cmp_i_zd;
+    volatile uint32_t zd_cnt_v;
+    volatile uint32_t zd_cnt_i;
+
+    struct k_timer timer_stat;
 };
 
 static struct bcb_zd_data bcb_zd_data = {
     .dev_cmp_v_zd = NULL,
     .dev_cmp_i_zd = NULL,
+    .zd_cnt_v = 0,
+    .zd_cnt_i = 0,
 };
 
 static void bcb_zd_on_v_zd(struct device* dev, bool status)
 {
-    LOG_DBG("V_ZD");
+    if (status) {
+        bcb_zd_data.zd_cnt_v++;
+        bcb_leds_on(BCB_LEDS_RED);
+    } else {
+        bcb_leds_off(BCB_LEDS_RED);
+    }
 }
 
 static void bcb_zd_on_i_zd(struct device* dev, bool status)
 {
-    LOG_DBG("I_ZD");
+    if (status) {
+        bcb_zd_data.zd_cnt_i++;
+        bcb_leds_on(BCB_LEDS_GREEN);
+    } else {
+        bcb_leds_off(BCB_LEDS_GREEN);
+    }
+}
+
+void on_zd_stat_timer_expired(struct k_timer* timer)
+{
+    volatile uint32_t c_v = bcb_zd_data.zd_cnt_v;
+    volatile uint32_t c_i = bcb_zd_data.zd_cnt_i;
+    bcb_zd_data.zd_cnt_v = 0;
+    bcb_zd_data.zd_cnt_i = 0;
+    //LOG_DBG("V_ZD %" PRIu32 ", I_ZD %" PRIu32,  c_v, c_i);
 }
 
 static int bcb_zd_init()
@@ -53,6 +79,9 @@ static int bcb_zd_init()
 
     cmp_mcux_set_enable(bcb_zd_data.dev_cmp_v_zd, true);
     cmp_mcux_set_enable(bcb_zd_data.dev_cmp_i_zd, true);
+
+    k_timer_init(&bcb_zd_data.timer_stat, on_zd_stat_timer_expired, NULL);
+    k_timer_start(&bcb_zd_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
 }

@@ -228,8 +228,8 @@ int32_t bcb_msmnt_get_voltage_rms()
 {
     /* TODO: Explain how the calculation is done. */
     int64_t adc_diff = (int64_t)bcb_msmnt_data.diff_v_mains_rms
-                        - (int64_t)(bcb_msmnt_data.val_v_mains_zero); 
-                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+                        //- (int64_t)(bcb_msmnt_data.val_v_mains_zero); 
+                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
     return (int32_t)(((adc_diff * 3 * 2000360) / 360) >> 16);
 }
 
@@ -252,11 +252,13 @@ void on_stat_timer_expired(struct k_timer* timer)
 #endif
 
 #if 1
-    LOG_DBG("current: l: %06" PRId32 "[%06" PRId32 "], h: %06" PRId32 "[%06" PRId32 "]", 
+    LOG_DBG("current: l: %06" PRId32 "[%06" PRId32 "], h: %06" PRId32 "[%06" PRId32 "], v %06" PRId32 "[%06" PRId32 "]", 
         bcb_msmnt_get_current_l(),
         bcb_msmnt_get_current_l_rms(), 
         bcb_msmnt_get_current_h(),
-        bcb_msmnt_get_current_h_rms());
+        bcb_msmnt_get_current_h_rms(),
+        bcb_msmnt_get_voltage(),
+        bcb_msmnt_get_voltage_rms());
 #endif 
 
 #if 0
@@ -297,8 +299,8 @@ static void on_rms_timer_expired(struct k_timer* timer)
     bcb_msmnt_data.diff_i_high_gain_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     adc_diff = (int32_t)*(bcb_msmnt_data.val_v_mains)
-                    - (int32_t)(bcb_msmnt_data.val_v_mains_zero);
-                    //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
+                    //- (int32_t)(bcb_msmnt_data.val_v_mains_zero);
+                    - (int32_t)*(bcb_msmnt_data.val_ref_1v5);
     bcb_msmnt_data.diff_v_mains_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     bcb_msmnt_data.n_samples_rms++;

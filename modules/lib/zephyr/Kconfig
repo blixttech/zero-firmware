@@ -1,22 +1,26 @@
+config BCB_LIB_LEDS_INIT_PRIORITY
+    int "BCB LEDs initialisation priority"
+    default 50
+
 config BCB_LIB_ETIME_INIT_PRIORITY
     int "BCB elapsed time timer initialisation priority"
-    default 50
+    default 51
 
 config BCB_LIB_MSMNT_INIT_PRIORITY
     int "BCB measurement initialisation priority"
-    default 51
+    default 52
 
 config BCB_LIB_CTRL_INIT_PRIORITY
     int "BCB control initialisation priority"
-    default 52
+    default 53
 
 config BCB_LIB_ZD_INIT_PRIORITY
     int "BCB zero detection initialisation priority"
-    default 53
+    default 54
 
 config BCB_LIB_SHELL_INIT_PRIORITY
     int "BCB shell initialisation priority"
-    default 54
+    default 55
 
 config BCB_LIB_ETIME_SECOND
     int "Number of ticks for one second of the elapsed time timer"

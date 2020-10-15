@@ -42,6 +42,13 @@ static int cmp_mcux_set_enable_impl(struct device* dev, bool status)
 {
     const struct cmp_mcux_config* config = dev->config_info;
     CMP_Enable(config->base, status);
+
+    LOG_DBG("CMP CR0   0x%" PRIx8, config->base->CR0);
+    LOG_DBG("CMP CR1   0x%" PRIx8, config->base->CR1);
+    LOG_DBG("CMP FPR   0x%" PRIx8, config->base->FPR);
+    LOG_DBG("CMP SCR   0x%" PRIx8, config->base->SCR);
+    LOG_DBG("CMP MUXCR 0x%" PRIx8, config->base->MUXCR);
+
     return 0;
 }
 
@@ -103,11 +110,19 @@ static int cmp_mcux_init(struct device* dev)
     }
 
     cmp_filter_config_t filter_cfg;
-    filter_cfg.enableSample = true;
+    filter_cfg.enableSample = false;
     filter_cfg.filterCount = config->filter_count;
     filter_cfg.filterPeriod = config->filter_period;
 
     CMP_SetFilterConfig(config->base, &filter_cfg);
+
+#if 0
+    LOG_DBG("CMP CR0   0x%" PRIx8, config->base->CR0);
+    LOG_DBG("CMP CR1   0x%" PRIx8, config->base->CR1);
+    LOG_DBG("CMP FPR   0x%" PRIx8, config->base->FPR);
+    LOG_DBG("CMP SCR   0x%" PRIx8, config->base->SCR);
+    LOG_DBG("CMP MUXCR 0x%" PRIx8, config->base->MUXCR);
+#endif
 
     return 0;
 }
