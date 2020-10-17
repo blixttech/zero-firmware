@@ -19,6 +19,16 @@ config ADC_MCUX_EDMA
     default y
     depends on DMA_MCUX_EDMA && ADC_MCUX_ADC16
 
+config ADC_MCUX_EDMA_CAL_R
+    bool "Enable/disable repeated ADC calibration"
+    default n
+    depends on ADC_MCUX_EDMA
+
+config ADC_MCUX_EDMA_CAL_R_SAMPLES
+    int "Number of repeated ADC calibrations"
+    default 40
+    depends on ADC_MCUX_EDMA_CAL_R
+
 config DMA_MCUX_EDMA
     bool "Enable EDMA"
     default y

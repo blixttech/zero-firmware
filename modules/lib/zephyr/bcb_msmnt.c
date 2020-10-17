@@ -73,8 +73,14 @@ struct bcb_msmnt_data {
     uint16_t                diff_i_high_gain_rms;
     uint16_t                diff_v_mains_rms;
 
+    volatile uint16_t                cal_n_samples;
+    volatile uint32_t                cal_i_lg_acc;
+    volatile uint32_t                cal_i_hg_acc;
+    volatile uint32_t                cal_v_acc;
+
     struct k_timer timer_stat;
     struct k_timer timer_rms;
+    struct k_timer timer_cal;
 };
 
 typedef struct bcb_msmnt_ntc_tbl {
@@ -108,6 +114,8 @@ static struct bcb_msmnt_data bcb_msmnt_data = {
     .diff_i_low_gain_rms = 0,
     .diff_i_high_gain_rms = 0,
     .diff_v_mains_rms = 0,
+    /* Calibration */
+    .cal_n_samples = 0,
 };
 
 static bcb_msmnt_ntc_tbl_t bcb_msmnt_ntc_tbl_data[] = {
@@ -322,6 +330,23 @@ static void on_rms_timer_expired(struct k_timer* timer)
     }
 }
 
+static void on_cal_timer_expired(struct k_timer* timer)
+{
+    if (bcb_msmnt_data.cal_n_samples > 4096) {
+        uint32_t i_hg_zero = bcb_msmnt_data.cal_i_hg_acc >> 12;
+        uint32_t i_lg_zero = bcb_msmnt_data.cal_i_lg_acc >> 12;
+        uint32_t v_zero = bcb_msmnt_data.cal_v_acc >> 12;
+        LOG_DBG("cal done. i_lg %" PRId32 ", i_hg %" PRIu32 ", v %" PRIu32, i_lg_zero, i_hg_zero, v_zero);
+        k_timer_stop(timer);
+    }
+
+    bcb_msmnt_data.cal_i_hg_acc += (uint32_t)*(bcb_msmnt_data.val_i_high_gain);
+    bcb_msmnt_data.cal_i_lg_acc += (uint32_t)*(bcb_msmnt_data.val_i_low_gain);
+    bcb_msmnt_data.cal_v_acc += (uint32_t)*(bcb_msmnt_data.val_v_mains);
+
+    bcb_msmnt_data.cal_n_samples++;
+}
+
 static inline void update_adc_zero()
 {
     bcb_msmnt_data.val_i_low_gain_zero = *(bcb_msmnt_data.val_i_low_gain);
@@ -367,6 +392,24 @@ uint16_t bcb_msmnt_get_temp_raw(bcb_msmnt_temp_t sensor)
     return 0;
 }
 
+int bcb_msmnt_cal_start(bcb_msmnt_cal_callback_t callback)
+{
+    bcb_msmnt_data.cal_n_samples = 0;
+    bcb_msmnt_data.cal_i_hg_acc = 0;
+    bcb_msmnt_data.cal_i_lg_acc = 0;
+    bcb_msmnt_data.cal_v_acc = 0;
+
+    k_timer_start(&bcb_msmnt_data.timer_cal, K_MSEC(10), K_MSEC(2));
+
+    return 0;
+}
+
+int bcb_msmnt_cal_stop()
+{
+    return 0;
+}
+
+
 static int bcb_msmnt_init()
 {
     bcb_msmnt_data.dev_adc_0 = device_get_binding(DT_LABEL(DT_NODELABEL(adc0)));
@@ -396,37 +439,43 @@ static int bcb_msmnt_init()
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, oc_test_adj);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, ref_1v5);
 
+
+    adc_mcux_set_reference(bcb_msmnt_data.dev_adc_0, ADC_MCUX_REF_EXTERNAL);
+    adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_0, ADC_MCUX_PERF_LVL_0);
+    adc_mcux_calibrate(bcb_msmnt_data.dev_adc_0);
+
+    adc_mcux_set_reference(bcb_msmnt_data.dev_adc_1, ADC_MCUX_REF_EXTERNAL);
+    adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_1, ADC_MCUX_PERF_LVL_0);
+    adc_mcux_calibrate(bcb_msmnt_data.dev_adc_1);
+
+    k_timer_init(&bcb_msmnt_data.timer_cal, on_cal_timer_expired, NULL);
+    k_timer_init(&bcb_msmnt_data.timer_rms, on_rms_timer_expired, NULL);
+    k_timer_init(&bcb_msmnt_data.timer_stat, on_stat_timer_expired, NULL);
+
     struct adc_mcux_sequence_config adc_seq_cfg;
 
-    adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_0, bcb_msmnt_data.seq_len_adc_0);
-    adc_seq_cfg.interval_us = 100;
+    adc_seq_cfg.interval_us = 50;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_0;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_0;
-    adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
-    adc_mcux_read(bcb_msmnt_data.dev_adc_0, &adc_seq_cfg, false);
+    adc_seq_cfg.seq_len = bcb_msmnt_data.seq_len_adc_0;
+    adc_mcux_read(bcb_msmnt_data.dev_adc_0, &adc_seq_cfg);
 
-    adc_mcux_set_sequence_len(bcb_msmnt_data.dev_adc_1, bcb_msmnt_data.seq_len_adc_1);
     adc_seq_cfg.interval_us = 1000;
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_1;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_1;
-    adc_seq_cfg.reference = ADC_MCUX_REF_EXTERNAL;
-    adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg, false);
-
-    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0;
-    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    adc_seq_cfg.seq_len = bcb_msmnt_data.seq_len_adc_1;
+    adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
     /* Wait for 10ms until ADC conversions started to measure offset errors. */
     k_msleep(10);
     update_adc_zero();
 
+
     /* Start RMS calculation timer. */
-    k_timer_init(&bcb_msmnt_data.timer_rms, on_rms_timer_expired, NULL);
-    k_timer_start(&bcb_msmnt_data.timer_rms, K_MSEC(1), K_MSEC(1));
+    //k_timer_start(&bcb_msmnt_data.timer_rms, K_MSEC(1), K_MSEC(1));
 
     /* Starting stat timer. */
-    k_timer_init(&bcb_msmnt_data.timer_stat, on_stat_timer_expired, NULL);
-    k_timer_start(&bcb_msmnt_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
+    //k_timer_start(&bcb_msmnt_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
 
     return 0;
 }

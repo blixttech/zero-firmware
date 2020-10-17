@@ -21,16 +21,17 @@ extern "C" {
  */
 
 /** @brief ADC references. */
-enum adc_mcux_ref {
+typedef enum adc_mcux_ref {
     ADC_MCUX_REF_EXTERNAL,  /**< External, VREFH & VREFL. */
     ADC_MCUX_REF_INTERNAL,  /**< Internal 1.2V. */
-};
+} adc_mcux_ref_t;
 
 /** @brief ADC performance level  */
 enum adc_mcux_perf_lvl {
-    ADC_MCUX_PERF_LVL_0,    /**< Least performace level - best DC accuracy. */
-    ADC_MCUX_PERF_LVL_1,    /**< Medium performance level - better compromise for the DC accuracy. */
-    ADC_MCUX_PERF_LVL_2,    /**< Maximum performance level - least DC accuracy. */
+    ADC_MCUX_PERF_LVL_0,    /**< Level 0- lowest performace level, best DC accuracy. */
+    ADC_MCUX_PERF_LVL_1,    /**< Level 1. */
+    ADC_MCUX_PERF_LVL_2,    /**< Level 2. */
+    ADC_MCUX_PERF_LVL_3,    /**< Level 3 - highest performance level, lowest DC accuracy. */
 };
 
 /**
@@ -73,8 +74,10 @@ typedef struct adc_mcux_sequence_config {
      * Specifies the size of the buffer pointed by the "buffer" in bytes.
      */
     size_t buffer_size;
-    /** Reference selection. */
-    enum adc_mcux_ref reference;
+    /**
+     * ADC sequence length
+     */
+    uint8_t seq_len;
 } adc_mcux_sequence_config_t;
 
 /**
@@ -93,17 +96,15 @@ typedef struct adc_mcux_channel_config {
     uint8_t alt_channel;
 } adc_mcux_channel_config_t;
 
-typedef int (*adc_mcux_api_read)(struct device* dev,
-				                const struct adc_mcux_sequence_config* seq_cfg,
-				                bool single);
+typedef int (*adc_mcux_api_read)(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg);
+
+typedef int (*adc_mcux_api_stop)(struct device* dev);
 
 typedef int (*adc_mcux_api_channel_setup)(struct device* dev,
                                             uint8_t seq_idx,
-				                            const struct adc_mcux_channel_config* ch_cfg);
+				                            const adc_mcux_channel_config_t* ch_cfg);
 
-typedef int (*adc_mcux_api_set_sequence_len)(struct device* dev, uint8_t seq_len);
-
-typedef uint8_t (*adc_mcux_api_get_sequence_len)(struct device* dev);
+typedef int (*adc_mcux_api_set_reference)(struct device* dev, adc_mcux_ref_t ref);
 
 typedef int (*adc_mcux_api_set_perf_level)(struct device* dev, uint8_t level);
 
@@ -120,53 +121,51 @@ typedef int (*adc_mcux_api_get_cal_params)(struct device* dev, adc_mcux_cal_para
  */
 __subsystem struct adc_mcux_driver_api {
     adc_mcux_api_read               read;
+    adc_mcux_api_stop               stop;
     adc_mcux_api_channel_setup      channel_setup;
-    adc_mcux_api_set_sequence_len   set_sequence_len;
-    adc_mcux_api_get_sequence_len   get_sequence_len;
+    adc_mcux_api_set_reference      set_reference;
     adc_mcux_api_set_perf_level     set_perf_level;
     adc_mcux_api_calibrate          calibrate;
     adc_mcux_api_set_cal_params     set_cal_params;
     adc_mcux_api_get_cal_params     get_cal_params;
 };
 
-__syscall int adc_mcux_read(struct device* dev, 
-                            const struct adc_mcux_sequence_config* seq_cfg, bool async);
+__syscall int adc_mcux_read(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg);
 
-static inline int z_impl_adc_mcux_read(struct device* dev, 
-                                        const struct adc_mcux_sequence_config* seq_cfg, bool async)
+static inline int z_impl_adc_mcux_read(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
-    return api->read(dev, seq_cfg, async);
+    return api->read(dev, seq_cfg);
+}
+
+__syscall int adc_mcux_stop(struct device* dev);
+
+static inline int z_impl_adc_mcux_stop(struct device* dev)
+{
+    struct adc_mcux_driver_api *api;
+    api = (struct adc_mcux_driver_api *)dev->driver_api;
+    return api->stop(dev);
 }
 
 __syscall int adc_mcux_channel_setup(struct device* dev, uint8_t seq_idx, 
-                                        const struct adc_mcux_channel_config* ch_cfg);
+                                        const adc_mcux_channel_config_t* ch_cfg);
 
 static inline int z_impl_adc_mcux_channel_setup(struct device* dev, uint8_t seq_idx, 
-                                                const struct adc_mcux_channel_config* ch_cfg)
+                                                const adc_mcux_channel_config_t* ch_cfg)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->channel_setup(dev, seq_idx, ch_cfg);
 }
 
-__syscall int adc_mcux_set_sequence_len(struct device* dev, uint8_t seq_len);
+__syscall int adc_mcux_set_reference(struct device* dev, adc_mcux_ref_t ref);
 
-static inline int z_impl_adc_mcux_set_sequence_len(struct device* dev, uint8_t seq_len)
+static inline int z_impl_adc_mcux_set_reference(struct device* dev, adc_mcux_ref_t ref)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
-    return api->set_sequence_len(dev, seq_len);
-}
-
-__syscall uint8_t adc_mcux_get_sequence_len(struct device* dev);
-
-static inline uint8_t z_impl_adc_mcux_get_sequence_len(struct device* dev)
-{
-    struct adc_mcux_driver_api *api;
-    api = (struct adc_mcux_driver_api *)dev->driver_api;
-    return api->get_sequence_len(dev);
+    return api->set_reference(dev, ref);
 }
 
 __syscall int adc_mcux_set_perf_level(struct device* dev, uint8_t level);

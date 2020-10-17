@@ -9,13 +9,20 @@
 extern "C" {
 #endif
 
-
 typedef enum {
     BCB_MSMNT_TEMP_PWR_IN = 0,
     BCB_MSMNT_TEMP_PWR_OUT,
     BCB_MSMNT_TEMP_AMB,
     BCB_MSMNT_TEMP_MCU
 } bcb_msmnt_temp_t;
+
+typedef struct bcb_msmnt_cal_params {
+    uint16_t i_lg_zero_raw;
+    uint16_t i_hg_zero_raw;
+    uint16_t v_zero_raw;
+} bcb_msmnt_cal_params_t ;
+
+typedef void (*bcb_msmnt_cal_callback_t)();
 
 int32_t bcb_msmnt_get_temp(bcb_msmnt_temp_t sensor);
 //int32_t bcb_msmnt_get_current_l();
@@ -38,6 +45,9 @@ uint16_t bcb_msmnt_get_v_ref_raw();
 uint32_t bcb_msmnt_get_i_lg_sq_acc_raw();
 uint32_t bcb_msmnt_get_i_hg_sq_acc_raw();
 uint32_t bcb_msmnt_get_v_sq_acc_raw();
+
+int bcb_msmnt_cal_start(bcb_msmnt_cal_callback_t callback);
+int bcb_msmnt_cal_stop();
 
 #ifdef __cplusplus
 }

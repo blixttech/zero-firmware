@@ -42,22 +42,26 @@ static struct bcb_zd_data bcb_zd_data = {
 
 static void bcb_zd_on_v_zd(struct device* dev, bool status)
 {
+#if 0
     if (status) {
         bcb_zd_data.zd_cnt_v++;
         bcb_leds_on(BCB_LEDS_RED);
     } else {
         bcb_leds_off(BCB_LEDS_RED);
     }
+#endif
 }
 
 static void bcb_zd_on_i_zd(struct device* dev, bool status)
 {
+#if 0
     if (status) {
         bcb_zd_data.zd_cnt_i++;
         bcb_leds_on(BCB_LEDS_GREEN);
     } else {
         bcb_leds_off(BCB_LEDS_GREEN);
     }
+#endif
 }
 
 void on_zd_stat_timer_expired(struct k_timer* timer)

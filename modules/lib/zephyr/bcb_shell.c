@@ -21,6 +21,11 @@ static void on_ocpt(uint64_t reponse_time, int direction)
             (uint32_t)(BCB_ONOFF_TICKS_TO_NS(reponse_time)));
 }
 
+static void on_cal_done()
+{
+
+}
+
 static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
 {
     ARG_UNUSED(argc);
@@ -63,10 +68,21 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
     return 0;
 }
 
+static int cmd_calibrate_params(const struct shell *shell, size_t argc, char **argv)
+{
+    ARG_UNUSED(argc);
+    ARG_UNUSED(argv);
+
+    bcb_msmnt_cal_start(on_cal_done);
+
+    return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
     SHELL_CMD(on, NULL, "Turn on.", cmd_on_params),
     SHELL_CMD(off, NULL, "Turn off.", cmd_off_params),
     SHELL_CMD(ocpt, NULL, "Trigger OCP.", cmd_ocp_trigger_params),
+    SHELL_CMD(cal, NULL, "Calibrate", cmd_calibrate_params),
     SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(breaker, &breaker_sub, "Breaker commands", NULL);

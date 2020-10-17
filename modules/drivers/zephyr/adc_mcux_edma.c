@@ -11,6 +11,10 @@
 #include <fsl_rcm.h>
 #include <drivers/clock_control.h>
 
+#if CONFIG_ADC_MCUX_EDMA_CAL_R
+#include <stdlib.h> // For qsort()
+#endif // CONFIG_ADC_MCUX_EDMA_CAL_R
+
 #define LOG_LEVEL CONFIG_ADC_MCUX_EDMA_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(adc_mcux_edma);
@@ -31,6 +35,28 @@ typedef struct adc_mcux_perf_config {
     adc16_config_t adc_config;
     adc16_hardware_average_mode_t avg_mode;
 } adc_mcux_perf_config_t;
+
+#if CONFIG_ADC_MCUX_EDMA_CAL_R
+typedef struct adc_mcux_cal_params_store {
+    uint16_t ofs[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t pg[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t mg[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clpd[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clps[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clp4[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clp3[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clp2[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clp1[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clp0[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clmd[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clms[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clm4[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clm3[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clm2[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clm1[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+    uint16_t clm0[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES];
+} adc_mcux_cal_params_store_t;
+#endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
 struct adc_mcux_config {
     ADC_Type* adc_base;
@@ -66,28 +92,17 @@ struct adc_mcux_data {
     uint32_t ftm_ticks_per_sec;
     edma_handle_t dma_h_result; /* DMA handle for the channel that transfers ADC result. */
     edma_handle_t dma_h_ch;     /* DMA handle for the channel that transfers ADC channels. */
-    adc16_config_t adc_config;
     adc_ch_mux_block_t* ch_mux_block;
     uint8_t* ch_cfg;            /* Stores the DMA channel configuration (main and alternate). */
     volatile void* buffer;      /* Buffer that stores ADC results. */
     uint8_t seq_len;            /* Length of the ADC sequence. */
-    bool cal_required;          /* True if calibration required */
+    adc16_reference_voltage_source_t v_ref;
+#if CONFIG_ADC_MCUX_EDMA_CAL_R
+    adc_mcux_cal_params_store_t cal_params_store;
+#endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 };
 
-#if 0
-    data->adc_config.referenceVoltageSource = kADC16_ReferenceVoltageSourceVref;
-    data->adc_config.clockSource = kADC16_ClockSourceAsynchronousClock; // Select ADACK = 12 MHz
-    data->adc_config.enableAsynchronousClock = true; // Pre-enable to avoid startup delay
-    data->adc_config.clockDivider = kADC16_ClockDivider1; // For maximum clock frequency (12 MHz) 
-    data->adc_config.resolution = kADC16_ResolutionSE16Bit; // 25 ADCK cycles
-    data->adc_config.longSampleMode = kADC16_LongSampleCycle10; // 6 ADCK cycles
-    data->adc_config.enableHighSpeed = true; // 2 ADCK cycles
-    data->adc_config.enableLowPower = false; // Should disabled for high-speed mode 
-    data->adc_config.enableContinuousConversion = false;
-#endif
-
 /* 
- * Always use the external reference and asynchronous clock enabled.
  * ADCK should be > 2 MHz fpr 16-bit single ended conversions.
  * 
  * Sample time (T_sample) calculation
@@ -102,17 +117,17 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
          * BCT          = 25 ADCK cycles (16-bit single-ended)
          * LSTAdder     = 20 ADCK cycles (long sample mode)
          * HSCAdder     = 0 ADCK cycles (normal speed conversion)
-         * f_ADCK       = 3 MHz
+         * f_ADCK       = 3.75 MHz
          * f_BUS        = 60 MHz
          * 
-         * T_sample     = ((3/3)+(5/60)) + (32 * (25 + 20 + 0)/3)
-         *              = 481.08 us
+         * T_sample     = ((3/3.75)+(5/60)) + (32 * (25 + 20 + 0)/3.75)
+         *              = 384.88 us
          */
         .adc_config =   {
             .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
-            .clockSource = kADC16_ClockSourceAsynchronousClock, // Select ADACK = 12 MHz
-            .enableAsynchronousClock = true, // Pre-enable to avoid startup delay
-            .clockDivider = kADC16_ClockDivider4, // 3 MHz
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = false, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider8, // ADCK = 3.75 MHz (30/8 MHz)
             .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
             .longSampleMode = kADC16_LongSampleCycle24, // 20 ADCK cycles
             .enableHighSpeed = false, // 0 ADCK cycles
@@ -128,17 +143,17 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
          * BCT          = 25 ADCK cycles (16-bit single-ended)
          * LSTAdder     = 6 ADCK cycles (long sample mode)
          * HSCAdder     = 0 ADCK cycles (normal speed conversion)
-         * f_ADCK       = 6 MHz
+         * f_ADCK       = 3.75 MHz
          * f_BUS        = 60 MHz
          * 
-         * T_sample     = ((3/6)+(5/60)) + (16 * (25 + 6 + 0)/6)
-         *              = 83.25 us
+         * T_sample     = ((3/3.75)+(5/60)) + (16 * (25 + 6 + 0)/3.75)
+         *              = 133.15 us
          */
         .adc_config =   {
             .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
-            .clockSource = kADC16_ClockSourceAsynchronousClock, // Select ADACK = 12 MHz
-            .enableAsynchronousClock = true, // Pre-enable to avoid startup delay
-            .clockDivider = kADC16_ClockDivider2, // 6 MHz
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = false, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider8, // ADCK = 3.75 MHz (30/8 MHz)
             .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
             .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
             .enableHighSpeed = false, // 0 ADCK cycles
@@ -153,25 +168,51 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
          * AverageNum   = 8
          * BCT          = 25 ADCK cycles (16-bit single-ended)
          * LSTAdder     = 6 ADCK cycles (long sample mode)
-         * HSCAdder     = 2 ADCK cycles (high speed conversion)
-         * f_ADCK       = 12 MHz
+         * HSCAdder     = 0 ADCK cycles (high speed conversion)
+         * f_ADCK       = 3.75 MHz
          * f_BUS        = 60 MHz
          * 
-         * T_sample     = ((3/12)+(5/60)) + (8 * (25 + 6 + 2)/12)
-         *              = 22.33 us
+         * T_sample     = ((3/3.75)+(5/60)) + (4 * (25 + 6 + 0)/3.75)
+         *              = 33.95 us
          */
         .adc_config =   {
             .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
-            .clockSource = kADC16_ClockSourceAsynchronousClock, // Select ADACK = 12 MHz
-            .enableAsynchronousClock = true, // Pre-enable to avoid startup delay
-            .clockDivider = kADC16_ClockDivider1, // 12 MHz
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = true, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider4, // ADCK = 7.5 MHz (30/4 MHz)
             .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
             .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
             .enableHighSpeed = true, // 2 ADCK cycles
             .enableLowPower = false,
             .enableContinuousConversion = false,
         },
-        .avg_mode = kADC16_HardwareAverageCount8,
+        .avg_mode = kADC16_HardwareAverageCount4,
+    },
+    {
+        /* 
+         * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
+         * AverageNum   = 8
+         * BCT          = 25 ADCK cycles (16-bit single-ended)
+         * LSTAdder     = 6 ADCK cycles (long sample mode)
+         * HSCAdder     = 0 ADCK cycles (high speed conversion)
+         * f_ADCK       = 3.75 MHz
+         * f_BUS        = 60 MHz
+         * 
+         * T_sample     = ((3/3.75)+(5/60)) + (1 * (25 + 6 + 0)/3.75)
+         *              = 9.15 us
+         */
+        .adc_config =   {
+            .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = true, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider4, // ADCK = 7.5 MHz (30/4 MHz)
+            .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
+            .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
+            .enableHighSpeed = true, // 2 ADCK cycles
+            .enableLowPower = false,
+            .enableContinuousConversion = false,
+        },
+        .avg_mode = kADC16_HardwareAverageDisabled,
     }
 };
 
@@ -191,13 +232,6 @@ static void adc_mcux_edma_dma_irq_handler(void *arg)
 
 static void adc_mcux_edma_adc_irq_handler(void *arg)
 {
-#if 0
-    /* Remove the following debugging block when the implementation is stable. */
-    struct device* dev = (struct device *)arg;
-    const struct adc_mcux_config* config = dev->config_info;
-    uint16_t adc_val = ADC16_GetChannelConversionValue(config->adc_base, 0);
-    LOG_DBG("ADC irq val %" PRIu16 "-------------", adc_val);
-#endif
 
 /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
  * exception return operation might vector to incorrect interrupt 
@@ -210,13 +244,7 @@ static void adc_mcux_edma_adc_irq_handler(void *arg)
 static void adc_mcux_edma_callback(edma_handle_t* handle, void* param, 
                                     bool transfer_done, uint32_t tcds)
 {
-#if 0
-    /* Remove the following debugging block when the implementation is stable. */
-    struct device* dev = (struct device *)param;
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
-    LOG_DBG("DMA ch %" PRIu8 ", done: %" PRIu8, handle->channel, transfer_done);
-#endif
+    /* Nothing to do here for the moment. */
 }
 
 /**
@@ -257,7 +285,7 @@ static inline void set_channel_mux_config(const struct adc_mcux_config* config,
 }
 
 static int adc_mcux_channel_setup_impl(struct device* dev, uint8_t seq_idx, 
-                                    const struct adc_mcux_channel_config* ch_cfg)
+                                        const adc_mcux_channel_config_t* ch_cfg)
 {
     const struct adc_mcux_config* config = dev->config_info;
     struct adc_mcux_data* data = dev->driver_data;
@@ -269,43 +297,10 @@ static int adc_mcux_channel_setup_impl(struct device* dev, uint8_t seq_idx,
     return 0;
 }
 
-static int adc_mcux_set_sequence_len_impl(struct device* dev, uint8_t seq_len)
+static int adc_mcux_stop_impl(struct device* dev)
 {
     const struct adc_mcux_config* config = dev->config_info;
     struct adc_mcux_data* data = dev->driver_data;
-    if (seq_len > config->max_channels) {
-        LOG_ERR("Invalid sequence length");
-        return -EINVAL;
-    }
-    data->seq_len = seq_len;
-    return 0;
-}
-
-static uint8_t adc_mcux_get_sequence_len_impl(struct device* dev)
-{
-    struct adc_mcux_data* data = dev->driver_data;
-    return data->seq_len;
-}
-
-static int adc_mcux_read_impl(struct device* dev, 
-                        const struct adc_mcux_sequence_config* seq_cfg, bool single)
-{
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
-
-    if (data->seq_len == 0) {
-        LOG_ERR("No channels to sample");
-        return -EINVAL;
-    }
-    LOG_DBG("ADC seq len: %" PRIu8 "", data->seq_len);
-
-    if (seq_cfg->buffer_size < data->seq_len * sizeof(uint16_t)) {
-        LOG_ERR("Not enough memory to store samples");
-        return -EINVAL;        
-    }
-    LOG_DBG("ADC buffer size: %" PRIu8 "", seq_cfg->buffer_size);
-
-    data->buffer = seq_cfg->buffer;
 
     /* Stop the ADC trigger timer before changes. */
     FTM_StopTimer(config->ftm_base);
@@ -313,29 +308,34 @@ static int adc_mcux_read_impl(struct device* dev,
     EDMA_AbortTransfer(&data->dma_h_result);
     EDMA_AbortTransfer(&data->dma_h_ch);
 
-    uint8_t adc_ref;
-    if (seq_cfg->reference == ADC_MCUX_REF_INTERNAL) {
-        adc_ref = kADC16_ReferenceVoltageSourceValt;
-    } else {
-        adc_ref = kADC16_ReferenceVoltageSourceVref;
+    return 0;
+}
+
+static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg)
+{
+    const struct adc_mcux_config* config = dev->config_info;
+    struct adc_mcux_data* data = dev->driver_data;
+
+    if (seq_cfg->seq_len == 0) {
+        LOG_ERR("No channels to sample");
+        return -EINVAL;
     }
 
-    if (data->adc_config.referenceVoltageSource != adc_ref) {
-        /* Reference has been changed. Reinitialise and do a recalibration  */
-        data->adc_config.referenceVoltageSource = adc_ref;
-        ADC16_Init(config->adc_base, &data->adc_config);
-        /* Need to disable interrupts, HW trigger and DMA before the calibration */
-        config->adc_base->SC1[0] &= ~ADC_SC1_AIEN_MASK;
-        ADC16_EnableHardwareTrigger(config->adc_base, false);
-        ADC16_EnableDMA(config->adc_base, false);
-
-        /* Do calibration */
-        ADC16_DoAutoCalibration(config->adc_base);
-        /* Uncomment the following only when debugging */
-        //config->adc_base->SC1[0] |= ADC_SC1_AIEN_MASK; 
-        ADC16_EnableHardwareTrigger(config->adc_base, true);
-        ADC16_EnableDMA(config->adc_base, true);
+    if (seq_cfg->seq_len > config->max_channels) {
+        LOG_ERR("Invalid sequence length %" PRIu8, seq_cfg->seq_len);
+        return -EINVAL;
     }
+    data->seq_len = seq_cfg->seq_len;
+    LOG_DBG("seq_len: %" PRIu8 "", data->seq_len);
+
+    if (seq_cfg->buffer_size < data->seq_len * sizeof(uint16_t)) {
+        LOG_ERR("Not enough memory to store samples");
+        return -EINVAL;        
+    }
+    data->buffer = seq_cfg->buffer;
+
+    /* Stop any already started ADC conversions. */
+    adc_mcux_stop_impl(dev);
 
     set_channel_mux_config(config, data);
 
@@ -403,41 +403,6 @@ static int adc_mcux_read_impl(struct device* dev,
                                         | kEDMA_MajorInterruptEnable 
                                         | kEDMA_HalfInterruptEnable));
 
-#if 0
-    /* Remove the following debugging block when the implementation is stable. */
-    LOG_DBG("TCD[result] SADDR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].SADDR);
-    LOG_DBG("TCD[result] DADDR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].DADDR);
-    LOG_DBG("TCD[result] SOFF 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].SOFF);
-    LOG_DBG("TCD[result] DOFF 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].DOFF);
-    LOG_DBG("TCD[result] NBYTES_MLNO 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].NBYTES_MLNO);
-    LOG_DBG("TCD[result] DLAST_SGA %" PRId32, config->dma_base->TCD[config->dma_ch_result].DLAST_SGA);
-    LOG_DBG("TCD[result] SLAST %" PRId32, config->dma_base->TCD[config->dma_ch_result].SLAST);
-    LOG_DBG("TCD[result] CITER 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].CITER_ELINKYES);
-    LOG_DBG("TCD[result] BITER 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].BITER_ELINKYES);
-    LOG_DBG("TCD[result] ATTR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].ATTR);
-    LOG_DBG("TCD[result] CSR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_result].CSR);
-
-    LOG_DBG("TCD[ch] SADDR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].SADDR);
-    LOG_DBG("TCD[ch] DADDR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].DADDR);
-    LOG_DBG("TCD[ch] SOFF 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].SOFF);
-    LOG_DBG("TCD[ch] DOFF 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].DOFF);
-    LOG_DBG("TCD[ch] NBYTES_MLNO 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].NBYTES_MLNO);
-    LOG_DBG("TCD[ch] DLAST_SGA %" PRId32, config->dma_base->TCD[config->dma_ch_ch].DLAST_SGA);
-    LOG_DBG("TCD[ch] SLAST %" PRId32, config->dma_base->TCD[config->dma_ch_ch].SLAST);
-    LOG_DBG("TCD[ch] CITER 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].CITER_ELINKNO);
-    LOG_DBG("TCD[ch] BITER 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].BITER_ELINKNO);
-    LOG_DBG("TCD[ch] ATTR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].ATTR);
-    LOG_DBG("TCD[ch] CSR 0x%" PRIx32, config->dma_base->TCD[config->dma_ch_ch].CSR);
-#endif
-
-#if 0
-    LOG_DBG("ADC SC1  0x%" PRIx32, config->adc_base->SC1[0]);
-    LOG_DBG("ADC CFG1 0x%" PRIx32, config->adc_base->CFG1);
-    LOG_DBG("ADC CFG2 0x%" PRIx32, config->adc_base->CFG2);
-    LOG_DBG("ADC SC2  0x%" PRIx32, config->adc_base->SC2);
-    LOG_DBG("ADC SC3  0x%" PRIx32, config->adc_base->SC3);
-#endif
-
     uint32_t period = (((uint64_t)seq_cfg->interval_us * (uint64_t)data->ftm_ticks_per_sec) / (uint64_t)1e6);
     LOG_DBG("FTM period: %" PRIu32 "", period);
 
@@ -452,15 +417,30 @@ static int adc_mcux_read_impl(struct device* dev,
     return 0;
 }
 
+static int adc_mcux_set_reference_impl(struct device* dev, adc_mcux_ref_t ref)
+{
+    struct adc_mcux_data* data = dev->driver_data;
+
+    if (ref == ADC_MCUX_REF_INTERNAL) {
+        data->v_ref = kADC16_ReferenceVoltageSourceValt;
+    } else {
+        data->v_ref = kADC16_ReferenceVoltageSourceVref;
+    }
+
+    return 0;
+}
+
 static int adc_mcux_set_perf_level_impl(struct device* dev, uint8_t level)
 {
     const struct adc_mcux_config* config = dev->config_info;
+    struct adc_mcux_data* data = dev->driver_data;
 
     if (level > ADC_MCUX_MAX_PERF_LVLS - 1) {
         LOG_ERR("Invalid performance level. Should be < %" PRIu32 "", ADC_MCUX_MAX_PERF_LVLS);
         return -EINVAL;
     }
 
+    adc_perf_lvls[level].adc_config.referenceVoltageSource = data->v_ref;
     ADC16_Init(config->adc_base, &(adc_perf_lvls[level].adc_config));
     ADC16_SetHardwareAverage(config->adc_base, adc_perf_lvls[level].avg_mode);
     ADC16_EnableHardwareTrigger(config->adc_base, true);
@@ -468,6 +448,93 @@ static int adc_mcux_set_perf_level_impl(struct device* dev, uint8_t level)
 
     return 0;
 }
+
+#if CONFIG_ADC_MCUX_EDMA_CAL_R
+static int adc_mcux_param_cmp(const void* a, const void* b)
+{
+    uint16_t arg_a = *((uint16_t*)a);
+    uint16_t arg_b = *((uint16_t*)b);
+
+    if (arg_a < arg_b) {
+        return -1;
+    } else if (arg_a > arg_b) {
+        return 1;
+    } else {
+        return 0;
+    }
+    return 0;
+}
+
+static status_t adc_mcux_calibrate_r_impl(struct device* dev)
+{
+    const struct adc_mcux_config* config = dev->config_info;
+    struct adc_mcux_data* data = dev->driver_data;
+
+    status_t status;
+    int i;
+    for (i = 0; i < CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES; i++) {
+        status = ADC16_DoAutoCalibration(config->adc_base);
+        if (status != kStatus_Success) {
+            return status;
+        }
+        data->cal_params_store.ofs[i] = (uint16_t)config->adc_base->OFS;
+        data->cal_params_store.pg[i] = (uint16_t)config->adc_base->PG;
+        data->cal_params_store.mg[i] = (uint16_t)config->adc_base->MG;
+        data->cal_params_store.clpd[i] = (uint16_t)config->adc_base->CLPD;
+        data->cal_params_store.clps[i] = (uint16_t)config->adc_base->CLPS;
+        data->cal_params_store.clp4[i] = (uint16_t)config->adc_base->CLP4;
+        data->cal_params_store.clp3[i] = (uint16_t)config->adc_base->CLP3;
+        data->cal_params_store.clp2[i] = (uint16_t)config->adc_base->CLP2;
+        data->cal_params_store.clp1[i] = (uint16_t)config->adc_base->CLP1;
+        data->cal_params_store.clp0[i] = (uint16_t)config->adc_base->CLP0;
+        data->cal_params_store.clmd[i] = (uint16_t)config->adc_base->CLMD;
+        data->cal_params_store.clms[i] = (uint16_t)config->adc_base->CLMS;
+        data->cal_params_store.clm4[i] = (uint16_t)config->adc_base->CLM4;
+        data->cal_params_store.clm3[i] = (uint16_t)config->adc_base->CLM3;
+        data->cal_params_store.clm2[i] = (uint16_t)config->adc_base->CLM2;
+        data->cal_params_store.clm1[i] = (uint16_t)config->adc_base->CLM1;
+        data->cal_params_store.clm0[i] = (uint16_t)config->adc_base->CLM0;
+    }
+
+    qsort(data->cal_params_store.ofs, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp); 
+    qsort(data->cal_params_store.pg, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.mg, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clpd, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clps, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clp4, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clp3, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clp2, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clp1, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clp0, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clmd, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clms, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clm4, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clm3, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clm2, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clm1, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+    qsort(data->cal_params_store.clm0, CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES, sizeof(uint16_t), adc_mcux_param_cmp);
+
+    config->adc_base->OFS = ADC_OFS_OFS(data->cal_params_store.ofs[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->PG = ADC_PG_PG(data->cal_params_store.pg[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->MG = ADC_MG_MG(data->cal_params_store.mg[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLPD = ADC_CLPD_CLPD(data->cal_params_store.clpd[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLPS = ADC_CLPS_CLPS(data->cal_params_store.clps[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLP4 = ADC_CLP4_CLP4(data->cal_params_store.clp4[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLP3 = ADC_CLP3_CLP3(data->cal_params_store.clp3[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLP2 = ADC_CLP2_CLP2(data->cal_params_store.clp2[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLP1 = ADC_CLP1_CLP1(data->cal_params_store.clp1[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLP0 = ADC_CLP0_CLP0(data->cal_params_store.clp0[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLMD = ADC_CLMD_CLMD(data->cal_params_store.clmd[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLMS = ADC_CLMS_CLMS(data->cal_params_store.clms[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLM4 = ADC_CLM4_CLM4(data->cal_params_store.clm4[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLM3 = ADC_CLM3_CLM3(data->cal_params_store.clm3[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLM2 = ADC_CLM2_CLM2(data->cal_params_store.clm2[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLM1 = ADC_CLM1_CLM1(data->cal_params_store.clm1[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+    config->adc_base->CLM0 = ADC_CLM0_CLM0(data->cal_params_store.clm0[CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES/2]);
+
+    return kStatus_Success;
+}
+#endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
 static int adc_mcux_calibrate_impl(struct device* dev)
 {
@@ -478,7 +545,14 @@ static int adc_mcux_calibrate_impl(struct device* dev)
     ADC16_EnableHardwareTrigger(config->adc_base, false);
     ADC16_EnableDMA(config->adc_base, false);
 
-    status_t status = ADC16_DoAutoCalibration(config->adc_base);
+    status_t status = kStatus_Success;
+#if CONFIG_ADC_MCUX_EDMA_CAL_R
+    LOG_INF("Calibrating ADC(repeated %" PRId32 ")..", CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES);
+    status = adc_mcux_calibrate_r_impl(dev);
+#else
+    LOG_INF("Calibrating ADC(single)..");
+    status = ADC16_DoAutoCalibration(config->adc_base);
+#endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
     ADC16_EnableHardwareTrigger(config->adc_base, true);
     ADC16_EnableDMA(config->adc_base, true);
@@ -573,38 +647,12 @@ static int adc_mcux_init(struct device* dev)
     const struct adc_mcux_config* config = dev->config_info;
     struct adc_mcux_data* data = dev->driver_data;
 
+
     /* ---------------- ADC configuration ---------------- */
 
-    /* Sample time (T_sample) calculation
-     * T_sample     = SFCAdder + AverageNum * (BCT + LSTAdder + HSCAdder)
-     * 
-     * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
-     * AverageNum   = 32
-     * BCT          = 25 ADCK cycles (16b single-ended)
-     * LSTAdder     = 6 ADCK cycles (long sample mode)
-     * HSCAdder     = 2 ADCK cycles (high speed conversion)
-     * f_ADCK       = 12 MHz
-     * f_BUS        = 60 MHz
-     * 
-     * T_sample     = ((3/12) + (5/60)) + (32 * (25 + 6 + 2) / 12)
-     *              = 88.33 us
-     */
-    ADC16_GetDefaultConfig(&data->adc_config);
-    data->adc_config.referenceVoltageSource = kADC16_ReferenceVoltageSourceVref;
-    data->adc_config.clockSource = kADC16_ClockSourceAsynchronousClock; // Select ADACK = 12 MHz
-    data->adc_config.enableAsynchronousClock = true; // Pre-enable to avoid startup delay
-    data->adc_config.clockDivider = kADC16_ClockDivider1; // For maximum clock frequency (12 MHz) 
-    data->adc_config.resolution = kADC16_ResolutionSE16Bit; // 25 ADCK cycles
-    data->adc_config.longSampleMode = kADC16_LongSampleCycle10; // 6 ADCK cycles
-    data->adc_config.enableHighSpeed = true; // 2 ADCK cycles
-    data->adc_config.enableLowPower = false; // Should disabled for high-speed mode 
-    data->adc_config.enableContinuousConversion = false;
-    ADC16_Init(config->adc_base, &data->adc_config);
-
-    ADC16_SetHardwareAverage(config->adc_base, kADC16_HardwareAverageCount32);
-    ADC16_DoAutoCalibration(config->adc_base);
-    ADC16_EnableHardwareTrigger(config->adc_base, true);
-    ADC16_EnableDMA(config->adc_base, true);
+    adc_mcux_set_reference_impl(dev, ADC_MCUX_REF_EXTERNAL);
+    adc_mcux_set_perf_level_impl(dev, ADC_MCUX_PERF_LVL_0);
+    adc_mcux_calibrate_impl(dev);
 
     /* ---------------- FTM configuration ---------------- */
 
@@ -655,10 +703,10 @@ static int adc_mcux_init(struct device* dev)
 
 static const struct adc_mcux_driver_api adc_mcux_driver_api = {
     .read = adc_mcux_read_impl,
+    .stop = adc_mcux_stop_impl,
     .channel_setup = adc_mcux_channel_setup_impl,
-    .set_sequence_len = adc_mcux_set_sequence_len_impl,
-    .get_sequence_len = adc_mcux_get_sequence_len_impl,
     .set_perf_level = adc_mcux_set_perf_level_impl,
+    .set_reference = adc_mcux_set_reference_impl,
     .calibrate = adc_mcux_calibrate_impl,
     .set_cal_params = adc_mcux_set_cal_params_impl,
     .get_cal_params = adc_mcux_get_cal_params_impl,
@@ -721,6 +769,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
     static struct adc_mcux_data adc_mcux_data_##n = {                                               \
         .ch_cfg = &adc_mcux_ch_cfg_##n[0],                                                          \
         .ch_mux_block = &adc_mcux_ch_mux_block_##n[0],                                              \
+        .v_ref = kADC16_ReferenceVoltageSourceVref,                                                 \
     };                                                                                              \
                                                                                                     \
     static int adc_mcux_init_##n(struct device* dev);                                               \
