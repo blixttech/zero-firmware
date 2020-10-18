@@ -1,0 +1,11 @@
+description: ST M95080 family EEPROMs
+
+compatible: "st,m95080"
+
+include: spi-device.yaml
+
+properties:
+  reset-gpios:
+    type: phandle-array
+    required: true
+    description: Write protect pin. This is an active low pin.

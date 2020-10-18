@@ -40,3 +40,11 @@ config ADC_MCUX_ADC16
 config CMP_MCUX
     bool "Enable Comparator"
     default y
+
+config SPI_MCUX_DSPI
+    default y
+
+config EEPROM_M95080
+    bool "Enable EEPROM M95080"
+    default y
+    depends on SPI_MCUX_DSPI

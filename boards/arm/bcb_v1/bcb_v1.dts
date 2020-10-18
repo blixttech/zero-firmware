@@ -451,8 +451,22 @@
     status = "okay";
 };
 
+&spi0 {
+    status = "disabled";
+};
+
 &spi2 {
     status = "okay";
+    cs-gpios = <&gpiob 20  GPIO_ACTIVE_LOW>;
+
+    eeprom0: eeprom@0 {
+        compatible = "st,m95080";
+        reg = <0x0>;
+        spi-max-frequency = <20000000>;
+        reset-gpios = <&gpiob 19  GPIO_ACTIVE_LOW>;
+        label = "EEPROM_M95080";
+        status = "okay";
+    }; 
 };
 
 &uart4 {
