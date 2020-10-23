@@ -105,21 +105,18 @@ Clone this repository and update other modules using ``west``.
 #### Setup the DHCP server
 * Create a bridge
     ```bridge
-    brctl addbr renode_br
+    ip link add name renode_bridge type bridge
+    ip addr add 192.168.1.1/24 brd + dev renode_bridge
+    ip link set renode_bridge up
     ```
 
 * Add tap0 to it
     ```Add tap0 to it
-    brctl addif renode_br tap0
-    ```
-
-* Bring it up
-    ```Bring it up
-    ifconfig tap0 up
-    ifconfig renode_br up
+    ip link set tap0 master renode_bridge
+    ip link set tap0 up
     ```
 
 * Run dnsmasq as DHCP server
     ```Run dnsmasq
-    dnsmasq --no-daemon --log-queries --no-hosts --no-resolv --leasefile-ro --interface=renode_br  -p0 --log-dhcp --dhcp-range=192.168.1.2,192.168.1.10
+    dnsmasq --no-daemon --log-queries --no-hosts --no-resolv --leasefile-ro --interface=renode_bridge  -p0 --log-dhcp --dhcp-range=192.168.1.2,192.168.1.10
     ```
