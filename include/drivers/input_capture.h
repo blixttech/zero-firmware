@@ -65,7 +65,7 @@ __subsystem struct input_capture_driver_api {
  * @retval the counter value.
  */
 __syscall uint32_t input_capture_get_counter(struct device* dev);
-static inline uint32_t z_impl_input_capture_get_counter(struct device* dev)
+static inline uint32_t z_impl_input_capture_get_counter(struct device *dev)
 {
     struct input_capture_driver_api *api;
 
@@ -80,8 +80,8 @@ static inline uint32_t z_impl_input_capture_get_counter(struct device* dev)
  * @param[in]   edge    The edge to be captured.
  * @retval 0 If successful.
  */
-__syscall int input_capture_set_channel(struct device* dev, uint32_t channel, uint32_t edge);
-static inline int z_impl_input_capture_set_channel(struct device* dev, uint32_t channel, uint32_t edge)
+__syscall int input_capture_set_channel(struct device *dev, uint32_t channel, uint32_t edge);
+static inline int z_impl_input_capture_set_channel(struct device *dev, uint32_t channel, uint32_t edge)
 {
     struct input_capture_driver_api *api;
 
@@ -95,8 +95,8 @@ static inline int z_impl_input_capture_set_channel(struct device* dev, uint32_t 
  * @param[in]   channel Channel number.
  * @retval the captured counter value.
  */
-__syscall uint32_t input_capture_get_value(struct device* dev, uint32_t channel);
-static inline uint32_t z_impl_input_capture_get_value(struct device* dev, uint32_t channel)
+__syscall uint32_t input_capture_get_value(struct device *dev, uint32_t channel);
+static inline uint32_t z_impl_input_capture_get_value(struct device *dev, uint32_t channel)
 {
     struct input_capture_driver_api *api;
 
@@ -109,8 +109,8 @@ static inline uint32_t z_impl_input_capture_get_value(struct device* dev, uint32
  * @param[in]  dev    Pointer to the device structure for the driver instance.
  * @retval the frequency in hertz.
  */
-__syscall uint32_t input_capture_get_frequency(struct device* dev);
-static inline uint32_t z_impl_input_capture_get_frequency(struct device* dev)
+__syscall uint32_t input_capture_get_frequency(struct device *dev);
+static inline uint32_t z_impl_input_capture_get_frequency(struct device *dev)
 {
     struct input_capture_driver_api *api;
 

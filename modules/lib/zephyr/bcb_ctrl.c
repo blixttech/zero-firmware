@@ -95,16 +95,16 @@ LOG_MODULE_REGISTER(bcb_ctrl);
                     0);
 
 struct bcb_ctrl_data {
-    struct device*  port_on_off;
-    struct device*  port_ocp_otp_reset;
-    struct device*  port_on_off_status;
-    struct device*  port_ocp_test_tr_n;
-    struct device*  port_ocp_test_tr_p;
-    struct device*  ic_on_off_status_r;
-    struct device*  ic_on_off_status_f;
-    struct device*  ic_ocp_test_tr_n;
-    struct device*  ic_ocp_test_tr_p;
-    struct device*  pwm_ocp_test_adj;
+    struct device *port_on_off;
+    struct device *port_ocp_otp_reset;
+    struct device *port_on_off_status;
+    struct device *port_ocp_test_tr_n;
+    struct device *port_ocp_test_tr_p;
+    struct device *ic_on_off_status_r;
+    struct device *ic_on_off_status_f;
+    struct device *ic_ocp_test_tr_n;
+    struct device *ic_ocp_test_tr_p;
+    struct device *pwm_ocp_test_adj;
     bcb_ocp_callback_t ocp_callback;
     bcb_otp_callback_t otp_callback;
     bcb_ocpt_callback_t ocpt_callback;
@@ -116,7 +116,7 @@ struct bcb_ctrl_data {
 static struct bcb_ctrl_data bcb_ctrl_data;
 static struct gpio_callback on_off_cb_data;
 
-static void on_off_status_changed(struct device* dev, struct gpio_callback* cb, uint32_t pins)
+static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     /* Timer used for capturing of/off status (FTM) is 16-bit.
      * Therefore, we cannot measure time durations longer than (2^16)*ftm_tick_time.

@@ -25,8 +25,8 @@ do {                                                                            
 
 
 struct bcb_zd_data {
-    struct device* dev_cmp_v_zd;
-    struct device* dev_cmp_i_zd;
+    struct device *dev_cmp_v_zd;
+    struct device *dev_cmp_i_zd;
     volatile uint32_t zd_cnt_v;
     volatile uint32_t zd_cnt_i;
 
@@ -40,7 +40,7 @@ static struct bcb_zd_data bcb_zd_data = {
     .zd_cnt_i = 0,
 };
 
-static void bcb_zd_on_v_zd(struct device* dev, bool status)
+static void bcb_zd_on_v_zd(struct device *dev, bool status)
 {
 #if 0
     if (status) {
@@ -52,7 +52,7 @@ static void bcb_zd_on_v_zd(struct device* dev, bool status)
 #endif
 }
 
-static void bcb_zd_on_i_zd(struct device* dev, bool status)
+static void bcb_zd_on_i_zd(struct device *dev, bool status)
 {
 #if 0
     if (status) {
@@ -64,7 +64,7 @@ static void bcb_zd_on_i_zd(struct device* dev, bool status)
 #endif
 }
 
-void on_zd_stat_timer_expired(struct k_timer* timer)
+void on_zd_stat_timer_expired(struct k_timer *timer)
 {
     volatile uint32_t c_v = bcb_zd_data.zd_cnt_v;
     volatile uint32_t c_i = bcb_zd_data.zd_cnt_i;

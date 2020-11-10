@@ -28,7 +28,7 @@ extern "C" {
  * @param chan_id    Channel ID.
  * @param user_data     A pointer to the user data. 
  */
-typedef void (*ctd_alarm_callback_t)(struct device* dev, uint8_t chan_id, void* user_data);
+typedef void (*ctd_alarm_callback_t)(struct device *dev, uint8_t chan_id, void *user_data);
 
 /**
  * @brief Alarm callback structure.
@@ -37,18 +37,18 @@ typedef void (*ctd_alarm_callback_t)(struct device* dev, uint8_t chan_id, void* 
  */
 struct ctd_alarm_cfg {
     ctd_alarm_callback_t callback;
-    void* user_data;
+    void *user_data;
 };
 
-typedef int (*counter_ctd_api_start)(struct device* dev, uint8_t chan_id);
-typedef int (*counter_ctd_api_stop)(struct device* dev, uint8_t chan_id);
-typedef uint32_t (*counter_ctd_api_get_value)(struct device* dev, uint8_t chan_id);
-typedef int (*counter_ctd_api_set_top_value)(struct device* dev, uint8_t chan_id, uint32_t ticks);
-typedef uint32_t (*counter_ctd_api_get_top_value)(struct device* dev, uint8_t chan_id);
-typedef int (*counter_ctd_api_set_alarm)(struct device* dev, uint8_t chan_id, const struct ctd_alarm_cfg* cfg);
-typedef int (*counter_ctd_api_cancel_alarm)(struct device* dev, uint8_t chan_id);
-typedef uint64_t (*counter_ctd_api_ns_to_ticks)(struct device* dev, uint64_t ns);
-typedef uint64_t (*counter_ctd_api_ticks_to_ns)(struct device* dev, uint64_t ticks);
+typedef int (*counter_ctd_api_start)(struct device *dev, uint8_t chan_id);
+typedef int (*counter_ctd_api_stop)(struct device *dev, uint8_t chan_id);
+typedef uint32_t (*counter_ctd_api_get_value)(struct device *dev, uint8_t chan_id);
+typedef int (*counter_ctd_api_set_top_value)(struct device *dev, uint8_t chan_id, uint32_t ticks);
+typedef uint32_t (*counter_ctd_api_get_top_value)(struct device *dev, uint8_t chan_id);
+typedef int (*counter_ctd_api_set_alarm)(struct device *dev, uint8_t chan_id, const struct ctd_alarm_cfg *cfg);
+typedef int (*counter_ctd_api_cancel_alarm)(struct device *dev, uint8_t chan_id);
+typedef uint64_t (*counter_ctd_api_ns_to_ticks)(struct device *dev, uint64_t ns);
+typedef uint64_t (*counter_ctd_api_ticks_to_ns)(struct device *dev, uint64_t ticks);
 typedef uint32_t (*counter_ctd_api_get_frequency)(struct device *dev);
 
 __subsystem struct counter_ctd_driver_api {
@@ -71,8 +71,8 @@ __subsystem struct counter_ctd_driver_api {
  * @param[in] chan_id        Channel ID.
  * @retval 0 If successful.  
  */
-__syscall int counter_ctd_start(struct device* dev, uint8_t chan_id);
-static inline int z_impl_counter_ctd_start(struct device* dev, uint8_t chan_id)
+__syscall int counter_ctd_start(struct device *dev, uint8_t chan_id);
+static inline int z_impl_counter_ctd_start(struct device *dev, uint8_t chan_id)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -86,8 +86,8 @@ static inline int z_impl_counter_ctd_start(struct device* dev, uint8_t chan_id)
  * @param[in] chan_id        Channel ID.
  * @retval 0 If successful.  
  */
-__syscall int counter_ctd_stop(struct device* dev, uint8_t chan_id);
-static inline int z_impl_counter_ctd_stop(struct device* dev, uint8_t chan_id)
+__syscall int counter_ctd_stop(struct device *dev, uint8_t chan_id);
+static inline int z_impl_counter_ctd_stop(struct device *dev, uint8_t chan_id)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -101,8 +101,8 @@ static inline int z_impl_counter_ctd_stop(struct device* dev, uint8_t chan_id)
  * @param[in] chan_id        Channel ID.
  * @retval Value of the counter in ticks. 
  */
-__syscall uint32_t counter_ctd_get_value(struct device* dev, uint8_t chan_id);
-static inline uint32_t z_impl_counter_ctd_get_value(struct device* dev, uint8_t chan_id)
+__syscall uint32_t counter_ctd_get_value(struct device *dev, uint8_t chan_id);
+static inline uint32_t z_impl_counter_ctd_get_value(struct device *dev, uint8_t chan_id)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -117,8 +117,8 @@ static inline uint32_t z_impl_counter_ctd_get_value(struct device* dev, uint8_t 
  * @param[in] ticks         Top value of the counter in ticks.
  * @retval 0 If successful. 
  */
-__syscall int counter_ctd_set_top_value(struct device* dev, uint8_t chan_id, uint32_t ticks);
-static inline int z_impl_counter_ctd_set_top_value(struct device* dev, uint8_t chan_id, uint32_t ticks)
+__syscall int counter_ctd_set_top_value(struct device *dev, uint8_t chan_id, uint32_t ticks);
+static inline int z_impl_counter_ctd_set_top_value(struct device *dev, uint8_t chan_id, uint32_t ticks)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -132,8 +132,8 @@ static inline int z_impl_counter_ctd_set_top_value(struct device* dev, uint8_t c
  * @param[in]   chan_id        Channel ID.
  * @retval Top value of the counter in ticks.
  */
-__syscall uint32_t counter_ctd_get_top_value(struct device* dev, uint8_t chan_id);
-static inline uint32_t z_impl_counter_ctd_get_top_value(struct device* dev, uint8_t chan_id)
+__syscall uint32_t counter_ctd_get_top_value(struct device *dev, uint8_t chan_id);
+static inline uint32_t z_impl_counter_ctd_get_top_value(struct device *dev, uint8_t chan_id)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -148,8 +148,8 @@ static inline uint32_t z_impl_counter_ctd_get_top_value(struct device* dev, uint
  * @param[in] cfg           Alarm configuration.
  * @retval 0 If successful. 
  */
-__syscall int counter_ctd_set_alarm(struct device* dev, uint8_t chan_id, const struct ctd_alarm_cfg* cfg);
-static inline int z_impl_counter_ctd_set_alarm(struct device* dev, uint8_t chan_id, const struct ctd_alarm_cfg* cfg)
+__syscall int counter_ctd_set_alarm(struct device *dev, uint8_t chan_id, const struct ctd_alarm_cfg* cfg);
+static inline int z_impl_counter_ctd_set_alarm(struct device *dev, uint8_t chan_id, const struct ctd_alarm_cfg *cfg)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -163,8 +163,8 @@ static inline int z_impl_counter_ctd_set_alarm(struct device* dev, uint8_t chan_
  * @param[in] chan_id        Channel ID.
  * @retval 0 If successful. 
  */
-__syscall int counter_ctd_cancel_alarm(struct device* dev, uint8_t chan_id);
-static inline int z_impl_counter_ctd_cancel_alarm(struct device* dev, uint8_t chan_id)
+__syscall int counter_ctd_cancel_alarm(struct device *dev, uint8_t chan_id);
+static inline int z_impl_counter_ctd_cancel_alarm(struct device *dev, uint8_t chan_id)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -178,8 +178,8 @@ static inline int z_impl_counter_ctd_cancel_alarm(struct device* dev, uint8_t ch
  * @param[in] ns    Duration in nanoseconds.
  * @return Ticks in nanoseconds.
  */
-__syscall uint64_t counter_ctd_ns_to_ticks(struct device* dev, uint64_t ns);
-static inline uint64_t z_impl_counter_ctd_ns_to_ticks(struct device* dev, uint64_t ns)
+__syscall uint64_t counter_ctd_ns_to_ticks(struct device *dev, uint64_t ns);
+static inline uint64_t z_impl_counter_ctd_ns_to_ticks(struct device *dev, uint64_t ns)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;
@@ -196,8 +196,8 @@ static inline uint64_t z_impl_counter_ctd_ns_to_ticks(struct device* dev, uint64
  * @param[in] ticks    Duration in timer ticks. 
  * @return  Nanoseconds in ticks.
  */
-__syscall uint64_t counter_ctd_ticks_to_ns(struct device* dev, uint64_t ticks);
-static inline uint64_t z_impl_counter_ctd_ticks_to_ns(struct device* dev, uint64_t ticks)
+__syscall uint64_t counter_ctd_ticks_to_ns(struct device *dev, uint64_t ticks);
+static inline uint64_t z_impl_counter_ctd_ticks_to_ns(struct device *dev, uint64_t ticks)
 {
     struct counter_ctd_driver_api *api;
     api = (struct counter_ctd_driver_api *)dev->driver_api;

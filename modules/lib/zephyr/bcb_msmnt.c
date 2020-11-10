@@ -12,6 +12,10 @@ LOG_MODULE_REGISTER(bcb_msmnt);
 #define BCB_MSMNT_RMS_SAMPLES           ((1U) << CONFIG_BCB_LIB_MSMNT_RMS_SAMPLES)
 #define BCB_MSMNT_RMS_SAMPLES_SHIFT     (CONFIG_BCB_LIB_MSMNT_RMS_SAMPLES) 
 
+#define BCB_MSMNT_CAL_SAMPLES           ((1U) << 10U)
+#define BCB_MSMNT_CAL_SAMPLES_SHIFT     (10U)
+
+
 #define BCB_MSMNT_ADC_SEQ_ADD(ds, dt_node, ch_name)                                                 \
     do {                                                                                            \
         struct adc_mcux_channel_config cfg;                                                         \
@@ -20,10 +24,10 @@ LOG_MODULE_REGISTER(bcb_msmnt);
         struct device* dev = device_get_binding(                                                    \
                         DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_node), io_channels, ch_name))); \
         if (dev == (ds)->dev_adc_0) {                                                               \
-            (ds)->val_##ch_name = &((ds)->buffer_adc_0[(ds)->seq_len_adc_0]);                       \
+            (ds)->raw_##ch_name = &((ds)->buffer_adc_0[(ds)->seq_len_adc_0]);                       \
             adc_mcux_channel_setup((ds)->dev_adc_0, ((ds)->seq_len_adc_0++), &cfg);                 \
         } else if(dev == (ds)->dev_adc_1) {                                                         \
-            (ds)->val_##ch_name = &((ds)->buffer_adc_1[(ds)->seq_len_adc_1]);                       \
+            (ds)->raw_##ch_name = &((ds)->buffer_adc_1[(ds)->seq_len_adc_1]);                       \
             adc_mcux_channel_setup((ds)->dev_adc_1, ((ds)->seq_len_adc_1++), &cfg);                 \
         } else {                                                                                    \
             LOG_ERR("Unknown ADC device");                                                          \
@@ -32,33 +36,33 @@ LOG_MODULE_REGISTER(bcb_msmnt);
 
 struct bcb_msmnt_data {
     /* ADC channel 0 */
-    struct device*          dev_adc_0;
+    struct device           *dev_adc_0;
     uint8_t                 seq_len_adc_0;
-    volatile uint16_t*       buffer_adc_0;
+    volatile uint16_t       *buffer_adc_0;
     size_t                  buffer_size_adc_0;
     /* ADC channel 1 */
-    struct device*          dev_adc_1;
+    struct device           *dev_adc_1;
     uint8_t                 seq_len_adc_1;
-    volatile uint16_t*      buffer_adc_1;
+    volatile uint16_t       *buffer_adc_1;
     size_t                  buffer_size_adc_1;
     /* ADC0 channel values */
-    volatile uint16_t*      val_i_low_gain;
-    volatile uint16_t*      val_i_high_gain;
-    volatile uint16_t*      val_v_mains;
+    volatile uint16_t       *raw_i_low_gain;
+    volatile uint16_t       *raw_i_high_gain;
+    volatile uint16_t       *raw_v_mains;
     /* ADC1 channel values */
-    volatile uint16_t*      val_t_mosfet_in;
-    volatile uint16_t*      val_t_mosfet_out;
-    volatile uint16_t*      val_t_ambient;
-    volatile uint16_t*      val_t_mcu;
-    volatile uint16_t*      val_hw_rev_in;
-    volatile uint16_t*      val_hw_rev_out;
-    volatile uint16_t*      val_hw_rev_ctrl;
-    volatile uint16_t*      val_oc_test_adj;
-    volatile uint16_t*      val_ref_1v5;
+    volatile uint16_t       *raw_t_mosfet_in;
+    volatile uint16_t       *raw_t_mosfet_out;
+    volatile uint16_t       *raw_t_ambient;
+    volatile uint16_t       *raw_t_mcu;
+    volatile uint16_t       *raw_hw_rev_in;
+    volatile uint16_t       *raw_hw_rev_out;
+    volatile uint16_t       *raw_hw_rev_ctrl;
+    volatile uint16_t       *raw_oc_test_adj;
+    volatile uint16_t       *raw_ref_1v5;
     /* offset errors */
-    uint16_t                val_i_low_gain_zero;
-    uint16_t                val_i_high_gain_zero;
-    uint16_t                val_v_mains_zero;
+    uint16_t                i_low_gain_raw_zero;
+    uint16_t                i_high_gain_raw_zero;
+    uint16_t                v_mains_raw_zero;
 
     uint32_t                diff_i_low_gain_2_acc;
     uint32_t                diff_i_high_gain_2_acc;
@@ -103,9 +107,9 @@ static struct bcb_msmnt_data bcb_msmnt_data = {
     .buffer_adc_1 = buffer_adc_1,
     .buffer_size_adc_1 = sizeof(buffer_adc_1),
     /* offset errors */
-    .val_i_low_gain_zero = 0,
-    .val_i_high_gain_zero = 0,
-    .val_v_mains_zero = 0,
+    .i_low_gain_raw_zero = 0,
+    .i_high_gain_raw_zero = 0,
+    .v_mains_raw_zero = 0,
     /* RMS calculation */
     .diff_i_low_gain_2_acc = 0,
     .diff_i_high_gain_2_acc = 0,
@@ -173,9 +177,9 @@ int32_t bcb_msmnt_get_current_l()
    * So current I = ADC_DIFF * (V_REF/2^16) / (R_SHUNT * G)
    * I (in mA) = ADC_DIFF * 3 * 10^5 / 2^18
    */
-    int16_t adc_diff = (int16_t)*(bcb_msmnt_data.val_i_low_gain)
-                        - (int16_t)(bcb_msmnt_data.val_i_low_gain_zero); 
-                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    int16_t adc_diff = (int16_t)*(bcb_msmnt_data.raw_i_low_gain)
+                        - (int16_t)(bcb_msmnt_data.i_low_gain_raw_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.ref_1v5_raw);
     return (int32_t)(((int64_t)adc_diff * 300000LL) >> 18ULL);
 }
 
@@ -188,19 +192,27 @@ int32_t bcb_msmnt_get_current_h()
    * So current I = ADC_DIFF * (V_REF/2^16) / (R_SHUNT * G)
    * I (in mA) = ADC_DIFF * 3 * 10^4 / 2^18
    */
-    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.val_i_high_gain)
-                        - (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
-                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.raw_i_high_gain)
+                        - (int64_t)(bcb_msmnt_data.i_high_gain_raw_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.ref_1v5_raw);
     return (int32_t)((adc_diff * 30000) >> 18);
 }
 
 int32_t bcb_msmnt_get_voltage()
 {
+#if 0
     /* TODO: Explain how the calculation is done. */
-    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.val_v_mains)
-                        - (int64_t)(bcb_msmnt_data.val_v_mains_zero);
-                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.v_mains_raw)
+                        - (int64_t)(bcb_msmnt_data.v_mains_raw_zero);
+                        //- (int64_t)*(bcb_msmnt_data.ref_1v5_raw);
     return (int32_t)(((adc_diff * 3 * 2000360) / 360) >> 16);
+#else
+    int64_t adc_diff = (int64_t)*(bcb_msmnt_data.raw_v_mains)
+                        - (int64_t)(bcb_msmnt_data.v_mains_raw_zero);
+    return (int32_t)(((adc_diff * 3000 * 4000710) / 20 / 710) >> 16);
+#endif
+
+    
 }
 
 int32_t bcb_msmnt_get_current_l_rms()
@@ -225,8 +237,8 @@ int32_t bcb_msmnt_get_current_h_rms()
    * I (in mA) = ADC_DIFF * 3 * 10^4 / 2^18
    */
     //int64_t adc_diff = (int64_t)bcb_msmnt_data.diff_i_high_gain_rms
-    //                    - (int64_t)(bcb_msmnt_data.val_i_high_gain_zero); 
-                        //- (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+    //                    - (int64_t)(bcb_msmnt_data.i_high_gain_raw_zero); 
+                        //- (int64_t)*(bcb_msmnt_data.ref_1v5_raw);
     //return (int32_t)((adc_diff * 30000) >> 18);
 
     return (int32_t)(((uint64_t)bcb_msmnt_data.diff_i_high_gain_rms * 30000ULL) >> 18ULL);
@@ -236,8 +248,8 @@ int32_t bcb_msmnt_get_voltage_rms()
 {
     /* TODO: Explain how the calculation is done. */
     int64_t adc_diff = (int64_t)bcb_msmnt_data.diff_v_mains_rms
-                        //- (int64_t)(bcb_msmnt_data.val_v_mains_zero); 
-                        - (int64_t)*(bcb_msmnt_data.val_ref_1v5);
+                        //- (int64_t)(bcb_msmnt_data.v_mains_raw_zero); 
+                        - (int64_t)*(bcb_msmnt_data.raw_ref_1v5);
     return (int32_t)(((adc_diff * 3 * 2000360) / 360) >> 16);
 }
 
@@ -270,22 +282,22 @@ void on_stat_timer_expired(struct k_timer* timer)
 #endif 
 
 #if 0
-    LOG_DBG("ref_1v5: %" PRIu16, *(bcb_msmnt_data.val_ref_1v5));
+    LOG_DBG("ref_1v5: %" PRIu16, *(bcb_msmnt_data.ref_1v5_raw));
 
     int16_t adc_diff;
-    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_i_low_gain)
-                //- (int32_t)(bcb_msmnt_data.val_i_low_gain_zero)); 
-                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.i_low_gain_raw)
+                //- (int32_t)(bcb_msmnt_data.i_low_gain_raw_zero)); 
+                - (int32_t)*(bcb_msmnt_data.ref_1v5_raw));
     LOG_DBG("adc_diff c_lg: %" PRId16, adc_diff);
 
-    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_i_high_gain)
-                //- (int32_t)(bcb_msmnt_data.val_i_high_gain_zero)); 
-                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.i_high_gain_raw)
+                //- (int32_t)(bcb_msmnt_data.i_high_gain_raw_zero)); 
+                - (int32_t)*(bcb_msmnt_data.ref_1v5_raw));
     LOG_DBG("adc_diff c_hg: %" PRId16, adc_diff);
 
-    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.val_v_mains)
-                //- (int32_t)(bcb_msmnt_data.val_v_mains_zero)); 
-                - (int32_t)*(bcb_msmnt_data.val_ref_1v5));
+    adc_diff = (int16_t)((int32_t)*(bcb_msmnt_data.v_mains_raw)
+                //- (int32_t)(bcb_msmnt_data.v_mains_raw_zero)); 
+                - (int32_t)*(bcb_msmnt_data.ref_1v5_raw));
     LOG_DBG("adc_diff v: %" PRId16, adc_diff);
 
 #endif 
@@ -295,20 +307,20 @@ void on_stat_timer_expired(struct k_timer* timer)
 static void on_rms_timer_expired(struct k_timer* timer)
 {
 
-    int32_t adc_diff = (int32_t)*(bcb_msmnt_data.val_i_low_gain)
-                    - (int32_t)(bcb_msmnt_data.val_i_low_gain_zero);
-                    //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
+    int32_t adc_diff = (int32_t)*(bcb_msmnt_data.raw_i_low_gain)
+                    - (int32_t)(bcb_msmnt_data.i_low_gain_raw_zero);
+                    //- (int32_t)*(bcb_msmnt_data.ref_1v5_raw);
 
     bcb_msmnt_data.diff_i_low_gain_2_acc += (uint32_t)(adc_diff * adc_diff);
 
-    adc_diff = (int32_t)*(bcb_msmnt_data.val_i_high_gain)
-                    - (int32_t)(bcb_msmnt_data.val_i_high_gain_zero);
-                    //- (int32_t)*(bcb_msmnt_data.val_ref_1v5);
+    adc_diff = (int32_t)*(bcb_msmnt_data.raw_i_high_gain)
+                    - (int32_t)(bcb_msmnt_data.i_high_gain_raw_zero);
+                    //- (int32_t)*(bcb_msmnt_data.ref_1v5_raw);
     bcb_msmnt_data.diff_i_high_gain_2_acc += (uint32_t)(adc_diff * adc_diff);
 
-    adc_diff = (int32_t)*(bcb_msmnt_data.val_v_mains)
-                    //- (int32_t)(bcb_msmnt_data.val_v_mains_zero);
-                    - (int32_t)*(bcb_msmnt_data.val_ref_1v5);
+    adc_diff = (int32_t)*(bcb_msmnt_data.raw_v_mains)
+                    //- (int32_t)(bcb_msmnt_data.v_mains_raw_zero);
+                    - (int32_t)*(bcb_msmnt_data.raw_ref_1v5);
     bcb_msmnt_data.diff_v_mains_2_acc += (uint32_t)(adc_diff * adc_diff);
 
     bcb_msmnt_data.n_samples_rms++;
@@ -332,43 +344,47 @@ static void on_rms_timer_expired(struct k_timer* timer)
 
 static void on_cal_timer_expired(struct k_timer* timer)
 {
-    if (bcb_msmnt_data.cal_n_samples > 4096) {
-        uint32_t i_hg_zero = bcb_msmnt_data.cal_i_hg_acc >> 12;
-        uint32_t i_lg_zero = bcb_msmnt_data.cal_i_lg_acc >> 12;
-        uint32_t v_zero = bcb_msmnt_data.cal_v_acc >> 12;
-        LOG_DBG("cal done. i_lg %" PRId32 ", i_hg %" PRIu32 ", v %" PRIu32, i_lg_zero, i_hg_zero, v_zero);
+    if (bcb_msmnt_data.cal_n_samples > BCB_MSMNT_CAL_SAMPLES) {
+        bcb_msmnt_data.i_high_gain_raw_zero = (uint16_t)(bcb_msmnt_data.cal_i_hg_acc >> BCB_MSMNT_CAL_SAMPLES_SHIFT);
+        bcb_msmnt_data.i_low_gain_raw_zero = (uint16_t)(bcb_msmnt_data.cal_i_lg_acc >> BCB_MSMNT_CAL_SAMPLES_SHIFT);
+        bcb_msmnt_data.v_mains_raw_zero = (uint16_t)(bcb_msmnt_data.cal_v_acc >> BCB_MSMNT_CAL_SAMPLES_SHIFT);
+        LOG_DBG("cal done. i_lg %" PRId16 ", i_hg %" PRIu16 ", v %" PRIu16, 
+                bcb_msmnt_data.i_low_gain_raw_zero, 
+                bcb_msmnt_data.i_high_gain_raw_zero, 
+                bcb_msmnt_data.v_mains_raw_zero);
         k_timer_stop(timer);
+        k_timer_start(&bcb_msmnt_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
     }
 
-    bcb_msmnt_data.cal_i_hg_acc += (uint32_t)*(bcb_msmnt_data.val_i_high_gain);
-    bcb_msmnt_data.cal_i_lg_acc += (uint32_t)*(bcb_msmnt_data.val_i_low_gain);
-    bcb_msmnt_data.cal_v_acc += (uint32_t)*(bcb_msmnt_data.val_v_mains);
+    bcb_msmnt_data.cal_i_hg_acc += (uint32_t)*(bcb_msmnt_data.raw_i_high_gain);
+    bcb_msmnt_data.cal_i_lg_acc += (uint32_t)*(bcb_msmnt_data.raw_i_low_gain);
+    bcb_msmnt_data.cal_v_acc += (uint32_t)*(bcb_msmnt_data.raw_v_mains);
 
     bcb_msmnt_data.cal_n_samples++;
 }
 
 static inline void update_adc_zero()
 {
-    bcb_msmnt_data.val_i_low_gain_zero = *(bcb_msmnt_data.val_i_low_gain);
-    bcb_msmnt_data.val_i_high_gain_zero = *(bcb_msmnt_data.val_i_high_gain);
-    bcb_msmnt_data.val_v_mains_zero = *(bcb_msmnt_data.val_v_mains);
+    bcb_msmnt_data.i_low_gain_raw_zero = *(bcb_msmnt_data.raw_i_low_gain);
+    bcb_msmnt_data.i_high_gain_raw_zero = *(bcb_msmnt_data.raw_i_high_gain);
+    bcb_msmnt_data.v_mains_raw_zero = *(bcb_msmnt_data.raw_v_mains);
 
-    LOG_DBG("low_gain_zero %" PRIu16, bcb_msmnt_data.val_i_low_gain_zero);
-    LOG_DBG("high_gain_zero %" PRIu16, bcb_msmnt_data.val_i_high_gain_zero);
-    LOG_DBG("v_mains_zero %" PRIu16, bcb_msmnt_data.val_v_mains_zero);
+    LOG_DBG("low_gain_zero %" PRIu16, bcb_msmnt_data.i_low_gain_raw_zero);
+    LOG_DBG("high_gain_zero %" PRIu16, bcb_msmnt_data.i_high_gain_raw_zero);
+    LOG_DBG("v_mains_zero %" PRIu16, bcb_msmnt_data.v_mains_raw_zero);
 }
 
 int32_t bcb_msmnt_get_temp(bcb_msmnt_temp_t sensor)
 {
     switch (sensor) {
         case BCB_MSMNT_TEMP_PWR_IN:
-            return (int32_t)get_temp(*(bcb_msmnt_data.val_t_mosfet_in));
+            return (int32_t)get_temp(*(bcb_msmnt_data.raw_t_mosfet_in));
         case BCB_MSMNT_TEMP_PWR_OUT:
-            return (int32_t)get_temp(*(bcb_msmnt_data.val_t_mosfet_out));
+            return (int32_t)get_temp(*(bcb_msmnt_data.raw_t_mosfet_out));
         case BCB_MSMNT_TEMP_AMB:
-            return (int32_t)get_temp(*(bcb_msmnt_data.val_t_ambient));
+            return (int32_t)get_temp(*(bcb_msmnt_data.raw_t_ambient));
         case BCB_MSMNT_TEMP_MCU:
-            return (int32_t)get_temp_mcu(*(bcb_msmnt_data.val_t_mcu));
+            return (int32_t)get_temp_mcu(*(bcb_msmnt_data.raw_t_mcu));
         default:
             LOG_ERR("Invalid sensor");
     }
@@ -379,13 +395,13 @@ uint16_t bcb_msmnt_get_temp_raw(bcb_msmnt_temp_t sensor)
 {
     switch (sensor) {
         case BCB_MSMNT_TEMP_PWR_IN:
-            return *(bcb_msmnt_data.val_t_mosfet_in);
+            return *(bcb_msmnt_data.raw_t_mosfet_in);
         case BCB_MSMNT_TEMP_PWR_OUT:
-            return *(bcb_msmnt_data.val_t_mosfet_out);
+            return *(bcb_msmnt_data.raw_t_mosfet_out);
         case BCB_MSMNT_TEMP_AMB:
-            return *(bcb_msmnt_data.val_t_ambient);
+            return *(bcb_msmnt_data.raw_t_ambient);
         case BCB_MSMNT_TEMP_MCU:
-            return *(bcb_msmnt_data.val_t_mcu);
+            return *(bcb_msmnt_data.raw_t_mcu);
         default:
             LOG_ERR("Invalid sensor");
     }
@@ -399,6 +415,7 @@ int bcb_msmnt_cal_start(bcb_msmnt_cal_callback_t callback)
     bcb_msmnt_data.cal_i_lg_acc = 0;
     bcb_msmnt_data.cal_v_acc = 0;
 
+    k_timer_stop(&bcb_msmnt_data.timer_stat);
     k_timer_start(&bcb_msmnt_data.timer_cal, K_MSEC(10), K_MSEC(2));
 
     return 0;
@@ -412,15 +429,16 @@ int bcb_msmnt_cal_stop()
 
 static int bcb_msmnt_init()
 {
+#if 0
     bcb_msmnt_data.dev_adc_0 = device_get_binding(DT_LABEL(DT_NODELABEL(adc0)));
     if (bcb_msmnt_data.dev_adc_0 == NULL) {
-        LOG_ERR("Could not get ADC device 0"); 
+        LOG_ERR("Could not get ADC device %s", DT_LABEL(DT_NODELABEL(adc0))); 
         return -EINVAL;
     }
 
     bcb_msmnt_data.dev_adc_1 = device_get_binding(DT_LABEL(DT_NODELABEL(adc1)));
     if (bcb_msmnt_data.dev_adc_1 == NULL) {
-        LOG_ERR("Could not get ADC device 1"); 
+        LOG_ERR("Could not get ADC device %s", DT_LABEL(DT_NODELABEL(adc1))); 
         return -EINVAL;
     }
 
@@ -464,7 +482,7 @@ static int bcb_msmnt_init()
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_1;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_1;
     adc_seq_cfg.seq_len = bcb_msmnt_data.seq_len_adc_1;
-    adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
+    //adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
     /* Wait for 10ms until ADC conversions started to measure offset errors. */
     k_msleep(10);
@@ -475,7 +493,9 @@ static int bcb_msmnt_init()
     //k_timer_start(&bcb_msmnt_data.timer_rms, K_MSEC(1), K_MSEC(1));
 
     /* Starting stat timer. */
-    //k_timer_start(&bcb_msmnt_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
+    k_timer_start(&bcb_msmnt_data.timer_stat, K_MSEC(500), K_MSEC(500));
+
+#endif
 
     return 0;
 }

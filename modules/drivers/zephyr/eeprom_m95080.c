@@ -39,7 +39,7 @@ static size_t eeprom_m95080_size(struct device *dev)
     return 0;
 }
 
-static int eeprom_m95080_init(struct device* dev)
+static int eeprom_m95080_init(struct device *dev)
 {
     return 0;
 }

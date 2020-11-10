@@ -36,8 +36,8 @@ LOG_MODULE_REGISTER(bcb_leds);
                     DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), gpios, pin_name, pin))
 
 struct bcb_leds_data {
-    struct device* dev_led_red;
-    struct device* dev_led_green;
+    struct device *dev_led_red;
+    struct device *dev_led_green;
 };
 
 static struct bcb_leds_data bcb_leds_data = {

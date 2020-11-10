@@ -9,7 +9,7 @@
 LOG_MODULE_REGISTER(cmp_mcux);
 
 struct cmp_mcux_config {
-    CMP_Type* base;
+    CMP_Type *base;
     cmp_hysteresis_mode_t hysteresis;
     uint8_t filter_count;
     uint8_t filter_period;
@@ -22,7 +22,7 @@ struct cmp_mcux_data {
 
 static void cmp_mcux_irq_handler(void *arg)
 {
-    struct device* dev = (struct device *)arg;
+    struct device *dev = (struct device *)arg;
     const struct cmp_mcux_config* config = dev->config_info;
     struct cmp_mcux_data* data = dev->driver_data;
     if (data->callback != NULL) {
@@ -38,7 +38,7 @@ static void cmp_mcux_irq_handler(void *arg)
 #endif
 }
 
-static int cmp_mcux_set_enable_impl(struct device* dev, bool status)
+static int cmp_mcux_set_enable_impl(struct device *dev, bool status)
 {
     const struct cmp_mcux_config* config = dev->config_info;
     CMP_Enable(config->base, status);
@@ -52,7 +52,7 @@ static int cmp_mcux_set_enable_impl(struct device* dev, bool status)
     return 0;
 }
 
-static int cmp_mcux_set_channels_impl(struct device* dev, int chp, int chn)
+static int cmp_mcux_set_channels_impl(struct device *dev, int chp, int chn)
 {
     const struct cmp_mcux_config* config = dev->config_info;
     if (chp > 7 || chn > 7) {
@@ -63,31 +63,31 @@ static int cmp_mcux_set_channels_impl(struct device* dev, int chp, int chn)
     return 0;
 }
 
-static int cmp_mcux_enable_interrupts_impl(struct device* dev, int interrupts)
+static int cmp_mcux_enable_interrupts_impl(struct device *dev, int interrupts)
 {
     const struct cmp_mcux_config* config = dev->config_info;
     CMP_EnableInterrupts(config->base, interrupts);
     return 0;
 }
 
-static int cmp_mcux_disable_interrupts_impl(struct device* dev, int interrupts)
+static int cmp_mcux_disable_interrupts_impl(struct device *dev, int interrupts)
 {
-    const struct cmp_mcux_config* config = dev->config_info;
+    const struct cmp_mcux_config *config = dev->config_info;
     CMP_DisableInterrupts(config->base, interrupts);
     return 0;
 }
 
-static int cmp_mcux_set_callback_impl(struct device* dev, cmp_mcux_callback_t callback)
+static int cmp_mcux_set_callback_impl(struct device *dev, cmp_mcux_callback_t callback)
 {
-    struct cmp_mcux_data* data = dev->driver_data;
+    struct cmp_mcux_data *data = dev->driver_data;
     data->callback = callback;
     return 0;
 }
 
-static int cmp_mcux_init(struct device* dev)
+static int cmp_mcux_init(struct device *dev)
 {
-    const struct cmp_mcux_config* config = dev->config_info;
-    struct cmp_mcux_data* data = dev->driver_data;
+    const struct cmp_mcux_config *config = dev->config_info;
+    struct cmp_mcux_data *data = dev->driver_data;
     /*
      * mCmpConfigStruct.enableCmp = true;
      * mCmpConfigStruct.hysteresisMode = kCMP_HysteresisLevel0;
@@ -155,7 +155,7 @@ static const struct cmp_mcux_driver_api cmp_mcux_driver_api = {
                         CONFIG_KERNEL_INIT_PRIORITY_DEVICE,                                         \
                         &cmp_mcux_driver_api);                                                      \
                                                                                                     \
-    static int cmp_mcux_init_##n(struct device* dev)                                                \
+    static int cmp_mcux_init_##n(struct device *dev)                                                \
     {                                                                                               \
         cmp_mcux_init(dev);                                                                         \
         IRQ_CONNECT(DT_INST_IRQ(n, irq),                                                            \

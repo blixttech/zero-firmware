@@ -59,10 +59,10 @@ typedef struct adc_mcux_cal_params_store {
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
 struct adc_mcux_config {
-    ADC_Type* adc_base;
-    FTM_Type* ftm_base;
-    DMA_Type* dma_base;
-    DMAMUX_Type* dma_mux_base;
+    ADC_Type *adc_base;
+    FTM_Type *ftm_base;
+    DMA_Type *dma_base;
+    DMAMUX_Type *dma_mux_base;
     ftm_clock_source_t ftm_clock_source;
     ftm_clock_prescale_t ftm_prescale;
     uint8_t ftm_channel;
@@ -92,9 +92,9 @@ struct adc_mcux_data {
     uint32_t ftm_ticks_per_sec;
     edma_handle_t dma_h_result; /* DMA handle for the channel that transfers ADC result. */
     edma_handle_t dma_h_ch;     /* DMA handle for the channel that transfers ADC channels. */
-    adc_ch_mux_block_t* ch_mux_block;
-    uint8_t* ch_cfg;            /* Stores the DMA channel configuration (main and alternate). */
-    volatile void* buffer;      /* Buffer that stores ADC results. */
+    adc_ch_mux_block_t *ch_mux_block;
+    uint8_t *ch_cfg;            /* Stores the DMA channel configuration (main and alternate). */
+    volatile void *buffer;      /* Buffer that stores ADC results. */
     uint8_t seq_len;            /* Length of the ADC sequence. */
     adc16_reference_voltage_source_t v_ref;
 #if CONFIG_ADC_MCUX_EDMA_CAL_R
@@ -220,7 +220,7 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
 
 static void adc_mcux_edma_dma_irq_handler(void *arg)
 {
-    edma_handle_t* handle = (edma_handle_t*)arg;
+    edma_handle_t *handle = (edma_handle_t*)arg;
     EDMA_HandleIRQ(handle);
 /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
  * exception return operation might vector to incorrect interrupt 
@@ -241,7 +241,7 @@ static void adc_mcux_edma_adc_irq_handler(void *arg)
 #endif
 }
 
-static void adc_mcux_edma_callback(edma_handle_t* handle, void* param, 
+static void adc_mcux_edma_callback(edma_handle_t *handle, void *param, 
                                     bool transfer_done, uint32_t tcds)
 {
     /* Nothing to do here for the moment. */
@@ -259,8 +259,8 @@ static void adc_mcux_edma_callback(edma_handle_t* handle, void* param,
  * @param config 
  * @param data 
  */
-static inline void set_channel_mux_config(const struct adc_mcux_config* config, 
-                                    struct adc_mcux_data* data)
+static inline void set_channel_mux_config(const struct adc_mcux_config *config, 
+                                    struct adc_mcux_data *data)
 {
     int i;
     uint32_t reg_masked;
@@ -284,10 +284,10 @@ static inline void set_channel_mux_config(const struct adc_mcux_config* config,
     config->adc_base->CFG2 = data->ch_mux_block[i].CFG2; 
 }
 
-static int adc_mcux_channel_setup_impl(struct device* dev, uint8_t seq_idx, 
-                                        const adc_mcux_channel_config_t* ch_cfg)
+static int adc_mcux_channel_setup_impl(struct device *dev, uint8_t seq_idx, 
+                                        const adc_mcux_channel_config_t *ch_cfg)
 {
-    const struct adc_mcux_config* config = dev->config_info;
+    const struct adc_mcux_config *config = dev->config_info;
     struct adc_mcux_data* data = dev->driver_data;
     if (seq_idx > (config->max_channels - 1)) {
         LOG_ERR("Invalid sequence index");
@@ -297,10 +297,10 @@ static int adc_mcux_channel_setup_impl(struct device* dev, uint8_t seq_idx,
     return 0;
 }
 
-static int adc_mcux_stop_impl(struct device* dev)
+static int adc_mcux_stop_impl(struct device *dev)
 {
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
+    const struct adc_mcux_config *config = dev->config_info;
+    struct adc_mcux_data *data = dev->driver_data;
 
     /* Stop the ADC trigger timer before changes. */
     FTM_StopTimer(config->ftm_base);
@@ -417,9 +417,9 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
     return 0;
 }
 
-static int adc_mcux_set_reference_impl(struct device* dev, adc_mcux_ref_t ref)
+static int adc_mcux_set_reference_impl(struct device *dev, adc_mcux_ref_t ref)
 {
-    struct adc_mcux_data* data = dev->driver_data;
+    struct adc_mcux_data *data = dev->driver_data;
 
     if (ref == ADC_MCUX_REF_INTERNAL) {
         data->v_ref = kADC16_ReferenceVoltageSourceValt;
@@ -430,10 +430,10 @@ static int adc_mcux_set_reference_impl(struct device* dev, adc_mcux_ref_t ref)
     return 0;
 }
 
-static int adc_mcux_set_perf_level_impl(struct device* dev, uint8_t level)
+static int adc_mcux_set_perf_level_impl(struct device *dev, uint8_t level)
 {
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
+    const struct adc_mcux_config *config = dev->config_info;
+    struct adc_mcux_data *data = dev->driver_data;
 
     if (level > ADC_MCUX_MAX_PERF_LVLS - 1) {
         LOG_ERR("Invalid performance level. Should be < %" PRIu32 "", ADC_MCUX_MAX_PERF_LVLS);
@@ -450,7 +450,7 @@ static int adc_mcux_set_perf_level_impl(struct device* dev, uint8_t level)
 }
 
 #if CONFIG_ADC_MCUX_EDMA_CAL_R
-static int adc_mcux_param_cmp(const void* a, const void* b)
+static int adc_mcux_param_cmp(const void *a, const void *b)
 {
     uint16_t arg_a = *((uint16_t*)a);
     uint16_t arg_b = *((uint16_t*)b);
@@ -465,10 +465,10 @@ static int adc_mcux_param_cmp(const void* a, const void* b)
     return 0;
 }
 
-static status_t adc_mcux_calibrate_r_impl(struct device* dev)
+static status_t adc_mcux_calibrate_r_impl(struct device *dev)
 {
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
+    const struct adc_mcux_config *config = dev->config_info;
+    struct adc_mcux_data *data = dev->driver_data;
 
     status_t status;
     int i;
@@ -536,9 +536,9 @@ static status_t adc_mcux_calibrate_r_impl(struct device* dev)
 }
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
-static int adc_mcux_calibrate_impl(struct device* dev)
+static int adc_mcux_calibrate_impl(struct device *dev)
 {
-    const struct adc_mcux_config* config = dev->config_info;
+    const struct adc_mcux_config *config = dev->config_info;
     
     /* Need to disable interrupts, HW trigger and DMA before the calibration */
     config->adc_base->SC1[0] &= ~ADC_SC1_AIEN_MASK;
@@ -565,9 +565,9 @@ static int adc_mcux_calibrate_impl(struct device* dev)
     return 0;
 }
 
-static int adc_mcux_set_cal_params_impl(struct device* dev, adc_mcux_cal_params_t* params)
+static int adc_mcux_set_cal_params_impl(struct device *dev, adc_mcux_cal_params_t *params)
 {
-    const struct adc_mcux_config* config = dev->config_info;
+    const struct adc_mcux_config *config = dev->config_info;
     config->adc_base->OFS = ADC_OFS_OFS(params->ofs);
     config->adc_base->PG = ADC_PG_PG(params->pg);
     config->adc_base->MG = ADC_MG_MG(params->mg);
@@ -588,9 +588,9 @@ static int adc_mcux_set_cal_params_impl(struct device* dev, adc_mcux_cal_params_
     return 0;
 }
 
-static int adc_mcux_get_cal_params_impl(struct device* dev, adc_mcux_cal_params_t* params)
+static int adc_mcux_get_cal_params_impl(struct device *dev, adc_mcux_cal_params_t *params)
 {
-    const struct adc_mcux_config* config = dev->config_info;
+    const struct adc_mcux_config *config = dev->config_info;
     params->ofs = (uint16_t)config->adc_base->OFS;
     params->pg = (uint16_t)config->adc_base->PG;
     params->mg = (uint16_t)config->adc_base->MG;
@@ -642,10 +642,10 @@ static inline uint32_t adc_mcux_get_ftm_exttrig(uint8_t channel)
     return kFTM_Chnl0Trigger;
 }
 
-static int adc_mcux_init(struct device* dev)
+static int adc_mcux_init(struct device *dev)
 {
-    const struct adc_mcux_config* config = dev->config_info;
-    struct adc_mcux_data* data = dev->driver_data;
+    const struct adc_mcux_config *config = dev->config_info;
+    struct adc_mcux_data *data = dev->driver_data;
 
 
     /* ---------------- ADC configuration ---------------- */
@@ -772,7 +772,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
         .v_ref = kADC16_ReferenceVoltageSourceVref,                                                 \
     };                                                                                              \
                                                                                                     \
-    static int adc_mcux_init_##n(struct device* dev);                                               \
+    static int adc_mcux_init_##n(struct device *dev);                                               \
                                                                                                     \
     DEVICE_AND_API_INIT(adc_mcux_##n,                                                               \
                         DT_INST_LABEL(n),                                                           \
@@ -783,7 +783,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
                         CONFIG_KERNEL_INIT_PRIORITY_DEVICE,                                         \
                         &adc_mcux_driver_api);                                                      \
                                                                                                     \
-    static int adc_mcux_init_##n(struct device* dev)                                                \
+    static int adc_mcux_init_##n(struct device *dev)                                                \
     {                                                                                               \
         adc_mcux_init(dev);                                                                         \
         IRQ_CONNECT(ADC_MUCX_DMA_IRQ(n, result),                                                    \

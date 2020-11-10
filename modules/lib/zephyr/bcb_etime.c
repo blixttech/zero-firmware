@@ -10,7 +10,7 @@
 LOG_MODULE_REGISTER(bcb_etime);
 
 struct bcb_etime_data {
-    struct device*  dev_cnt_ctd;
+    struct device *dev_cnt_ctd;
     uint32_t ticks_per_sec;
 };
 

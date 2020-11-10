@@ -69,7 +69,7 @@ typedef struct adc_mcux_sequence_config {
      * Pointer to a buffer where the samples are to be written.
      * Samples are written in 16-bit words.
      */
-    volatile void* buffer;
+    volatile void *buffer;
     /**
      * Specifies the size of the buffer pointed by the "buffer" in bytes.
      */
@@ -96,23 +96,23 @@ typedef struct adc_mcux_channel_config {
     uint8_t alt_channel;
 } adc_mcux_channel_config_t;
 
-typedef int (*adc_mcux_api_read)(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg);
+typedef int (*adc_mcux_api_read)(struct device *dev, const adc_mcux_sequence_config_t *seq_cfg);
 
-typedef int (*adc_mcux_api_stop)(struct device* dev);
+typedef int (*adc_mcux_api_stop)(struct device *dev);
 
-typedef int (*adc_mcux_api_channel_setup)(struct device* dev,
+typedef int (*adc_mcux_api_channel_setup)(struct device *dev,
                                             uint8_t seq_idx,
-				                            const adc_mcux_channel_config_t* ch_cfg);
+				                            const adc_mcux_channel_config_t *ch_cfg);
 
-typedef int (*adc_mcux_api_set_reference)(struct device* dev, adc_mcux_ref_t ref);
+typedef int (*adc_mcux_api_set_reference)(struct device *dev, adc_mcux_ref_t ref);
 
-typedef int (*adc_mcux_api_set_perf_level)(struct device* dev, uint8_t level);
+typedef int (*adc_mcux_api_set_perf_level)(struct device *dev, uint8_t level);
 
-typedef int (*adc_mcux_api_calibrate)(struct device* dev);
+typedef int (*adc_mcux_api_calibrate)(struct device *dev);
 
-typedef int (*adc_mcux_api_set_cal_params)(struct device* dev, adc_mcux_cal_params_t* params);
+typedef int (*adc_mcux_api_set_cal_params)(struct device *dev, adc_mcux_cal_params_t *params);
 
-typedef int (*adc_mcux_api_get_cal_params)(struct device* dev, adc_mcux_cal_params_t* params);
+typedef int (*adc_mcux_api_get_cal_params)(struct device *dev, adc_mcux_cal_params_t *params);
 
 /**
  * @brief ADC driver API
@@ -130,74 +130,74 @@ __subsystem struct adc_mcux_driver_api {
     adc_mcux_api_get_cal_params     get_cal_params;
 };
 
-__syscall int adc_mcux_read(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg);
+__syscall int adc_mcux_read(struct device *dev, const adc_mcux_sequence_config_t *seq_cfg);
 
-static inline int z_impl_adc_mcux_read(struct device* dev, const adc_mcux_sequence_config_t* seq_cfg)
+static inline int z_impl_adc_mcux_read(struct device *dev, const adc_mcux_sequence_config_t *seq_cfg)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->read(dev, seq_cfg);
 }
 
-__syscall int adc_mcux_stop(struct device* dev);
+__syscall int adc_mcux_stop(struct device *dev);
 
-static inline int z_impl_adc_mcux_stop(struct device* dev)
+static inline int z_impl_adc_mcux_stop(struct device *dev)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->stop(dev);
 }
 
-__syscall int adc_mcux_channel_setup(struct device* dev, uint8_t seq_idx, 
-                                        const adc_mcux_channel_config_t* ch_cfg);
+__syscall int adc_mcux_channel_setup(struct device *dev, uint8_t seq_idx, 
+                                        const adc_mcux_channel_config_t *ch_cfg);
 
-static inline int z_impl_adc_mcux_channel_setup(struct device* dev, uint8_t seq_idx, 
-                                                const adc_mcux_channel_config_t* ch_cfg)
+static inline int z_impl_adc_mcux_channel_setup(struct device *dev, uint8_t seq_idx, 
+                                                const adc_mcux_channel_config_t *ch_cfg)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->channel_setup(dev, seq_idx, ch_cfg);
 }
 
-__syscall int adc_mcux_set_reference(struct device* dev, adc_mcux_ref_t ref);
+__syscall int adc_mcux_set_reference(struct device *dev, adc_mcux_ref_t ref);
 
-static inline int z_impl_adc_mcux_set_reference(struct device* dev, adc_mcux_ref_t ref)
+static inline int z_impl_adc_mcux_set_reference(struct device *dev, adc_mcux_ref_t ref)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->set_reference(dev, ref);
 }
 
-__syscall int adc_mcux_set_perf_level(struct device* dev, uint8_t level);
+__syscall int adc_mcux_set_perf_level(struct device *dev, uint8_t level);
 
-static inline int z_impl_adc_mcux_set_perf_level(struct device* dev, uint8_t level)
+static inline int z_impl_adc_mcux_set_perf_level(struct device *dev, uint8_t level)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->set_perf_level(dev, level);
 }
 
-__syscall int adc_mcux_calibrate(struct device* dev);
+__syscall int adc_mcux_calibrate(struct device *dev);
 
-static inline int z_impl_adc_mcux_calibrate(struct device* dev)
+static inline int z_impl_adc_mcux_calibrate(struct device *dev)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->calibrate(dev);
 }
 
-__syscall int adc_mcux_set_cal_params(struct device* dev, adc_mcux_cal_params_t* params);
+__syscall int adc_mcux_set_cal_params(struct device *dev, adc_mcux_cal_params_t *params);
 
-static inline int z_impl_adc_mcux_set_cal_params(struct device* dev, adc_mcux_cal_params_t* params)
+static inline int z_impl_adc_mcux_set_cal_params(struct device *dev, adc_mcux_cal_params_t *params)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
     return api->set_cal_params(dev, params);
 }
 
-__syscall int adc_mcux_get_cal_params(struct device* dev, adc_mcux_cal_params_t* params);
+__syscall int adc_mcux_get_cal_params(struct device *dev, adc_mcux_cal_params_t *params);
 
-static inline int z_impl_adc_mcux_get_cal_params(struct device* dev, adc_mcux_cal_params_t* params)
+static inline int z_impl_adc_mcux_get_cal_params(struct device *dev, adc_mcux_cal_params_t *params)
 {
     struct adc_mcux_driver_api *api;
     api = (struct adc_mcux_driver_api *)dev->driver_api;
