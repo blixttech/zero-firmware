@@ -104,6 +104,9 @@ struct adc_mcux_data {
 
 /* 
  * ADCK should be > 2 MHz fpr 16-bit single ended conversions.
+ *
+ * NOTE: It is not clear what frequencies for f_ADCK are supported for different
+ *       configurations of CFG2[ADHSC] and CFG1[ADLPC].
  * 
  * Sample time (T_sample) calculation
  * T_sample     = SFCAdder + AverageNum * (BCT + LSTAdder + HSCAdder)
@@ -165,10 +168,10 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
     {
         /* 
          * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
-         * AverageNum   = 8
+         * AverageNum   = 4
          * BCT          = 25 ADCK cycles (16-bit single-ended)
          * LSTAdder     = 6 ADCK cycles (long sample mode)
-         * HSCAdder     = 0 ADCK cycles (high speed conversion)
+         * HSCAdder     = 0 ADCK cycles (normal speed conversion)
          * f_ADCK       = 3.75 MHz
          * f_BUS        = 60 MHz
          * 
@@ -179,10 +182,10 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
             .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
             .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
             .enableAsynchronousClock = true, // Not using asynchronous clock
-            .clockDivider = kADC16_ClockDivider4, // ADCK = 7.5 MHz (30/4 MHz)
+            .clockDivider = kADC16_ClockDivider8, // ADCK = 3.75 MHz (30/8 MHz)
             .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
             .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
-            .enableHighSpeed = true, // 2 ADCK cycles
+            .enableHighSpeed = false, // 0 ADCK cycles
             .enableLowPower = false,
             .enableContinuousConversion = false,
         },
@@ -191,10 +194,10 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
     {
         /* 
          * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
-         * AverageNum   = 8
+         * AverageNum   = 1
          * BCT          = 25 ADCK cycles (16-bit single-ended)
          * LSTAdder     = 6 ADCK cycles (long sample mode)
-         * HSCAdder     = 0 ADCK cycles (high speed conversion)
+         * HSCAdder     = 0 ADCK cycles (normal speed conversion)
          * f_ADCK       = 3.75 MHz
          * f_BUS        = 60 MHz
          * 
@@ -205,10 +208,62 @@ static adc_mcux_perf_config_t adc_perf_lvls[] = {
             .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
             .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
             .enableAsynchronousClock = true, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider8, // ADCK = 3.75 MHz (30/8 MHz)
+            .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
+            .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
+            .enableHighSpeed = false, // 0 ADCK cycles
+            .enableLowPower = false,
+            .enableContinuousConversion = false,
+        },
+        .avg_mode = kADC16_HardwareAverageDisabled,
+    },
+    {
+        /* 
+         * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
+         * AverageNum   = 4
+         * BCT          = 25 ADCK cycles (16-bit single-ended)
+         * LSTAdder     = 6 ADCK cycles (long sample mode)
+         * HSCAdder     = 0 ADCK cycles (normal speed conversion)
+         * f_ADCK       = 7.5 MHz
+         * f_BUS        = 60 MHz
+         * 
+         * T_sample     = ((3/7.5)+(5/60)) + (4 * (25 + 6 + 0)/7.5)
+         *              = 17.02 us
+         */
+        .adc_config =   {
+            .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = true, // Not using asynchronous clock
             .clockDivider = kADC16_ClockDivider4, // ADCK = 7.5 MHz (30/4 MHz)
             .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
             .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
-            .enableHighSpeed = true, // 2 ADCK cycles
+            .enableHighSpeed = false, // 0 ADCK cycles
+            .enableLowPower = false,
+            .enableContinuousConversion = false,
+        },
+        .avg_mode = kADC16_HardwareAverageCount4,
+    },
+    {
+        /* 
+         * SFCAdder     = 3 ADCK cycles + 5 BUS cycles
+         * AverageNum   = 1
+         * BCT          = 25 ADCK cycles (16-bit single-ended)
+         * LSTAdder     = 6 ADCK cycles (long sample mode)
+         * HSCAdder     = 2 ADCK cycles (high speed conversion)
+         * f_ADCK       = 7.5 MHz
+         * f_BUS        = 60 MHz
+         * 
+         * T_sample     = ((3/7.5)+(5/60)) + (1 * (25 + 6 + 0)/7.5)
+         *              = 4.62 us
+         */
+        .adc_config =   {
+            .referenceVoltageSource = kADC16_ReferenceVoltageSourceVref,
+            .clockSource = kADC16_ClockSourceAlt1, // Select (Bus clock)/2 = 30 MHz
+            .enableAsynchronousClock = true, // Not using asynchronous clock
+            .clockDivider = kADC16_ClockDivider4, // ADCK = 7.5 MHz (30/4 MHz)
+            .resolution = kADC16_ResolutionSE16Bit, // 25 ADCK cycles
+            .longSampleMode = kADC16_LongSampleCycle10, // 6 ADCK cycles
+            .enableHighSpeed = false, // 0 ADCK cycles
             .enableLowPower = false,
             .enableContinuousConversion = false,
         },

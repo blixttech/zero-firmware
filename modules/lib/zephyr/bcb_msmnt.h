@@ -23,6 +23,9 @@ typedef struct bcb_msmnt_cal_params {
 } bcb_msmnt_cal_params_t ;
 
 typedef void (*bcb_msmnt_cal_callback_t)();
+#if CONFIG_BCB_LIB_ADC_DUMP_ENABLE
+typedef void (*bcb_msmnt_adc_dump_callback_t)();
+#endif // CONFIG_BCB_LIB_ADC_DUMP_ENABLE
 
 int32_t bcb_msmnt_get_temp(bcb_msmnt_temp_t sensor);
 //int32_t bcb_msmnt_get_current_l();
@@ -48,6 +51,12 @@ uint32_t bcb_msmnt_get_v_sq_acc_raw();
 
 int bcb_msmnt_cal_start(bcb_msmnt_cal_callback_t callback);
 int bcb_msmnt_cal_stop();
+
+#if CONFIG_BCB_LIB_ADC_DUMP_ENABLE
+int bcb_msmnt_adc_dump_sstart(bcb_msmnt_adc_dump_callback_t callback);
+int bcb_msmnt_adc_dump_dstart(bcb_msmnt_adc_dump_callback_t callback);
+int bcb_msmnt_adc_dump_stop();
+#endif // CONFIG_BCB_LIB_ADC_DUMP_ENABLE
 
 #ifdef __cplusplus
 }

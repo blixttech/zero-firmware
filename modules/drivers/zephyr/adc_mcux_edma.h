@@ -31,7 +31,9 @@ enum adc_mcux_perf_lvl {
     ADC_MCUX_PERF_LVL_0,    /**< Level 0- lowest performace level, best DC accuracy. */
     ADC_MCUX_PERF_LVL_1,    /**< Level 1. */
     ADC_MCUX_PERF_LVL_2,    /**< Level 2. */
-    ADC_MCUX_PERF_LVL_3,    /**< Level 3 - highest performance level, lowest DC accuracy. */
+    ADC_MCUX_PERF_LVL_3,    /**< Level 3  */
+    ADC_MCUX_PERF_LVL_4,    /**< Level 3  */
+    ADC_MCUX_PERF_LVL_5,    /**< Level 5 - highest performance level, lowest DC accuracy. */
 };
 
 /**

@@ -34,6 +34,14 @@ config BCB_LIB_MSMNT_RMS_SAMPLES
     int "Number of samples used for RMS calculation as the power of two. Eg. if 5 used, 32 (2^5) samples"
     default 5
 
+config BCB_LIB_ADC_DUMP_SAMPLES
+    int "Number of ADC samples to take for noise measurement."
+    default 25000
+
+config BCB_LIB_ADC_DUMP_ENABLE
+    bool "Enable/disable ADC sampling for noise measurement."
+    default n
+
 config BCB_SHELL
     bool "Enable BCB shell"
     default n

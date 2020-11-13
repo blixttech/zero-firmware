@@ -4,8 +4,7 @@
 #include <drivers/counter_ctd.h>
 #include <counter_ctd_mcux_pit.h>
 
-#define LOG_LEVEL LOG_LEVEL_DBG
-//#define LOG_LEVEL CONFIG_BCB_LIB_ETIME_LOG_LEVEL
+#define LOG_LEVEL CONFIG_BCB_LIB_ETIME_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_etime);
 
