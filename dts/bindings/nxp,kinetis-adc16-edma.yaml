@@ -14,10 +14,10 @@ properties:
     interrupts:
       required: true
 
-    triggers:
+    trigger:
       required: true
-      type: phandle-array
-      description: Triggers to be used
+      type: int
+      description: Trigger to be used
 
     max-channels:
       required: true

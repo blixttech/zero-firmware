@@ -59,6 +59,8 @@ typedef struct adc_mcux_cal_params {
     uint16_t clm0;  /**< ADC Minus-Side General Calibration Value Register */
 } adc_mcux_cal_params_t;
 
+typedef void (*adc_mcux_seq_callback)(struct device *dev);
+
 /**
  * @brief Structure defining an ADC sampling sequence configuration.
  */
@@ -70,6 +72,8 @@ typedef struct adc_mcux_sequence_config {
     /**
      * Pointer to a buffer where the samples are to be written.
      * Samples are written in 16-bit words.
+     * The buffer must be of an appropriate size, taking into account the seq_len and the seq_samples
+     * i.e. (2 * seq_samples * seq_len) bytes.
      */
     volatile void *buffer;
     /**
@@ -77,9 +81,19 @@ typedef struct adc_mcux_sequence_config {
      */
     size_t buffer_size;
     /**
+     * Number of times that the sequence has to be sampled.
+     */
+    size_t seq_samples;
+    /**
      * ADC sequence length
      */
     uint8_t seq_len;
+    /**
+     * A pointer to the callback function that will be called after completing 
+     * all samples in the sequence i.e. after (seq_samples * seq_len) samples are done.
+     * If not used set this to NULL.
+     */
+    adc_mcux_seq_callback seq_callback;
 } adc_mcux_sequence_config_t;
 
 /**
@@ -132,8 +146,19 @@ __subsystem struct adc_mcux_driver_api {
     adc_mcux_api_get_cal_params     get_cal_params;
 };
 
+/**
+ * @brief Set a read request.
+ *
+ * Note that this function does not setup ADC trigger for sampling.
+ * The ADC trigger has to be specified in the device tree node and the appropriate trigger driver
+ * has to be used. 
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ * @param seq_cfg   Specifies ADC sequence configuration.
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_read(struct device *dev, const adc_mcux_sequence_config_t *seq_cfg);
-
 static inline int z_impl_adc_mcux_read(struct device *dev, const adc_mcux_sequence_config_t *seq_cfg)
 {
     struct adc_mcux_driver_api *api;
@@ -141,8 +166,14 @@ static inline int z_impl_adc_mcux_read(struct device *dev, const adc_mcux_sequen
     return api->read(dev, seq_cfg);
 }
 
+/**
+ * @brief Stop ADC triggering and any ongoing DMA transfers.
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_stop(struct device *dev);
-
 static inline int z_impl_adc_mcux_stop(struct device *dev)
 {
     struct adc_mcux_driver_api *api;
@@ -150,9 +181,19 @@ static inline int z_impl_adc_mcux_stop(struct device *dev)
     return api->stop(dev);
 }
 
+/**
+ * @brief Setup ADC channel and add to the sequence.
+ *
+ * Same channel can be added into more than one location in the sequence. 
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ * @param seq_idx   Index that specifies the location of the channel in the sequence (starts from zero).
+ * @param ch_cfg    Pointer to the channel configuration structure.
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_channel_setup(struct device *dev, uint8_t seq_idx, 
                                         const adc_mcux_channel_config_t *ch_cfg);
-
 static inline int z_impl_adc_mcux_channel_setup(struct device *dev, uint8_t seq_idx, 
                                                 const adc_mcux_channel_config_t *ch_cfg)
 {
@@ -161,8 +202,15 @@ static inline int z_impl_adc_mcux_channel_setup(struct device *dev, uint8_t seq_
     return api->channel_setup(dev, seq_idx, ch_cfg);
 }
 
+/**
+ * @brief Sets ADC reference.
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ * @param ref       ADC reference.   
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_set_reference(struct device *dev, adc_mcux_ref_t ref);
-
 static inline int z_impl_adc_mcux_set_reference(struct device *dev, adc_mcux_ref_t ref)
 {
     struct adc_mcux_driver_api *api;
@@ -170,8 +218,19 @@ static inline int z_impl_adc_mcux_set_reference(struct device *dev, adc_mcux_ref
     return api->set_reference(dev, ref);
 }
 
+/**
+ * @brief Sets ADC performance level.
+ *
+ * ADC has several performance depends parameters like ADC clock frequency, sampling mode
+ * and number of averaged samples.
+ * Due to simplicity, several performance levels are used.
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ * @param level     ADC reference.   
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_set_perf_level(struct device *dev, uint8_t level);
-
 static inline int z_impl_adc_mcux_set_perf_level(struct device *dev, uint8_t level)
 {
     struct adc_mcux_driver_api *api;
@@ -179,8 +238,14 @@ static inline int z_impl_adc_mcux_set_perf_level(struct device *dev, uint8_t lev
     return api->set_perf_level(dev, level);
 }
 
+/**
+ * @brief Runs the calibration procedure of the ADC.
+ *
+ * @param dev       Pointer to the device structure for the driver instance.
+ *
+ * @retval 0        On success.
+ */
 __syscall int adc_mcux_calibrate(struct device *dev);
-
 static inline int z_impl_adc_mcux_calibrate(struct device *dev)
 {
     struct adc_mcux_driver_api *api;
@@ -189,7 +254,6 @@ static inline int z_impl_adc_mcux_calibrate(struct device *dev)
 }
 
 __syscall int adc_mcux_set_cal_params(struct device *dev, adc_mcux_cal_params_t *params);
-
 static inline int z_impl_adc_mcux_set_cal_params(struct device *dev, adc_mcux_cal_params_t *params)
 {
     struct adc_mcux_driver_api *api;
@@ -198,7 +262,6 @@ static inline int z_impl_adc_mcux_set_cal_params(struct device *dev, adc_mcux_ca
 }
 
 __syscall int adc_mcux_get_cal_params(struct device *dev, adc_mcux_cal_params_t *params);
-
 static inline int z_impl_adc_mcux_get_cal_params(struct device *dev, adc_mcux_cal_params_t *params)
 {
     struct adc_mcux_driver_api *api;

@@ -60,12 +60,8 @@ typedef struct adc_mcux_cal_params_store {
 
 struct adc_mcux_config {
     ADC_Type *adc_base;
-    FTM_Type *ftm_base;
     DMA_Type *dma_base;
     DMAMUX_Type *dma_mux_base;
-    ftm_clock_source_t ftm_clock_source;
-    ftm_clock_prescale_t ftm_prescale;
-    uint8_t ftm_channel;
     uint8_t max_channels;       /* Maximum number of ADC channels supported by the driver */
     uint8_t dma_ch_result;      /* DMA channel used for transfering ADC result */
     uint8_t dma_ch_ch;          /* DMA channel used for changing ADC main channel */
@@ -95,8 +91,11 @@ struct adc_mcux_data {
     adc_ch_mux_block_t *ch_mux_block;
     uint8_t *ch_cfg;            /* Stores the DMA channel configuration (main and alternate). */
     volatile void *buffer;      /* Buffer that stores ADC results. */
+    size_t buffer_size;
     uint8_t seq_len;            /* Length of the ADC sequence. */
+    size_t seq_samples;
     adc16_reference_voltage_source_t v_ref;
+    adc_mcux_seq_callback seq_callback;
 #if CONFIG_ADC_MCUX_EDMA_CAL_R
     adc_mcux_cal_params_store_t cal_params_store;
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
@@ -300,6 +299,13 @@ static void adc_mcux_edma_callback(edma_handle_t *handle, void *param,
                                     bool transfer_done, uint32_t tcds)
 {
     /* Nothing to do here for the moment. */
+    if (transfer_done) {
+        struct device *dev = param;
+        struct adc_mcux_data* data = dev->driver_data;
+        if (data->seq_callback != NULL) {
+            data->seq_callback(dev);
+        }
+    }
 }
 
 /**
@@ -354,11 +360,10 @@ static int adc_mcux_channel_setup_impl(struct device *dev, uint8_t seq_idx,
 
 static int adc_mcux_stop_impl(struct device *dev)
 {
-    const struct adc_mcux_config *config = dev->config_info;
+    const struct adc_mcux_config* config = dev->config_info;
     struct adc_mcux_data *data = dev->driver_data;
 
-    /* Stop the ADC trigger timer before changes. */
-    FTM_StopTimer(config->ftm_base);
+    ADC16_EnableHardwareTrigger(config->adc_base, false);
     /* Abort any ongoing transfers. */
     EDMA_AbortTransfer(&data->dma_h_result);
     EDMA_AbortTransfer(&data->dma_h_ch);
@@ -383,11 +388,18 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
     data->seq_len = seq_cfg->seq_len;
     LOG_DBG("seq_len: %" PRIu8 "", data->seq_len);
 
-    if (seq_cfg->buffer_size < data->seq_len * sizeof(uint16_t)) {
+    if (seq_cfg->seq_samples == 0) {
+        LOG_ERR("Sequence should be sampled at least once");
+        return -EINVAL;
+    }
+    data->seq_samples = seq_cfg->seq_samples;
+
+    if (seq_cfg->buffer_size < sizeof(uint16_t)* data->seq_len * data->seq_samples) {
         LOG_ERR("Not enough memory to store samples");
         return -EINVAL;        
     }
     data->buffer = seq_cfg->buffer;
+    data->buffer_size = sizeof(uint16_t)* data->seq_len * data->seq_samples;
 
     /* Stop any already started ADC conversions. */
     adc_mcux_stop_impl(dev);
@@ -406,8 +418,8 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
                         sizeof(uint16_t),
                         /* Bytes transferred in each minor loop (2 bytes) */
                         sizeof(uint16_t),
-                        /* Total of bytes to transfer (data->seq_len*2 bytes) */
-                        data->seq_len * sizeof(uint16_t),
+                        /* Total of bytes to transfer (2*data->seq_len*data->seq_samples bytes) */
+                        data->buffer_size,
                         /* From ADC to Memory */
                         kEDMA_PeripheralToMemory);
     EDMA_SubmitTransfer(&data->dma_h_result, &tran_cfg_result);
@@ -436,7 +448,7 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
      * the major loop ends.  
      */
     config->dma_base->TCD[config->dma_ch_ch].SLAST = -1 * sizeof(adc_ch_mux_block_t) * data->seq_len;
-    config->dma_base->TCD[config->dma_ch_result].DLAST_SGA = -1 * sizeof(uint16_t) * data->seq_len;
+    config->dma_base->TCD[config->dma_ch_result].DLAST_SGA = -1 * data->buffer_size;
 
     EDMA_SetChannelLink(config->dma_base, config->dma_ch_result, kEDMA_MinorLink, config->dma_ch_ch);
     EDMA_SetChannelLink(config->dma_base, config->dma_ch_result, kEDMA_MajorLink, config->dma_ch_ch);
@@ -458,16 +470,7 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
                                         | kEDMA_MajorInterruptEnable 
                                         | kEDMA_HalfInterruptEnable));
 
-    uint32_t period = (((uint64_t)seq_cfg->interval_us * (uint64_t)data->ftm_ticks_per_sec) / (uint64_t)1e6);
-    LOG_DBG("FTM period: %" PRIu32 "", period);
-
-    if (period < 2) {
-        LOG_ERR("FTM period too small: %" PRIu32 "", period);
-        return -EINVAL;
-    }
-
-    FTM_SetTimerPeriod(config->ftm_base, period);
-    FTM_StartTimer(config->ftm_base, config->ftm_clock_source);
+    ADC16_EnableHardwareTrigger(config->adc_base, true);
 
     return 0;
 }
@@ -498,7 +501,6 @@ static int adc_mcux_set_perf_level_impl(struct device *dev, uint8_t level)
     adc_perf_lvls[level].adc_config.referenceVoltageSource = data->v_ref;
     ADC16_Init(config->adc_base, &(adc_perf_lvls[level].adc_config));
     ADC16_SetHardwareAverage(config->adc_base, adc_perf_lvls[level].avg_mode);
-    ADC16_EnableHardwareTrigger(config->adc_base, true);
     ADC16_EnableDMA(config->adc_base, true);
 
     return 0;
@@ -595,6 +597,8 @@ static int adc_mcux_calibrate_impl(struct device *dev)
 {
     const struct adc_mcux_config *config = dev->config_info;
     
+    adc_mcux_stop_impl(dev);
+
     /* Need to disable interrupts, HW trigger and DMA before the calibration */
     config->adc_base->SC1[0] &= ~ADC_SC1_AIEN_MASK;
     ADC16_EnableHardwareTrigger(config->adc_base, false);
@@ -609,7 +613,6 @@ static int adc_mcux_calibrate_impl(struct device *dev)
     status = ADC16_DoAutoCalibration(config->adc_base);
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
-    ADC16_EnableHardwareTrigger(config->adc_base, true);
     ADC16_EnableDMA(config->adc_base, true);
 
     if (status != kStatus_Success) {
@@ -666,37 +669,6 @@ static int adc_mcux_get_cal_params_impl(struct device *dev, adc_mcux_cal_params_
     return 0;
 }
 
-static inline uint32_t adc_mcux_get_ftm_exttrig(uint8_t channel)
-{
-    switch(channel) {
-        case 0:
-            return kFTM_Chnl0Trigger;
-        case 1:
-            return kFTM_Chnl1Trigger;
-        case 2:
-            return kFTM_Chnl2Trigger;
-        case 3:
-            return kFTM_Chnl3Trigger;
-        case 4:
-            return kFTM_Chnl4Trigger;
-        case 5:
-            return kFTM_Chnl5Trigger;
-#if defined(FSL_FEATURE_FTM_HAS_CHANNEL6_TRIGGER) && (FSL_FEATURE_FTM_HAS_CHANNEL6_TRIGGER)
-        case 6:
-            return kFTM_Chnl6Trigger;
-#endif
-#if defined(FSL_FEATURE_FTM_HAS_CHANNEL7_TRIGGER) && (FSL_FEATURE_FTM_HAS_CHANNEL7_TRIGGER)
-        case 7:
-            return kFTM_Chnl7Trigger;
-#endif
-        default:
-            LOG_ERR("Invalid FTM external trigger %" PRIu8, channel);
-            return kFTM_Chnl0Trigger;
-    }
-
-    return kFTM_Chnl0Trigger;
-}
-
 static int adc_mcux_init(struct device *dev)
 {
     const struct adc_mcux_config *config = dev->config_info;
@@ -708,37 +680,6 @@ static int adc_mcux_init(struct device *dev)
     adc_mcux_set_reference_impl(dev, ADC_MCUX_REF_EXTERNAL);
     adc_mcux_set_perf_level_impl(dev, ADC_MCUX_PERF_LVL_0);
     adc_mcux_calibrate_impl(dev);
-
-    /* ---------------- FTM configuration ---------------- */
-
-    clock_name_t clock_name;
-    if (config->ftm_clock_source == kFTM_SystemClock) {
-        clock_name = kCLOCK_CoreSysClk;
-    } else if (config->ftm_clock_source == kFTM_FixedClock) {
-        clock_name = kCLOCK_McgFixedFreqClk;
-    } else {
-        LOG_ERR("Not supported FTM clock");
-        return -EINVAL;
-    }
-
-    data->ftm_ticks_per_sec = CLOCK_GetFreq(clock_name) >> config->ftm_prescale;
-    LOG_DBG("FTM ticks/s: %" PRIu32 "", data->ftm_ticks_per_sec);
-
-    if (config->ftm_channel > FTM_MAX_CHANNELS) {
-        LOG_ERR("Invalid number of FTM channels");
-        return -EINVAL;
-    }
-
-    ftm_config_t ftm_config;
-    FTM_GetDefaultConfig(&ftm_config);
-    ftm_config.prescale = config->ftm_prescale;
-    /* FTM trigger generation is only for the specified channel. */
-    ftm_config.extTriggers = adc_mcux_get_ftm_exttrig(config->ftm_channel);
-    FTM_Init(config->ftm_base, &ftm_config);
-    /* Keep the channel compare value as zero and use the timer period to
-     * adjust the time between consecutive triggers.
-     */
-    FTM_SetupOutputCompare(config->ftm_base, config->ftm_channel, kFTM_NoOutputSignal, 0);
 
     /* ---------------- DMA configuration ---------------- */
 
@@ -778,24 +719,11 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
                     DT_INST_PHA_BY_NAME(adc_inst, dmas, dma_ch, channel),                           \
                     priority)
 
-#define ADC_MCUX_SET_FTM_TRIGGER(n, ftm_base)                                                       \
+#define ADC_MCUX_SET_TRIGGER(n, trigger)                                                            \
     do {                                                                                            \
         uint32_t trg_sel = SIM->SOPT7 & ~((SIM_SOPT7_ADC ##n## TRGSEL_MASK) |                       \
                                           (SIM_SOPT7_ADC ##n## ALTTRGEN_MASK));                     \
-        switch ((uint32_t)(ftm_base)) {                                                             \
-            case (uint32_t)FTM0:                                                                    \
-                trg_sel |= SIM_SOPT7_ADC ##n## TRGSEL(0x8);                                         \
-                break;                                                                              \
-            case (uint32_t)FTM1:                                                                    \
-                trg_sel |= SIM_SOPT7_ADC ##n## TRGSEL(0x9);                                         \
-                break;                                                                              \
-            case (uint32_t)FTM2:                                                                    \
-                trg_sel |= SIM_SOPT7_ADC ##n## TRGSEL(0xA);                                         \
-                break;                                                                              \
-            case (uint32_t)FTM3:                                                                    \
-                trg_sel |= SIM_SOPT7_ADC ##n## TRGSEL(0xB);                                         \
-                break;                                                                              \
-        }                                                                                           \
+        trg_sel |= SIM_SOPT7_ADC ##n## TRGSEL((trigger));                                           \
         trg_sel |= SIM_SOPT7_ADC ##n## ALTTRGEN(0x1);                                               \
         SIM->SOPT7 = trg_sel;                                                                       \
     } while (0)
@@ -805,12 +733,8 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
 #define ADC_MCUX_DEVICE(n)                                                                          \
     static struct adc_mcux_config adc_mcux_config_##n = {                                           \
         .adc_base = (ADC_Type *)DT_INST_REG_ADDR(n),                                                \
-        .ftm_base = (FTM_Type *)DT_REG_ADDR(DT_INST_PHANDLE(n, triggers)),                          \
         .dma_base = DMA0,                                                                           \
         .dma_mux_base = DMAMUX0,                                                                    \
-        .ftm_clock_source = DT_INST_PROP_BY_PHANDLE(n, triggers, clock_source),                     \
-        .ftm_prescale = TO_FTM_PRESCALE_DIVIDE(DT_INST_PROP_BY_PHANDLE(n, triggers, prescaler)),    \
-        .ftm_channel = DT_INST_PHA(n, triggers, channel),                                           \
         .max_channels = DT_INST_PROP(n, max_channels),                                              \
         .dma_ch_result = DT_INST_PHA_BY_NAME(n, dmas, result, channel),                             \
         .dma_ch_ch = DT_INST_PHA_BY_NAME(n, dmas, ch, channel),                                     \
@@ -825,6 +749,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
         .ch_cfg = &adc_mcux_ch_cfg_##n[0],                                                          \
         .ch_mux_block = &adc_mcux_ch_mux_block_##n[0],                                              \
         .v_ref = kADC16_ReferenceVoltageSourceVref,                                                 \
+        .seq_callback = NULL,                                                                       \
     };                                                                                              \
                                                                                                     \
     static int adc_mcux_init_##n(struct device *dev);                                               \
@@ -857,7 +782,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
                     adc_mcux_edma_adc_irq_handler, DEVICE_GET(adc_mcux_##n), 0);                    \
         irq_enable(DT_INST_IRQ(n, irq));                                                            \
                                                                                                     \
-        ADC_MCUX_SET_FTM_TRIGGER(n, DT_REG_ADDR(DT_INST_PHANDLE(n, triggers)));                     \
+        ADC_MCUX_SET_TRIGGER(n,  DT_INST_PROP(n, trigger));                                         \
         return 0;                                                                                   \
     }                                                                                               
 
