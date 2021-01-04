@@ -302,7 +302,7 @@ static void adc_mcux_edma_callback(edma_handle_t *handle, void *param,
     if (transfer_done) {
         struct device *dev = param;
         struct adc_mcux_data* data = dev->driver_data;
-        if (data->seq_callback != NULL) {
+        if (!data->seq_callback) {
             data->seq_callback(dev);
         }
     }
@@ -399,7 +399,7 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
         return -EINVAL;        
     }
     data->buffer = seq_cfg->buffer;
-    data->buffer_size = sizeof(uint16_t)* data->seq_len * data->seq_samples;
+    data->buffer_size = sizeof(uint16_t) * data->seq_len * data->seq_samples;
 
     /* Stop any already started ADC conversions. */
     adc_mcux_stop_impl(dev);
@@ -674,15 +674,7 @@ static int adc_mcux_init(struct device *dev)
     const struct adc_mcux_config *config = dev->config_info;
     struct adc_mcux_data *data = dev->driver_data;
 
-
-    /* ---------------- ADC configuration ---------------- */
-
-    adc_mcux_set_reference_impl(dev, ADC_MCUX_REF_EXTERNAL);
-    adc_mcux_set_perf_level_impl(dev, ADC_MCUX_PERF_LVL_0);
-    adc_mcux_calibrate_impl(dev);
-
     /* ---------------- DMA configuration ---------------- */
-
     DMAMUX_SetSource(config->dma_mux_base, config->dma_ch_result, config->dma_src_result);
     DMAMUX_EnableChannel(config->dma_mux_base, config->dma_ch_result);
     DMAMUX_SetSource(config->dma_mux_base, config->dma_ch_ch, config->dma_src_ch);
@@ -693,6 +685,11 @@ static int adc_mcux_init(struct device *dev)
 
     EDMA_SetCallback(&data->dma_h_result, adc_mcux_edma_callback, dev);
     EDMA_SetCallback(&data->dma_h_ch, adc_mcux_edma_callback, dev);
+
+    /* ---------------- ADC configuration ---------------- */
+    adc_mcux_set_reference_impl(dev, ADC_MCUX_REF_EXTERNAL);
+    adc_mcux_set_perf_level_impl(dev, ADC_MCUX_PERF_LVL_0);
+    adc_mcux_calibrate_impl(dev);
 
     return 0;
 }

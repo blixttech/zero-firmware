@@ -66,10 +66,6 @@ typedef void (*adc_mcux_seq_callback)(struct device *dev);
  */
 typedef struct adc_mcux_sequence_config {
     /**
-     * Interval between consecutive samplings (in microseconds). Should not be zero.
-     */
-    uint32_t interval_us;
-    /**
      * Pointer to a buffer where the samples are to be written.
      * Samples are written in 16-bit words.
      * The buffer must be of an appropriate size, taking into account the seq_len and the seq_samples
@@ -85,7 +81,7 @@ typedef struct adc_mcux_sequence_config {
      */
     size_t seq_samples;
     /**
-     * ADC sequence length
+     * Number of ADC channels in the sequence.
      */
     uint8_t seq_len;
     /**

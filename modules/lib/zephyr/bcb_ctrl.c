@@ -5,6 +5,7 @@
 #include <drivers/gpio.h>
 #include <drivers/input_capture.h>
 #include <drivers/pwm.h>
+#include <drivers/dac.h>
 
 #define LOG_LEVEL CONFIG_BCB_CTRL_LOG_LEVEL
 #include <logging/log.h>
@@ -94,6 +95,32 @@ LOG_MODULE_REGISTER(bcb_ctrl);
                     (DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), pwms, ch_name, period)*(dcycle)/100),      \
                     0);
 
+/* ---------------- Overcurrent protection limit related macros ---------------- */
+#define BCB_OCPL_ADJ_DAC_DEV(ch_name)            (bcb_ctrl_data.dac_##ch_name)
+
+#define BCB_INIT_OCPL_ADJ_DAC(dt_nlabel, ch_name)                                                               \
+    do {                                                                                                        \
+        BCB_OCPL_ADJ_DAC_DEV(ch_name) = device_get_binding(DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_nlabel), \
+                                                                io_channels, ch_name)));                        \
+        if (BCB_OCPL_ADJ_DAC_DEV(ch_name) == NULL) {                                                            \
+            LOG_ERR("Could not get DAC device");                                                                \
+            return -EINVAL;                                                                                     \
+        }                                                                                                       \
+        struct dac_channel_cfg cfg =                                                                            \
+        {                                                                                                       \
+            .channel_id = DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), io_channels, ch_name, output),                \
+            .resolution = 12                                                                                    \
+        };                                                                                                      \
+        dac_channel_setup(BCB_OCPL_ADJ_DAC_DEV(ch_name), &cfg);                                                 \
+    } while(0)
+
+#define BCB_SET_OCPL_ADJ_DAC(dt_nlabel, ch_name, value)                                                 \
+    do {                                                                                                \
+        dac_write_value(BCB_OCPL_ADJ_DAC_DEV(ch_name),                                                  \
+                        DT_PHA_BY_NAME(DT_NODELABEL(dt_nlabel), io_channels, ch_name, output),          \
+                        value); \
+    } while(0)
+
 struct bcb_ctrl_data {
     struct device *port_on_off;
     struct device *port_ocp_otp_reset;
@@ -105,6 +132,7 @@ struct bcb_ctrl_data {
     struct device *ic_ocp_test_tr_n;
     struct device *ic_ocp_test_tr_p;
     struct device *pwm_ocp_test_adj;
+    struct device *dac_ocp_limit_adj;
     bcb_ocp_callback_t ocp_callback;
     bcb_otp_callback_t otp_callback;
     bcb_ocpt_callback_t ocpt_callback;
@@ -228,6 +256,10 @@ static int bcb_ctrl_init()
     /* Configure overcurrent protection test system */
     BCB_INIT_OCPT_ADJ_PWM(actrl, ocp_test_adj);
     BCB_SET_OCPT_ADJ_PWM(actrl, ocp_test_adj, 50);
+
+    BCB_INIT_OCPL_ADJ_DAC(actrl, ocp_limit_adj);
+    BCB_SET_OCPL_ADJ_DAC(actrl, ocp_limit_adj, 4095);
+    //BCB_SET_OCPL_ADJ_DAC(actrl, ocp_limit_adj, 0);
 
     return 0;
 }

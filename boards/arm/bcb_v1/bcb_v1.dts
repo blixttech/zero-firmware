@@ -392,11 +392,12 @@
     dmas =  <&edma0 0 41 2>, <&edma0 0 61 3>;
     dma-names = "RESULT", "CH";
     #io-channel-cells = <2>;
-    status = "okay";
+    status = "disabled";
 };
 
 /* Used for OC limit adjustment */
 &dac0 {
+    voltage-reference = <2>;
     status = "okay";
 };
 

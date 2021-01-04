@@ -532,7 +532,7 @@ int bcb_msmnt_adc_dump_stop()
 
 static int bcb_msmnt_init()
 {
-#if 1
+#if 0
     bcb_msmnt_data.dev_adc_0 = device_get_binding(DT_LABEL(DT_NODELABEL(adc0)));
     if (bcb_msmnt_data.dev_adc_0 == NULL) {
         LOG_ERR("Could not get ADC device %s", DT_LABEL(DT_NODELABEL(adc0))); 
