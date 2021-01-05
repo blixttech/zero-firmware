@@ -13,9 +13,14 @@ properties:
     required: true
     description: Clock source of the FTM
 
+  trigger-source:
+    type: int
+    required: true
+    description: Channel of the trigger
+
   "#trigger-cells":
     type: int
     description: Number of items to expect in a trigger specifier
 
 trigger-cells:
-  - channel
+  - sim-config

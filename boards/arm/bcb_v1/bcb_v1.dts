@@ -377,7 +377,7 @@
 
 &adc0 {
     compatible = "nxp,kinetis-adc16-edma";
-    trigger = <KINETIS_ADC_TRG_FTM_0>;
+    triggers = <&ftm0 KINETIS_ADC_TRG_FTM_0>;
     max-channels = <3>;
     dmas =  <&edma0 0 40 0>, <&edma0 0 60 1>;
     dma-names = "RESULT", "CH";
@@ -387,12 +387,12 @@
 
 &adc1 {
     compatible = "nxp,kinetis-adc16-edma";
-    trigger = <KINETIS_ADC_TRG_FTM_1>;
+    triggers = <&ftm1 KINETIS_ADC_TRG_FTM_1>;
     max-channels = <9>;
     dmas =  <&edma0 0 41 2>, <&edma0 0 61 3>;
     dma-names = "RESULT", "CH";
     #io-channel-cells = <2>;
-    status = "disabled";
+    status = "okay";
 };
 
 /* Used for OC limit adjustment */
@@ -409,6 +409,7 @@
      * So multiply the value of here by two to get the actual precaler value.
      */
     prescaler = <4>;
+    trigger-source = <0>;
     #trigger-cells = <1>;
     status = "okay";
 };
@@ -421,6 +422,7 @@
      * So multiply the value of here by two to get the actual precaler value.
      */
     prescaler = <32>;
+    trigger-source = <0>;
     #trigger-cells = <1>;
     status = "okay";
 };

@@ -1,7 +1,9 @@
+#include <stdint.h>
 #define DT_DRV_COMPAT nxp_kinetis_adc16_edma
 
 
 #include <adc_mcux_edma.h>
+#include <adc_trigger.h>
 #include <fsl_common.h>
 #include <fsl_adc16.h>
 #include <fsl_dmamux.h>
@@ -67,6 +69,7 @@ struct adc_mcux_config {
     uint8_t dma_ch_ch;          /* DMA channel used for changing ADC main channel */
     uint8_t dma_src_result;     /* DMA request source used for transfering ADC result */
     uint8_t dma_src_ch;         /* DMA request source used for changing ADC main channel */
+    const char* trigger;
 };
 
 /**
@@ -85,7 +88,7 @@ typedef struct adc_ch_mux_block {
 } adc_ch_mux_block_t;
 
 struct adc_mcux_data {
-    uint32_t ftm_ticks_per_sec;
+    uint8_t started;
     edma_handle_t dma_h_result; /* DMA handle for the channel that transfers ADC result. */
     edma_handle_t dma_h_ch;     /* DMA handle for the channel that transfers ADC channels. */
     adc_ch_mux_block_t *ch_mux_block;
@@ -284,6 +287,18 @@ static void adc_mcux_edma_dma_irq_handler(void *arg)
 #endif
 }
 
+static void adc_mcux_edma_callback(edma_handle_t *handle, void *param, 
+                                    bool transfer_done, uint32_t tcds)
+{
+    if (transfer_done) {
+        struct device *dev = param;
+        struct adc_mcux_data* data = dev->driver_data;
+        if (data->seq_callback) {
+            data->seq_callback(dev);
+        }
+    }
+}
+
 static void adc_mcux_edma_adc_irq_handler(void *arg)
 {
 
@@ -295,22 +310,10 @@ static void adc_mcux_edma_adc_irq_handler(void *arg)
 #endif
 }
 
-static void adc_mcux_edma_callback(edma_handle_t *handle, void *param, 
-                                    bool transfer_done, uint32_t tcds)
-{
-    /* Nothing to do here for the moment. */
-    if (transfer_done) {
-        struct device *dev = param;
-        struct adc_mcux_data* data = dev->driver_data;
-        if (!data->seq_callback) {
-            data->seq_callback(dev);
-        }
-    }
-}
-
 /**
  * @brief   Set the values of SC1A, SC1B, CFG1 & CFG2 registers with relevant 
- *          the main and alternate ADC channels.
+ *          main and alternate ADC channels. Then initiate ADC conversion if the hardware
+ *          trigger is not selected.
  * 
  * We write into all SC1A, SC1B, CFG1 & CFG2 registers due to the way the DMA transfer is done.
  * Therefore, we have to set these registers to their appropriate values.
@@ -340,9 +343,10 @@ static inline void set_channel_mux_config(const struct adc_mcux_config *config,
     data->ch_mux_block[i].CFG1 = config->adc_base->CFG1;
     reg_masked = config->adc_base->CFG2 & ~ADC_CFG2_MUXSEL_MASK;
     data->ch_mux_block[i].CFG2 = reg_masked | ADC_CFG2_MUXSEL(ADC_MCUX_GET_ALT_CH(data->ch_cfg[0]));
-    /* Set the main and alternate channels of the first in the ADC channel sequence. */
+
+    config->adc_base->CFG2 = data->ch_mux_block[i].CFG2;
+    /* Following starts ADC conversion unless HW trigger mode is selected. */
     config->adc_base->SC1[0] = data->ch_mux_block[i].SC1A;
-    config->adc_base->CFG2 = data->ch_mux_block[i].CFG2; 
 }
 
 static int adc_mcux_channel_setup_impl(struct device *dev, uint8_t seq_idx, 
@@ -363,11 +367,37 @@ static int adc_mcux_stop_impl(struct device *dev)
     const struct adc_mcux_config* config = dev->config_info;
     struct adc_mcux_data *data = dev->driver_data;
 
+    if (!data->started) {
+        return 0;
+    }
+
+    struct device *trigger_dev = device_get_binding(config->trigger);
+    if (!trigger_dev) {
+        LOG_ERR("Trigger device %s not found", config->trigger);
+        return -ENODEV;
+    }
+    adc_trigger_stop(trigger_dev);
+
+    /* Writing all 1s to channel selection bits disables ADC. */
+    config->adc_base->SC1[0] |= ADC_SC1_ADCH_MASK;
     ADC16_EnableHardwareTrigger(config->adc_base, false);
-    /* Abort any ongoing transfers. */
+    ADC16_EnableDMA(config->adc_base, false);
+
     EDMA_AbortTransfer(&data->dma_h_result);
     EDMA_AbortTransfer(&data->dma_h_ch);
 
+    EDMA_DisableChannelInterrupts(config->dma_base, 
+                                    config->dma_ch_result, 
+                                    (kEDMA_ErrorInterruptEnable 
+                                        | kEDMA_MajorInterruptEnable 
+                                        | kEDMA_HalfInterruptEnable));
+    EDMA_DisableChannelInterrupts(config->dma_base, 
+                                    config->dma_ch_ch, 
+                                    (kEDMA_ErrorInterruptEnable 
+                                        | kEDMA_MajorInterruptEnable 
+                                        | kEDMA_HalfInterruptEnable));
+
+    data->started = 0;
     return 0;
 }
 
@@ -401,9 +431,13 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
     data->buffer = seq_cfg->buffer;
     data->buffer_size = sizeof(uint16_t) * data->seq_len * data->seq_samples;
 
-    /* Stop any already started ADC conversions. */
+    data->seq_callback = seq_cfg->seq_callback;
+
     adc_mcux_stop_impl(dev);
 
+    /* Enable HW trigger mode for periodic trigger events. */
+    ADC16_EnableHardwareTrigger(config->adc_base, true);
+    /* Set channel configurations (this does not start conversions since HW trigger mode is set) */
     set_channel_mux_config(config, data);
 
     edma_transfer_config_t tran_cfg_result;
@@ -453,24 +487,26 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
     EDMA_SetChannelLink(config->dma_base, config->dma_ch_result, kEDMA_MinorLink, config->dma_ch_ch);
     EDMA_SetChannelLink(config->dma_base, config->dma_ch_result, kEDMA_MajorLink, config->dma_ch_ch);
 
-    /* Enable transfer requests for the DMA channel.  */
     EDMA_EnableChannelRequest(config->dma_base, config->dma_ch_result);
     /* TODO: Find why we do not need to enable config->dma_ch_ch.
      * Could it be due to it is always enabled? 
      */
-    /* Disable all DMA requests as we do not need them. */
-    EDMA_DisableChannelInterrupts(config->dma_base, 
-                                    config->dma_ch_result, 
-                                    (kEDMA_ErrorInterruptEnable 
-                                        | kEDMA_MajorInterruptEnable 
-                                        | kEDMA_HalfInterruptEnable));
-    EDMA_DisableChannelInterrupts(config->dma_base, 
-                                    config->dma_ch_ch, 
-                                    (kEDMA_ErrorInterruptEnable 
-                                        | kEDMA_MajorInterruptEnable 
-                                        | kEDMA_HalfInterruptEnable));
 
-    ADC16_EnableHardwareTrigger(config->adc_base, true);
+    if (data->seq_callback) {
+        EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_result, 
+                                    kEDMA_MajorInterruptEnable);
+    }
+
+    ADC16_EnableDMA(config->adc_base, true);
+
+    struct device *trigger_dev = device_get_binding(config->trigger);
+    if (!trigger_dev) {
+        LOG_ERR("Trigger device %s not found", config->trigger);
+        return -ENODEV;
+    }
+    adc_trigger_start(trigger_dev);
+
+    data->started = 1;
 
     return 0;
 }
@@ -501,7 +537,6 @@ static int adc_mcux_set_perf_level_impl(struct device *dev, uint8_t level)
     adc_perf_lvls[level].adc_config.referenceVoltageSource = data->v_ref;
     ADC16_Init(config->adc_base, &(adc_perf_lvls[level].adc_config));
     ADC16_SetHardwareAverage(config->adc_base, adc_perf_lvls[level].avg_mode);
-    ADC16_EnableDMA(config->adc_base, true);
 
     return 0;
 }
@@ -594,15 +629,8 @@ static status_t adc_mcux_calibrate_r_impl(struct device *dev)
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
 
 static int adc_mcux_calibrate_impl(struct device *dev)
-{
-    const struct adc_mcux_config *config = dev->config_info;
-    
+{    
     adc_mcux_stop_impl(dev);
-
-    /* Need to disable interrupts, HW trigger and DMA before the calibration */
-    config->adc_base->SC1[0] &= ~ADC_SC1_AIEN_MASK;
-    ADC16_EnableHardwareTrigger(config->adc_base, false);
-    ADC16_EnableDMA(config->adc_base, false);
 
     status_t status = kStatus_Success;
 #if CONFIG_ADC_MCUX_EDMA_CAL_R
@@ -610,10 +638,9 @@ static int adc_mcux_calibrate_impl(struct device *dev)
     status = adc_mcux_calibrate_r_impl(dev);
 #else
     LOG_INF("Calibrating ADC(single)..");
+    const struct adc_mcux_config *config = dev->config_info;
     status = ADC16_DoAutoCalibration(config->adc_base);
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
-
-    ADC16_EnableDMA(config->adc_base, true);
 
     if (status != kStatus_Success) {
         LOG_ERR("Calibration failed. status %" PRIu32 "", status);
@@ -686,6 +713,17 @@ static int adc_mcux_init(struct device *dev)
     EDMA_SetCallback(&data->dma_h_result, adc_mcux_edma_callback, dev);
     EDMA_SetCallback(&data->dma_h_ch, adc_mcux_edma_callback, dev);
 
+    EDMA_DisableChannelInterrupts(config->dma_base, 
+                                    config->dma_ch_result, 
+                                    (kEDMA_ErrorInterruptEnable 
+                                        | kEDMA_MajorInterruptEnable 
+                                        | kEDMA_HalfInterruptEnable));
+    EDMA_DisableChannelInterrupts(config->dma_base, 
+                                    config->dma_ch_ch, 
+                                    (kEDMA_ErrorInterruptEnable 
+                                        | kEDMA_MajorInterruptEnable 
+                                        | kEDMA_HalfInterruptEnable));
+
     /* ---------------- ADC configuration ---------------- */
     adc_mcux_set_reference_impl(dev, ADC_MCUX_REF_EXTERNAL);
     adc_mcux_set_perf_level_impl(dev, ADC_MCUX_PERF_LVL_0);
@@ -737,6 +775,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
         .dma_ch_ch = DT_INST_PHA_BY_NAME(n, dmas, ch, channel),                                     \
         .dma_src_result = DT_INST_PHA_BY_NAME(n, dmas, result, source),                             \
         .dma_src_ch = DT_INST_PHA_BY_NAME(n, dmas, ch, source),                                     \
+        .trigger = DT_LABEL(DT_INST_PHANDLE_BY_IDX(n, triggers, 0)),                                \
     };                                                                                              \
                                                                                                     \
     static adc_ch_mux_block_t                                                                       \
@@ -747,6 +786,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
         .ch_mux_block = &adc_mcux_ch_mux_block_##n[0],                                              \
         .v_ref = kADC16_ReferenceVoltageSourceVref,                                                 \
         .seq_callback = NULL,                                                                       \
+        .started = 0,                                                                               \
     };                                                                                              \
                                                                                                     \
     static int adc_mcux_init_##n(struct device *dev);                                               \
@@ -779,7 +819,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
                     adc_mcux_edma_adc_irq_handler, DEVICE_GET(adc_mcux_##n), 0);                    \
         irq_enable(DT_INST_IRQ(n, irq));                                                            \
                                                                                                     \
-        ADC_MCUX_SET_TRIGGER(n,  DT_INST_PROP(n, trigger));                                         \
+        ADC_MCUX_SET_TRIGGER(n,  DT_INST_PHA_BY_IDX(n, triggers, 0, sim_config));                   \
         return 0;                                                                                   \
     }                                                                                               
 
