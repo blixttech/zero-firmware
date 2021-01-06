@@ -3,7 +3,7 @@
 #include <device.h>
 #include <devicetree.h>
 #include <arm_math.h>
-#include <math.h>
+#include <string.h>
 
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
@@ -60,21 +60,10 @@ typedef struct bcb_msmnt_ntc_tbl {
     uint32_t b;
 } bcb_msmnt_ntc_tbl_t;
 
+static struct bcb_msmnt_data bcb_msmnt_data;
+
 static uint16_t buffer_adc_0[DT_PROP(DT_NODELABEL(adc0), max_channels)] __attribute__ ((aligned (2)));
 static uint16_t buffer_adc_1[DT_PROP(DT_NODELABEL(adc1), max_channels)] __attribute__ ((aligned (2)));
-
-static struct bcb_msmnt_data bcb_msmnt_data = {
-    /* ADC0. */
-    .dev_adc_0 = NULL,
-    .seq_len_adc_0 = 0,
-    .buffer_adc_0 = buffer_adc_0,
-    .buffer_size_adc_0 = sizeof(buffer_adc_0),
-    /* ADC1. */
-    .dev_adc_1 = NULL,
-    .seq_len_adc_1 = 0,
-    .buffer_adc_1 = buffer_adc_1,
-    .buffer_size_adc_1 = sizeof(buffer_adc_1),
-};
 
 static bcb_msmnt_ntc_tbl_t bcb_msmnt_ntc_tbl_data[] = {
     {1135000U,   4075U}, /* -20C */
@@ -147,8 +136,19 @@ int32_t bcb_get_temp(bcb_temp_t sensor)
     return 0;
 }
 
-static int bcb_msmnt_init()
+/**
+ * @brief Set up the default measurement channels and the sequence.
+ * 
+ * @return int 0 if the operation is successful.
+ */
+int bcb_msmnt_setup_default()
 {
+    memset(&bcb_msmnt_data, 0, sizeof(bcb_msmnt_data));
+    bcb_msmnt_data.buffer_adc_0 = buffer_adc_0;
+    bcb_msmnt_data.buffer_size_adc_0 = sizeof(buffer_adc_0);
+    bcb_msmnt_data.buffer_adc_1 = buffer_adc_1;
+    bcb_msmnt_data.buffer_size_adc_1 = sizeof(buffer_adc_1);
+
     bcb_msmnt_data.dev_adc_0 = device_get_binding(DT_LABEL(DT_NODELABEL(adc0)));
     if (bcb_msmnt_data.dev_adc_0 == NULL) {
         LOG_ERR("Could not get ADC device %s", DT_LABEL(DT_NODELABEL(adc0))); 
@@ -162,10 +162,12 @@ static int bcb_msmnt_init()
     }
 
     /* ADC0 */
+    adc_mcux_stop(bcb_msmnt_data.dev_adc_0);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, i_low_gain);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, i_high_gain);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, v_mains);
     /* ADC1 */
+    adc_mcux_stop(bcb_msmnt_data.dev_adc_1);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, t_mosfet_in);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, t_mosfet_out);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, t_ambient);
@@ -176,17 +178,11 @@ static int bcb_msmnt_init()
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, oc_test_adj);
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, ref_1v5);
 
-
-    /*
-    // ADCs are calibrated by the driver when initialised.
     adc_mcux_set_reference(bcb_msmnt_data.dev_adc_0, ADC_MCUX_REF_EXTERNAL);
     adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_0, ADC_MCUX_PERF_LVL_0);
-    adc_mcux_calibrate(bcb_msmnt_data.dev_adc_0);
 
     adc_mcux_set_reference(bcb_msmnt_data.dev_adc_1, ADC_MCUX_REF_EXTERNAL);
     adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_1, ADC_MCUX_PERF_LVL_0);
-    adc_mcux_calibrate(bcb_msmnt_data.dev_adc_1);
-    */
 
     adc_mcux_sequence_config_t adc_seq_cfg;
 
@@ -203,6 +199,11 @@ static int bcb_msmnt_init()
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
     return 0;
+}
+
+static int bcb_msmnt_init()
+{
+    return bcb_msmnt_setup_default();
 }
 
 

@@ -15,6 +15,7 @@ typedef enum {
 } bcb_temp_t;
 
 int32_t bcb_get_temp(bcb_temp_t sensor);
+int bcb_msmnt_setup_default();
 
 #ifdef __cplusplus
 }
