@@ -14,6 +14,10 @@ config COUNTER_MCUX_PIT
     default y
     depends on COUNTER_CTD_MCUX_PIT
 
+config COUNTER_MCUX_LPTMR
+    bool "MCUX LPTMR driver"
+    default y
+
 config ADC_MCUX_EDMA
     bool "DMA based ADC driver"
     default y

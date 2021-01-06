@@ -42,6 +42,20 @@
             status = "okay";
         };
 
+        /* LPTMR is not in nxp_k6x.dtsi. */
+        lptmr0: lptmr@40040000 {
+            compatible = "nxp,kinetis-lptmr";
+            reg = <0x40040000 0x10>;
+            clocks = <&sim KINETIS_SIM_BUS_CLK 0x1038 0>;
+            interrupts = <58 0>;
+            clk-source = <0>;           /* MCGIRCLK- 32768 Hz */
+            clock-frequency = <32768>;
+            prescaler = <0>;            /* devided by 2 */
+            period = <16384>;
+            label = "LPTMR_0";
+            status = "okay";
+        };
+
         /* Due to the driver API limitations, a partially implemented DMA driver is used.
          * This driver only initialises the DMA and DMAMUX. 
          */
@@ -387,7 +401,7 @@
 
 &adc1 {
     compatible = "nxp,kinetis-adc16-edma";
-    triggers = <&ftm1 KINETIS_ADC_TRG_FTM_1>;
+    triggers = <&lptmr0 KINETIS_ADC_TRG_LPTMR>;
     max-channels = <9>;
     dmas =  <&edma0 0 41 2>, <&edma0 0 61 3>;
     dma-names = "RESULT", "CH";
@@ -451,6 +465,15 @@
      */
     prescaler = <1>;
     #pwm-cells = <3>;
+    status = "okay";
+};
+
+&lptmr0 {
+    compatible = "nxp,kinetis-lptmr-trigger";
+    clk-source = <0>;   /* MCGIRCLK- 32768 Hz */
+    prescaler = <0>;    /* devided by 2 */
+    period = <128>;
+    #trigger-cells = <1>;
     status = "okay";
 };
 
