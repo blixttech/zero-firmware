@@ -80,11 +80,33 @@ static int cmd_temp_params(const struct shell *shell, size_t argc, char **argv)
     return 0;
 }
 
+static int cmd_voltage_params(const struct shell *shell, size_t argc, char **argv)
+{
+    ARG_UNUSED(argc);
+    ARG_UNUSED(argv);
+
+    shell_print(shell, "%" PRId32 " mV", bcb_get_voltage());
+
+    return 0;
+}
+
+static int cmd_current_params(const struct shell *shell, size_t argc, char **argv)
+{
+    ARG_UNUSED(argc);
+    ARG_UNUSED(argv);
+
+    shell_print(shell, "%" PRId32 " mA", bcb_get_current());
+
+    return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
     SHELL_CMD(on, NULL, "Turn on.", cmd_on_params),
     SHELL_CMD(off, NULL, "Turn off.", cmd_off_params),
     SHELL_CMD(ocpt, NULL, "Trigger OCP.", cmd_ocp_trigger_params),
     SHELL_CMD(temp, NULL, "Get temperature.", cmd_temp_params),
+    SHELL_CMD(voltage, NULL, "Get voltage.", cmd_voltage_params),
+    SHELL_CMD(current, NULL, "Get current.", cmd_current_params),
     SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(breaker, &breaker_sub, "Breaker commands", NULL);

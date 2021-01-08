@@ -102,12 +102,25 @@ static int32_t get_temp_adc(uint32_t adc_ntc)
         }
     }
     /* 
-     * T = (T_0 * B)/(B + (T_0 * ln(R/R_0)))
-     * ln(R/R_0) = ln(R) - ln(R_0)
+     *           T  ⋅ β      
+     *            0          
+     * T = ──────────────────
+     *         ⎛        ⎛ R⎞⎞
+     *     β + ⎜T  ⋅ ln ⎜──⎟⎟
+     *         ⎜ 0      ⎜R ⎟⎟
+     *         ⎝        ⎝ 0⎠⎠
      *
-     * T_0 = 298.15 K (25C)
-     * R_0 = 100000 ohm
-     * ln(R_0) = 11.5130
+     *    ⎛ R⎞                  
+     * ln ⎜──⎟ = ln(R) - ln ⎛R ⎞
+     *    ⎜R ⎟              ⎝ 0⎠
+     *    ⎝ 0⎠
+     *
+     * T  = 298.15 K (25C)     
+     *  0               
+     * R  = 100000 ohms     
+     *  0               
+     * ln ⎛R ⎞ = 11.5130
+     *    ⎝ 0⎠
      */
     float temp_k = (298.15f * ((float)b_ntc));
     temp_k /= ((float)b_ntc) + (298.15f * (logf(r_tnc) - 11.5130f));
@@ -303,13 +316,57 @@ int bcb_msmnt_get_cal_params(bcb_msmnt_type_t type, uint16_t *a, uint16_t *b)
     return calibrated ? 0 : -EINVAL;
 }
 
+static int32_t bcb_msmnt_get_i_low_gain()
+{
+    int32_t a;
+    int32_t b;
+    if (bcb_msmnt_data.i_low_gain_calibrated) {
+        a = bcb_msmnt_data.i_low_gain_cal_a;
+        b = bcb_msmnt_data.i_low_gain_cal_b;
+    } else {
+        a = 874;    /* (20*2*10^-3*2^16)/3 */
+        b = 32768;  /* Middle of the ADC code range */
+    }
+    return ((((int32_t)*bcb_msmnt_data.raw_i_low_gain) - b) * 1000) / a;
+}
+
+static int32_t bcb_msmnt_get_i_high_gain()
+{
+    int32_t a;
+    int32_t b;
+    if (bcb_msmnt_data.i_high_gain_calibrated) {
+        a = bcb_msmnt_data.i_high_gain_cal_a;
+        b = bcb_msmnt_data.i_high_gain_cal_b;
+    } else {
+        a = 8738U; /* (200*2*10^-3*2^16)/3 */
+        b = 32768; /* Middle of the ADC code range */
+    }
+    return ((((int32_t)*bcb_msmnt_data.raw_i_high_gain) - b) * 1000) / a;
+}
+
 int32_t bcb_get_voltage()
 {
-    return 0;
+    int32_t a;
+    int32_t b;
+    if (bcb_msmnt_data.v_mains_calibrated) {
+        a = bcb_msmnt_data.v_mains_cal_a;
+        b = bcb_msmnt_data.v_mains_cal_b;
+    } else {
+        a = 79;     /* (20*2^16*360*2)/(3*(360*2+1*10^6*4)) */
+        b = 32768;  /* Middle of the ADC code range */
+    }
+    return ((((int32_t)*bcb_msmnt_data.raw_v_mains) - b) * 1000) / a;
 }
 
 int32_t bcb_get_current()
 {
+    if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) || 
+        (*bcb_msmnt_data.raw_i_low_gain > 100)) {
+        return bcb_msmnt_get_i_low_gain();    
+    } else {
+        /* Low gain amplifer is about get saturated or already saturated. */
+        return bcb_msmnt_get_i_high_gain(); 
+    }
     return 0;
 }
 
@@ -320,3 +377,64 @@ static int bcb_msmnt_init()
 
 
 SYS_INIT(bcb_msmnt_init, APPLICATION, CONFIG_BCB_LIB_MSMNT_INIT_PRIORITY);
+
+/*
+ * Current measurement calculation
+ * ===============================
+ *             ⎛                 N⎞                     
+ *             ⎜G    ⋅ R      ⋅ 2 ⎟                     
+ *             ⎜ amp    sense     ⎟                     
+ *  ADC      = ⎜──────────────────⎟ ⋅ I      + ADC      
+ *     total   ⎜     V            ⎟    sense      offset
+ *             ⎝      ADC_ref     ⎠                     
+ *          
+ * Where:                                           
+ * ADC         = Total ADC reading                     
+ *    total
+ * -------------
+ * ADC         = ADC reading when the input current is zero                     
+ *    offset    
+ * -------------                                  
+ * G           = Gain of the amplifier (20 or 200)                         
+ *  amp                                       
+ * -------------
+ * R           = Value of sense resistor(s) (2 milliohms)        
+ *  sense                                     
+ * -------------
+ * V           = ADC reference voltage (3 V)           
+ *  ADC_ref
+ * -------------
+ * I           = Measured current
+ *  sense
+ *
+ * Voltage measurement calculation
+ * ===============================
+ *            ⎛                 N⎞                     
+ *            ⎜G    ⋅ R      ⋅ 2 ⎟                     
+ *            ⎜ amp    sense     ⎟                     
+ * ADC      = ⎜──────────────────⎟ ⋅ V      + ADC      
+ *    total   ⎜ V        ⋅ R     ⎟    mains      offset
+ *            ⎝  ADC_ref    total⎠                     
+ *
+ * Where:                                           
+ * ADC         = Total ADC reading                     
+ *    total
+ * -------------
+ * ADC         = ADC reading when the input voltage is zero                     
+ *    offset    
+ * -------------                                  
+ * G           = Gain of the amplifier (20)                         
+ *  amp                                       
+ * -------------
+ * R           = Value of sense resistor(s) (720 ohms)        
+ *  sense
+ * -------------
+ * R           = Total value of resistor ladder (4000720 ohms)        
+ *  total                                      
+ * -------------
+ * V           = ADC reference voltage (3 V)           
+ *  ADC_ref
+ * -------------
+ * V           = Measured voltage
+ *  mains  
+ */
