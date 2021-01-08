@@ -464,12 +464,12 @@ int32_t bcb_get_current()
     return 0;
 }
 
-int32_t bcb_get_voltage_rms()
+uint32_t bcb_get_voltage_rms()
 {
     return bcb_msmnt_data.v_mains_rms;
 }
 
-int32_t bcb_get_current_rms()
+uint32_t bcb_get_current_rms()
 {
     if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) ||
         (*bcb_msmnt_data.raw_i_low_gain > 100)) {

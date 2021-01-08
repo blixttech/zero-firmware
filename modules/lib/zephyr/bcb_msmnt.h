@@ -32,8 +32,8 @@ typedef enum {
 int32_t bcb_get_temp(bcb_temp_sensor_t sensor);
 int32_t bcb_get_voltage();
 int32_t bcb_get_current();
-int32_t bcb_get_voltage_rms();
-int32_t bcb_get_current_rms();
+uint32_t bcb_get_voltage_rms();
+uint32_t bcb_get_current_rms();
 
 int bcb_msmnt_setup_default();
 uint16_t bcb_msmnt_get_raw(bcb_msmnt_type_t type);
