@@ -69,13 +69,13 @@ static int cmd_temp_params(const struct shell *shell, size_t argc, char **argv)
     if (argc != 2) {
         shell_print(shell, "Invalid sensor");
         shell_print(shell, "Available sensors:");
-        shell_print(shell, "    %d: PWR_IN", BCB_TEMP_PWR_IN);
-        shell_print(shell, "    %d: PWR_OUT", BCB_TEMP_PWR_OUT);
-        shell_print(shell, "    %d: AMB", BCB_TEMP_AMB);
-        shell_print(shell, "    %d: MCU", BCB_TEMP_MCU);
+        shell_print(shell, "    %d: PWR_IN", BCB_TEMP_SENSOR_PWR_IN);
+        shell_print(shell, "    %d: PWR_OUT", BCB_TEMP_SENSOR_PWR_OUT);
+        shell_print(shell, "    %d: AMB", BCB_TEMP_SENSOR_AMB);
+        shell_print(shell, "    %d: MCU", BCB_TEMP_SENSOR_MCU);
         return -1;
     }
-    bcb_temp_t sensor = (bcb_temp_t)(argv[1][0] - '0');
+    bcb_temp_sensor_t sensor = (bcb_temp_sensor_t)(argv[1][0] - '0');
     shell_print(shell, "%d C", bcb_get_temp(sensor));
     return 0;
 }

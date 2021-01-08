@@ -53,6 +53,16 @@ struct bcb_msmnt_data {
     volatile uint16_t       *raw_hw_rev_ctrl;
     volatile uint16_t       *raw_oc_test_adj;
     volatile uint16_t       *raw_ref_1v5;
+    /* Calibration related */
+    uint8_t                 i_low_gain_calibrated;
+    uint8_t                 i_high_gain_calibrated;
+    uint8_t                 v_mains_calibrated;
+    uint16_t                i_low_gain_cal_a;
+    uint16_t                i_low_gain_cal_b;
+    uint16_t                i_high_gain_cal_a;
+    uint16_t                i_high_gain_cal_b;
+    uint16_t                v_mains_cal_a;
+    uint16_t                v_mains_cal_b;
 };
 
 typedef struct bcb_msmnt_ntc_tbl {
@@ -119,16 +129,16 @@ static int32_t get_temp_mcu(uint32_t adc_ntc)
  * @param sensor    Type of the sensor. 
  * @return int32_t  Temperature in centigrade.
  */
-int32_t bcb_get_temp(bcb_temp_t sensor)
+int32_t bcb_get_temp(bcb_temp_sensor_t sensor)
 {
     switch (sensor) {
-        case BCB_TEMP_PWR_IN:
+        case BCB_TEMP_SENSOR_PWR_IN:
             return (int32_t)get_temp_adc(*(bcb_msmnt_data.raw_t_mosfet_in));
-        case BCB_TEMP_PWR_OUT:
+        case BCB_TEMP_SENSOR_PWR_OUT:
             return (int32_t)get_temp_adc(*(bcb_msmnt_data.raw_t_mosfet_out));
-        case BCB_TEMP_AMB:
+        case BCB_TEMP_SENSOR_AMB:
             return (int32_t)get_temp_adc(*(bcb_msmnt_data.raw_t_ambient));
-        case BCB_TEMP_MCU:
+        case BCB_TEMP_SENSOR_MCU:
             return (int32_t)get_temp_mcu(*(bcb_msmnt_data.raw_t_mcu));
         default:
             LOG_ERR("Invalid sensor");
@@ -198,6 +208,108 @@ int bcb_msmnt_setup_default()
     adc_seq_cfg.seq_samples = 1;
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
+    return 0;
+}
+
+
+uint16_t bcb_msmnt_get_raw(bcb_msmnt_type_t type)
+{
+    switch (type) {
+        case BCB_MSMNT_TYPE_I_LOW_GAIN:
+            return (*bcb_msmnt_data.raw_i_low_gain);
+        case BCB_MSMNT_TYPE_I_HIGH_GAIN:
+            return (*bcb_msmnt_data.raw_i_high_gain);
+        case BCB_MSMNT_TYPE_V_MAINS:
+            return (*bcb_msmnt_data.raw_v_mains);
+        case BCB_MSMNT_TYPE_T_PWR_IN:
+            return (*bcb_msmnt_data.raw_t_mosfet_in);
+        case BCB_MSMNT_TYPE_T_PWR_OUT:
+            return (*bcb_msmnt_data.raw_t_mosfet_out);
+        case BCB_MSMNT_TYPE_T_AMB:
+            return (*bcb_msmnt_data.raw_t_ambient);
+        case BCB_MSMNT_TYPE_T_MCU:
+            return (*bcb_msmnt_data.raw_t_mcu);
+        case BCB_MSMNT_TYPE_REV_IN:
+            return (*bcb_msmnt_data.raw_hw_rev_in);
+        case BCB_MSMNT_TYPE_REV_OUT:
+            return (*bcb_msmnt_data.raw_hw_rev_out);
+        case BCB_MSMNT_TYPE_REV_CTRL:
+            return (*bcb_msmnt_data.raw_hw_rev_ctrl);
+        case BCB_MSMNT_TYPE_OCP_TEST_ADJ:
+            return (*bcb_msmnt_data.raw_oc_test_adj);
+        case BCB_MSMNT_TYPE_V_REF_1V5:
+            return (*bcb_msmnt_data.raw_ref_1v5);
+        default:
+            LOG_ERR("Invalid measurement type");
+    }
+    return 0;
+}
+
+int bcb_msmnt_set_cal_params(bcb_msmnt_type_t type, uint16_t a, uint16_t b)
+{
+    if (!a) {
+        LOG_ERR("Invalid calibration value");
+        return -EINVAL;
+    }
+
+    switch (type) {
+        case BCB_MSMNT_TYPE_I_LOW_GAIN:
+            bcb_msmnt_data.i_low_gain_calibrated = 1;
+            bcb_msmnt_data.i_low_gain_cal_a = a;
+            bcb_msmnt_data.i_low_gain_cal_b = b;
+            break;
+        case BCB_MSMNT_TYPE_I_HIGH_GAIN:
+            bcb_msmnt_data.i_high_gain_calibrated = 1;
+            bcb_msmnt_data.i_high_gain_cal_a = a;
+            bcb_msmnt_data.i_high_gain_cal_b = b;
+            break;
+        case BCB_MSMNT_TYPE_V_MAINS:
+            bcb_msmnt_data.v_mains_calibrated = 1;
+            bcb_msmnt_data.v_mains_cal_a = a;
+            bcb_msmnt_data.v_mains_cal_b = b;
+            break;
+        default:
+            LOG_ERR("Invalid measurement type");
+            return -EINVAL;
+    }
+
+    return 0;
+}
+
+int bcb_msmnt_get_cal_params(bcb_msmnt_type_t type, uint16_t *a, uint16_t *b)
+{
+    uint8_t calibrated;
+    switch (type) {
+        case BCB_MSMNT_TYPE_I_LOW_GAIN:
+            calibrated = bcb_msmnt_data.i_low_gain_calibrated;
+            *a = bcb_msmnt_data.i_low_gain_cal_a;
+            *b = bcb_msmnt_data.i_low_gain_cal_b;
+            break;
+        case BCB_MSMNT_TYPE_I_HIGH_GAIN:
+            calibrated = bcb_msmnt_data.i_high_gain_calibrated;
+            *a = bcb_msmnt_data.i_high_gain_cal_a;
+            *b = bcb_msmnt_data.i_high_gain_cal_b;
+            break;
+        case BCB_MSMNT_TYPE_V_MAINS:
+            calibrated = bcb_msmnt_data.v_mains_calibrated;
+            *a = bcb_msmnt_data.v_mains_cal_a;
+            *b = bcb_msmnt_data.v_mains_cal_b;
+            break;
+        default:
+            LOG_ERR("Invalid measurement type");
+            return -EINVAL;
+    }
+
+    return calibrated ? 0 : -EINVAL;
+}
+
+int32_t bcb_get_voltage()
+{
+    return 0;
+}
+
+int32_t bcb_get_current()
+{
     return 0;
 }
 
