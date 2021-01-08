@@ -66,7 +66,7 @@ struct bcb_msmnt_data {
 };
 
 typedef struct bcb_msmnt_ntc_tbl {
-    uint32_t r; /* Resistance in milliohm */
+    uint32_t r; /* Resistance in ohms */
     uint32_t b;
 } bcb_msmnt_ntc_tbl_t;
 
@@ -90,7 +90,7 @@ static int32_t get_temp_adc(uint32_t adc_ntc)
 {
     /* ADC is referenced to 3V (3000 millivolt). */
     uint32_t v_ntc = (3000 * adc_ntc) >> 16;
-    /* NTC is connected to 3V3 (3300 millivolt) rail via a 56k (56000 milliohm) resistor. */
+    /* NTC is connected to 3V3 (3300 millivolt) rail via a 56k resistor. */
     uint32_t r_tnc = v_ntc * 56000 / (3300 - v_ntc);
     uint32_t b_ntc = 4197U;
     int i;
