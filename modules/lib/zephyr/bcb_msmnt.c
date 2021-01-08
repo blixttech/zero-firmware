@@ -9,6 +9,8 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_msmnt);
 
+#define BCB_MSMNT_RMS_SAMPLES           ((1U) << CONFIG_BCB_LIB_MSMNT_RMS_SAMPLES)
+#define BCB_MSMNT_RMS_SAMPLES_SHIFT     (CONFIG_BCB_LIB_MSMNT_RMS_SAMPLES)
 
 #define BCB_MSMNT_ADC_SEQ_ADD(ds, dt_node, ch_name)                                                 \
     do {                                                                                            \
@@ -63,6 +65,15 @@ struct bcb_msmnt_data {
     uint16_t                i_high_gain_cal_b;
     uint16_t                v_mains_cal_a;
     uint16_t                v_mains_cal_b;
+    /* RMS calculation related */
+    uint32_t                i_low_gain_diff_sqrd_acc;
+    uint32_t                i_high_gain_diff_sqrd_acc;
+    uint32_t                v_mains_diff_sqrd_acc;
+    uint32_t                i_low_gain_rms;
+    uint32_t                i_high_gain_rms;
+    uint32_t                v_mains_rms;
+    uint8_t                 rms_samples;
+    struct k_timer          timer_rms;
 };
 
 typedef struct bcb_msmnt_ntc_tbl {
@@ -85,6 +96,8 @@ static bcb_msmnt_ntc_tbl_t bcb_msmnt_ntc_tbl_data[] = {
     {10580U,     4301U}, /* 80C */
     {5410U,      4327U}, /* 100C */
 };
+
+static void bcb_msmnt_on_rms_timer(struct k_timer* timer);
 
 static int32_t get_temp_adc(uint32_t adc_ntc) 
 {
@@ -221,6 +234,8 @@ int bcb_msmnt_setup_default()
     adc_seq_cfg.seq_samples = 1;
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
+    k_timer_init(&bcb_msmnt_data.timer_rms, bcb_msmnt_on_rms_timer, NULL);
+
     return 0;
 }
 
@@ -316,6 +331,85 @@ int bcb_msmnt_get_cal_params(bcb_msmnt_type_t type, uint16_t *a, uint16_t *b)
     return calibrated ? 0 : -EINVAL;
 }
 
+static void bcb_msmnt_on_rms_timer(struct k_timer* timer)
+{
+    int32_t adc_diff;
+
+    if (bcb_msmnt_data.i_low_gain_calibrated) {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_i_low_gain - (int32_t)bcb_msmnt_data.i_low_gain_cal_b;
+    } else {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_i_low_gain - 32768;
+    }
+    bcb_msmnt_data.i_low_gain_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+
+    if (bcb_msmnt_data.i_high_gain_calibrated) {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_i_high_gain - (int32_t)bcb_msmnt_data.i_high_gain_cal_b;
+    } else {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_i_high_gain - 32768;
+    }
+    bcb_msmnt_data.i_high_gain_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+
+    if (bcb_msmnt_data.v_mains_calibrated) {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_v_mains - (int32_t)bcb_msmnt_data.v_mains_cal_b;
+    } else {
+        adc_diff = (int32_t)*bcb_msmnt_data.raw_v_mains - 32768;
+    }
+    bcb_msmnt_data.v_mains_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+
+    bcb_msmnt_data.rms_samples++;
+
+    if (bcb_msmnt_data.rms_samples == BCB_MSMNT_RMS_SAMPLES) {
+        uint32_t diff_rms;
+        uint32_t a;
+
+        if (bcb_msmnt_data.i_low_gain_calibrated) {
+            a = bcb_msmnt_data.i_low_gain_cal_a;
+        } else {
+            a = 874;
+        }
+        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.i_low_gain_diff_sqrd_acc);
+        bcb_msmnt_data.i_low_gain_rms = (diff_rms * 1000) / a;
+
+        if (bcb_msmnt_data.i_high_gain_calibrated) {
+            a = bcb_msmnt_data.i_high_gain_cal_a;
+        } else {
+            a = 8738U;
+        }
+        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.i_high_gain_diff_sqrd_acc);
+        bcb_msmnt_data.i_high_gain_rms = (diff_rms * 1000) / a;
+
+        if (bcb_msmnt_data.v_mains_calibrated) {
+            a = bcb_msmnt_data.v_mains_cal_a;
+        } else {
+            a = 79;
+        }
+        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.v_mains_diff_sqrd_acc);
+        bcb_msmnt_data.v_mains_rms = (diff_rms * 1000) / a;
+
+        bcb_msmnt_data.rms_samples = 0;
+        bcb_msmnt_data.i_low_gain_diff_sqrd_acc = 0;
+        bcb_msmnt_data.i_high_gain_diff_sqrd_acc = 0;
+        bcb_msmnt_data.v_mains_diff_sqrd_acc = 0;
+    }
+}
+
+void bcb_msmnt_rms_start(uint8_t interval)
+{
+    bcb_msmnt_data.rms_samples = 0;
+    bcb_msmnt_data.i_low_gain_diff_sqrd_acc = 0;
+    bcb_msmnt_data.i_high_gain_diff_sqrd_acc = 0;
+    bcb_msmnt_data.v_mains_diff_sqrd_acc = 0;
+    bcb_msmnt_data.i_low_gain_rms = 0;
+    bcb_msmnt_data.i_high_gain_rms = 0;
+    bcb_msmnt_data.v_mains_rms = 0;
+    k_timer_start(&bcb_msmnt_data.timer_rms, K_MSEC(interval), K_MSEC(interval));
+}
+
+void bcb_msmnt_rms_stop()
+{
+    k_timer_stop(&bcb_msmnt_data.timer_rms);
+}
+
 static int32_t bcb_msmnt_get_i_low_gain()
 {
     int32_t a;
@@ -368,6 +462,22 @@ int32_t bcb_get_current()
         return bcb_msmnt_get_i_high_gain(); 
     }
     return 0;
+}
+
+int32_t bcb_get_voltage_rms()
+{
+    return bcb_msmnt_data.v_mains_rms;
+}
+
+int32_t bcb_get_current_rms()
+{
+    if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) ||
+        (*bcb_msmnt_data.raw_i_low_gain > 100)) {
+        return bcb_msmnt_data.i_low_gain_rms;
+    } else {
+        /* Low gain amplifer is about get saturated or already saturated. */
+        return bcb_msmnt_data.i_high_gain_rms;
+    }
 }
 
 static int bcb_msmnt_init()
