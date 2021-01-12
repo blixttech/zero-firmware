@@ -1,0 +1,5 @@
+function(zephyr_library_source_remove source)
+    get_target_property(target_sources ${ZEPHYR_CURRENT_LIBRARY} SOURCES)
+    list(REMOVE_ITEM target_sources ${source})
+    set_property(TARGET ${ZEPHYR_CURRENT_LIBRARY} PROPERTY SOURCES ${target_sources})
+endfunction()

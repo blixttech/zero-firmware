@@ -23,6 +23,8 @@ list(APPEND SYSCALL_INCLUDE_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../modules/drivers/zephyr"
 )
 
+include("${CMAKE_CURRENT_LIST_DIR}/extensions.cmake")
+
 find_package(Zephyr REQUIRED HINTS "$ENV{ZEPHYR_BASE}")
 
 zephyr_include_directories("${CMAKE_CURRENT_LIST_DIR}/../include")
