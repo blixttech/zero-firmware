@@ -1,7 +1,7 @@
 MCUBOOT_DIR=zephyr-os/bootloader/mcuboot/boot/zephyr/
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 BCB_ROOT :=$(dir $(mkfile_path))
-DTS_ROOT :=$(BCB_ROOT)/modules/bcb/zephyr
+DTS_ROOT :=$(BCB_ROOT)
 ZEPHYR_MODULE_BCB :=$(BCB_ROOT)/modules/bcb
 
 BUILD_DIR=build/zephyr/
