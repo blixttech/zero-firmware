@@ -1,0 +1,8 @@
+menuconfig BCB_LIB
+	bool "BCB Library"
+	default y
+	depends on BCB_EXTENSIONS
+
+if BCB_LIB && BCB_DRIVERS
+rsource "bcb/Kconfig"
+endif # BCB_LIB

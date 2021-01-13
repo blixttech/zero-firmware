@@ -1,0 +1,6 @@
+menuconfig COUNTER
+	bool "Counter driver"
+
+if COUNTER
+rsource "Kconfig.mcux_pit"
+endif

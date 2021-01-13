@@ -1,0 +1,5 @@
+config ADC_TRIGGER_MCUX_LPTMR
+	bool "MCUX LPTMR ADC Trigger driver"
+	depends on HAS_MCUX_LPTMR
+	# HAL sources for LPTMR are enabled only if the following is set
+	select COUNTER_MCUX_LPTMR

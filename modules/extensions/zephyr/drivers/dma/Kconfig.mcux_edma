@@ -1,0 +1,4 @@
+config DMA_MCUX_EDMA
+	bool "MCUX EDMA driver"
+	default y
+	depends on HAS_MCUX_EDMA

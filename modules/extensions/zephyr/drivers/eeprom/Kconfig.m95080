@@ -1,0 +1,4 @@
+config EEPROM_M95080
+	bool "EEPROM M95080 driver"
+	default y
+	depends on SPI_MCUX_DSPI

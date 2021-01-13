@@ -1,0 +1,6 @@
+menuconfig INPUT_CAPTURE
+	bool "Input Capture driver"
+
+if INPUT_CAPTURE
+rsource "Kconfig.mcux_ftm"
+endif # INPUT_CAPTURE

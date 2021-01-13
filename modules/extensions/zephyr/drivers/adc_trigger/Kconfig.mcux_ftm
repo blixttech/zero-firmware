@@ -1,0 +1,3 @@
+config ADC_TRIGGER_MCUX_FTM
+	bool "MCUX FTM ADC Trigger driver"
+	depends on HAS_MCUX_FTM

@@ -13,17 +13,16 @@ endif()
 get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephyr" ABSOLUTE)
 set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")
 
-list(APPEND ZEPHYR_EXTRA_MODULES
-    "${CMAKE_CURRENT_LIST_DIR}/../modules/lib"
-    "${CMAKE_CURRENT_LIST_DIR}/../modules/drivers"
-)
-
-list(APPEND SYSCALL_INCLUDE_DIRS
-    "${CMAKE_CURRENT_LIST_DIR}/../include"
-    "${CMAKE_CURRENT_LIST_DIR}/../modules/drivers/zephyr"
-)
-
 include("${CMAKE_CURRENT_LIST_DIR}/extensions.cmake")
+
+list(APPEND ZEPHYR_EXTRA_MODULES
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/extensions"
+)
+
+list_directories(includes_dirs
+    "${CMAKE_CURRENT_LIST_DIR}/../include"
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/extensions/*/include")
+list(APPEND SYSCALL_INCLUDE_DIRS ${includes_dirs})
 
 find_package(Zephyr REQUIRED HINTS "$ENV{ZEPHYR_BASE}")
 

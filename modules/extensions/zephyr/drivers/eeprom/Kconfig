@@ -1,0 +1,6 @@
+menuconfig EEPROM
+	bool "EEPROM driver"
+
+if EEPROM
+rsource "Kconfig.m95080"
+endif # EEPROM

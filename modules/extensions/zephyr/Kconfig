@@ -1,0 +1,11 @@
+menuconfig BCB_EXTENSIONS
+	bool "BCB extensions"
+	default y
+	depends on BOARD_BCB_V1
+
+if BCB_EXTENSIONS
+rsource "modules/Kconfig"
+rsource "soc/Kconfig"
+rsource "drivers/Kconfig"
+rsource "lib/Kconfig"
+endif # BCB_EXTENSIONS

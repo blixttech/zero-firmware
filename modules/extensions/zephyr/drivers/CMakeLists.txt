@@ -1,0 +1,6 @@
+add_subdirectory(adc)
+add_subdirectory(adc_trigger)
+add_subdirectory(counter)
+add_subdirectory(dma)
+add_subdirectory(eeprom)
+add_subdirectory(input_capture)

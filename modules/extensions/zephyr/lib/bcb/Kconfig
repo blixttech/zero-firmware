@@ -1,0 +1,52 @@
+config BCB_SHELL
+	bool "Shell"
+	default n
+
+menu "Initialisation priorities"
+
+config BCB_LIB_LEDS_INIT_PRIORITY
+	int "LEDs initialisation priority"
+	default 50
+
+config BCB_LIB_ETIME_INIT_PRIORITY
+	int "Elapsed time timer initialisation priority"
+	default 51
+
+config BCB_LIB_MSMNT_INIT_PRIORITY
+	int "Measurement initialisation priority"
+	default 52
+
+config BCB_LIB_CTRL_INIT_PRIORITY
+	int "Control initialisation priority"
+	default 53
+
+config BCB_LIB_ZD_INIT_PRIORITY
+	int "Zero detection initialisation priority"
+	default 54
+
+config BCB_LIB_SHELL_INIT_PRIORITY
+	int "Shell initialisation priority"
+	default 55
+	depends on BCB_SHELL
+
+endmenu
+
+menu "Timing"
+
+config BCB_LIB_ETIME_SECOND
+	int "Number of ticks for one second of the elapsed time timer"
+	default 30000000
+
+config BCB_LIB_IC_ONOFF_SECOND
+	int "Number of ticks for one second of the on/off input capture timer"
+	default 30000000
+
+endmenu
+
+menu "Measurements"
+
+config BCB_LIB_MSMNT_RMS_SAMPLES
+	int "Number of samples for RMS calculation as the power of two."
+	default 5
+
+endmenu
