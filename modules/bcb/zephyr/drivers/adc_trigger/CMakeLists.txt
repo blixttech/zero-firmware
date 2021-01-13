@@ -9,6 +9,12 @@ else()
 endif()
 
 zephyr_library_include_directories(.)
-zephyr_library_sources_ifdef(CONFIG_ADC_TRIGGER_MCUX_FTM      adc_trigger_mcux_ftm.c)
-zephyr_library_sources_ifdef(CONFIG_ADC_TRIGGER_MCUX_LPTMR    adc_trigger_mcux_lptmr.c)
+
 zephyr_include_directories(.)
+
+if(NOT BCB_MODULE_DUMMY)
+    zephyr_library_sources_ifdef(CONFIG_ADC_TRIGGER_MCUX_FTM      adc_trigger_mcux_ftm.c)
+    zephyr_library_sources_ifdef(CONFIG_ADC_TRIGGER_MCUX_LPTMR    adc_trigger_mcux_lptmr.c)
+else()
+    zephyr_library_sources(adc_trigger_dummy.c)
+endif()

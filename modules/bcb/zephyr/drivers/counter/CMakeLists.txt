@@ -9,5 +9,10 @@ else()
 endif()
 
 zephyr_library_include_directories(.)
-zephyr_library_sources_ifdef(CONFIG_COUNTER_MCUX_PIT    counter_ctd_mcux_pit.c)
 zephyr_include_directories(.)
+
+if(NOT BCB_MODULE_DUMMY)
+    zephyr_library_sources_ifdef(CONFIG_COUNTER_MCUX_PIT    counter_ctd_mcux_pit.c)
+else()
+    zephyr_library_sources(counter_dummy.c)
+endif()

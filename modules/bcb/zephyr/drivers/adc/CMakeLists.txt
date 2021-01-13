@@ -9,5 +9,10 @@ else()
 endif()
 
 zephyr_library_include_directories(.)
-zephyr_library_sources_ifdef(CONFIG_ADC_MCUX_ADC16      adc_mcux_edma.c)
 zephyr_include_directories(.)
+
+if(NOT BCB_MODULE_DUMMY)
+    zephyr_library_sources_ifdef(CONFIG_ADC_MCUX_ADC16      adc_mcux_edma.c)
+else()
+    zephyr_library_sources(adc_dummy.c)
+endif()
