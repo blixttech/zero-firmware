@@ -634,10 +634,10 @@ static int adc_mcux_calibrate_impl(struct device *dev)
 
     status_t status = kStatus_Success;
 #if CONFIG_ADC_MCUX_EDMA_CAL_R
-    LOG_INF("Calibrating ADC(repeated %" PRId32 ")..", CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES);
+    LOG_DBG("Calibrating ADC(repeated %" PRId32 ")..", CONFIG_ADC_MCUX_EDMA_CAL_R_SAMPLES);
     status = adc_mcux_calibrate_r_impl(dev);
 #else
-    LOG_INF("Calibrating ADC(single)..");
+    LOG_DBG("Calibrating ADC(single)..");
     const struct adc_mcux_config *config = dev->config_info;
     status = ADC16_DoAutoCalibration(config->adc_base);
 #endif // CONFIG_ADC_MCUX_EDMA_CAL_R
