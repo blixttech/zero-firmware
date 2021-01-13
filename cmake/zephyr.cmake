@@ -7,7 +7,7 @@ if(NOT BOARD_ROOT)
 endif()
 
 if(NOT DTS_ROOT)
-    get_filename_component(DTS_ROOT "${CMAKE_CURRENT_LIST_DIR}/../modules/extensions/zephyr" ABSOLUTE)
+    get_filename_component(DTS_ROOT "${CMAKE_CURRENT_LIST_DIR}/../modules/bcb/zephyr" ABSOLUTE)
 endif()
 
 get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephyr" ABSOLUTE)
@@ -16,11 +16,11 @@ set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")
 include("${CMAKE_CURRENT_LIST_DIR}/extensions.cmake")
 
 list(APPEND ZEPHYR_EXTRA_MODULES
-    "${CMAKE_CURRENT_LIST_DIR}/../modules/extensions"
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/bcb"
 )
 
 list_directories(includes_dirs
-    "${CMAKE_CURRENT_LIST_DIR}/../modules/extensions/*/include")
+    "${CMAKE_CURRENT_LIST_DIR}/../modules/bcb/*/include")
 list(APPEND SYSCALL_INCLUDE_DIRS ${includes_dirs})
 
 find_package(Zephyr REQUIRED HINTS "$ENV{ZEPHYR_BASE}")
