@@ -21,6 +21,9 @@ manifest:
     - name: mcumgr
       revision: 5885efb7cabf7b566577b73129c9d277d7d8848d
       path: zephyr-os/modules/lib/mcumgr
+    - name: mbedtls                                                              
+      path: zephyr-os/modules/crypto/mbedtls                                               
+      revision: 4bf099f1254332d16dcd931ccea0a88d24a7d3c7   
     - name: hal_nxp
       remote: blixttech
       revision: 274f6a6e68f81de8730253407448444caa4ef542
