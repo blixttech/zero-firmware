@@ -1,4 +1,4 @@
 config COUNTER_MCUX_PIT
 	bool "MCUX PIT driver"
-	default y
+	default n
 	depends on HAS_MCUX_PIT

@@ -1,5 +1,6 @@
 menuconfig ADC_TRIGGER
 	bool "ADC Trigger driver"
+	default n
 
 if ADC_TRIGGER
 rsource "Kconfig.mcux_ftm"

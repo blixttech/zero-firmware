@@ -1,6 +1,6 @@
 menuconfig BCB_DRIVERS
 	bool "BCB Drivers"
-	default y
+	default n
 	depends on BCB_EXTENSIONS
 
 if BCB_DRIVERS

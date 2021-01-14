@@ -1,6 +1,6 @@
 menuconfig BCB_LIB
 	bool "BCB Library"
-	default y
+	default n
 	depends on BCB_EXTENSIONS
 
 if BCB_LIB && BCB_DRIVERS
