@@ -10,9 +10,5 @@ endif()
 
 zephyr_library_include_directories(.)
 zephyr_include_directories(.)
+zephyr_library_sources_ifdef(CONFIG_INPUT_CAPTURE_MCUX_FTM      input_capture_mcux_ftm.c)
 
-if(NOT BCB_MODULE_DUMMY)
-    zephyr_library_sources_ifdef(CONFIG_INPUT_CAPTURE_MCUX_FTM      input_capture_mcux_ftm.c)
-else()
-    zephyr_library_sources(input_capture_dummy.c)
-endif()

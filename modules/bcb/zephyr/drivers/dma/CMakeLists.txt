@@ -9,9 +9,5 @@ endif()
 
 zephyr_library_include_directories(.)
 zephyr_include_directories(.)
+zephyr_library_sources_ifdef(CONFIG_DMA_MCUX_EDMA      dma_mcux_partial.c)
 
-if(NOT BCB_MODULE_DUMMY)
-    zephyr_library_sources_ifdef(CONFIG_DMA_MCUX_EDMA      dma_mcux_partial.c)
-else()
-    zephyr_library_sources(dma_dummy.c)
-endif()
