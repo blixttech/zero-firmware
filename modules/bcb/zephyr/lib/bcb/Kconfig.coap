@@ -1,0 +1,19 @@
+config BCB_COAP_SERVER_PORT
+	int "Server port"
+	default 5683
+	depends on BCB_COAP
+
+config BCB_COAP_MAX_MSG_LEN
+	int "Maximum message length"
+	default 256
+	depends on BCB_COAP
+
+config BCB_COAP_MAX_PENDING
+	int "Maximum number requests pending acknowledgments"
+	default 2
+	depends on BCB_COAP
+
+config BCB_COAP_MAX_OBSERVERS
+	int "Maximum number of observers"
+	default 2
+	depends on BCB_COAP
