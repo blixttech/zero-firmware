@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include <sys/_stdint.h>
 #include <zephyr.h>
 #include <init.h>
 #include <net/socket.h>
@@ -20,6 +21,7 @@ struct bcb_coap_periodic_notifier {
     sys_snode_t node;
     struct coap_resource *resource;
     struct coap_observer *observer;
+    uint32_t seq;
     uint32_t period;
     uint32_t start;
     uint8_t used;
@@ -62,7 +64,6 @@ static void bcb_coap_retransmit_request(struct k_work *work)
     }
 
     if (!coap_pending_cycle(pending)) {
-        /* No more retransmissions. */
         k_free(pending->data);
         coap_pending_clear(pending);
         return;
@@ -80,16 +81,20 @@ void bcb_coap_periodic_notifier_schedule()
     sys_snode_t *node = sys_slist_peek_head(&bcb_coap_data.notifier_list);
     struct bcb_coap_periodic_notifier* notifier = (struct bcb_coap_periodic_notifier*) node;
     uint32_t t_d;
+    uint32_t t_p;
     uint32_t t_now = k_uptime_get_32();
 
     /* Find how soon the delayed work has to be scheduled */
     t_d = notifier->start + notifier->period - t_now;
+    t_p = notifier->period;
     SYS_SLIST_FOR_EACH_NODE(&bcb_coap_data.notifier_list, node) {
         notifier = (struct bcb_coap_periodic_notifier*) node;
         if (notifier->start + notifier->period - t_now < t_d) {
-            t_d = notifier->start + notifier->period - t_now;   
+            t_d = notifier->start + notifier->period - t_now;
+            t_p = notifier->period;   
         }
     }
+    t_d = t_d ? t_d : t_p;
     k_delayed_work_submit(&bcb_coap_data.observer_work, K_MSEC(t_d));
 }
 
@@ -101,12 +106,14 @@ static void bcb_coap_observer_notify(struct k_work *work)
     SYS_SLIST_FOR_EACH_NODE(&bcb_coap_data.notifier_list, node) {
         notifier = (struct bcb_coap_periodic_notifier*) node;
         uint32_t t_now = k_uptime_get_32();
-        if (t_now - notifier->start > notifier->period) {
-            /* It is time to activate this notifier */
-            notifier->start = t_now;
-            coap_resource_notify(notifier->resource);
+        if (t_now - notifier->start >= notifier->period) {
+            if(notifier->resource->notify) {
+                notifier->seq++;
+                notifier->start = t_now;
+                notifier->resource->user_data = &notifier->seq;
+                notifier->resource->notify(notifier->resource, notifier->observer);
+            }
         }
-
     }
     bcb_coap_periodic_notifier_schedule();
 }
@@ -205,6 +212,7 @@ struct bcb_coap_periodic_notifier* bcb_coap_periodic_notifier_add(struct coap_re
         notifier->observer = observer;
         notifier->resource = resource;
         notifier->period = period;
+        notifier->seq = 0;
         notifier->start = k_uptime_get_32();
     }
     return notifier;
@@ -254,6 +262,8 @@ struct coap_observer* bcb_coap_register_observer(struct coap_resource *resource,
                                                 struct sockaddr *addr,
                                                 uint32_t period)
 {
+    period = period < CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD ? 
+                        CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD : period;
     if (!resource->notify) {
         LOG_WRN("Notification not implemented");
         return NULL;
@@ -285,6 +295,7 @@ int bcb_coap_deregister_observer(struct sockaddr *addr, uint8_t *token, uint8_t 
         struct bcb_coap_periodic_notifier* notifier = (struct bcb_coap_periodic_notifier*)node;
         if (bcb_coap_sockaddr_equal(addr, &notifier->observer->addr) && 
             !memcmp(token, notifier->observer->token, tkl)) {
+            bcb_coap_periodic_notifier_remove(notifier->resource, notifier->observer);
             coap_remove_observer(notifier->resource, notifier->observer);
             memset(notifier->observer, 0, sizeof(struct coap_observer));
             bcb_coap_periodic_notifier_schedule();

@@ -17,3 +17,8 @@ config BCB_COAP_MAX_OBSERVERS
 	int "Maximum number of observers"
 	default 2
 	depends on BCB_COAP
+
+config BCB_COAP_MIN_OBSERVE_PERIOD
+	int "Minimum observation period (ms)"
+	default 100
+	depends on BCB_COAP

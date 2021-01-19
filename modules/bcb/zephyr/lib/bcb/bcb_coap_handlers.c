@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <sys/_stdint.h>
 #include <zephyr.h>
 #include <kernel.h>
 #include <init.h>
@@ -99,7 +100,7 @@ int bcb_coap_send_notification_status(struct coap_resource *resource,
     }
 
     if (notify) {
-        uint32_t age = resource->age;
+        uint32_t age = *((uint32_t *)resource->user_data);
         r = coap_append_option_int(&response, COAP_OPTION_OBSERVE, age);
         if (r < 0) {
             goto cleanup;
@@ -176,8 +177,6 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource,
                 period = strtoul((char*)&options[i].value[2], NULL, 0);
             }  
         }
-        period = period < 1000 ? 1000 : period;
-        LOG_INF("observe period %" PRIu32, period);
         struct coap_observer* observer = bcb_coap_register_observer(resource, request, addr, period);
         if (observer) {
             return bcb_coap_send_notification_status(resource, addr, addr_len, 
