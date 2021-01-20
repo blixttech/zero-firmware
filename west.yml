@@ -19,7 +19,8 @@ manifest:
       revision: e88113bbebe34ff2ccc6627ffae885cfeed6fdfd                         
       path: zephyr-os/bootloader/mcuboot
     - name: mcumgr
-      revision: 5885efb7cabf7b566577b73129c9d277d7d8848d
+      remote: blixttech
+      revision: 4ebb0b1a927bd9740b58610e2eec7f807fcf308a
       path: zephyr-os/modules/lib/mcumgr
     - name: mbedtls                                                              
       path: zephyr-os/modules/crypto/mbedtls                                               
