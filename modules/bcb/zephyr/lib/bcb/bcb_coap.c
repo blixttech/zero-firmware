@@ -390,7 +390,7 @@ static void bcb_coap_receive_thread(void *p1, void *p2, void *p3)
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    LOG_INF("CoAP server started");
+    LOG_INF("Started");
 
     while (1) {
         struct sockaddr addr;
