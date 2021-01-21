@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "kernel.h"
 #include <zephyr.h>
 #include <bcb_coap.h>
 
@@ -15,8 +16,7 @@ void main(void)
 {
     LOG_INF("Coap Test Application");
     bcb_coap_start_server();
-    do {
-        bcb_coap_process();
-    } while(1);
-    LOG_INF("Coap Test Application Exit");
+    while(1) {
+        k_sleep(K_MSEC(1000));
+    }
 }

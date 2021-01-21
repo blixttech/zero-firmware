@@ -14,5 +14,6 @@ zephyr_include_directories(.)
 zephyr_library_sources(${lib_sources})
 zephyr_library_sources_ifdef(CONFIG_BCB_SHELL   bcb_shell.c)
 zephyr_library_sources_ifdef(CONFIG_BCB_COAP    bcb_coap.c)
+zephyr_library_sources_ifdef(CONFIG_BCB_COAP    bcb_coap_buffer.c)
 zephyr_library_sources_ifdef(CONFIG_BCB_COAP    bcb_coap_handlers.c)
 

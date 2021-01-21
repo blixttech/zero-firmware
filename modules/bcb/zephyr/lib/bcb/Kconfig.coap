@@ -22,3 +22,23 @@ config BCB_COAP_MIN_OBSERVE_PERIOD
 	int "Minimum observation period (ms)"
 	default 100
 	depends on BCB_COAP
+
+config BCB_COAP_MAX_BUF_COUNT
+	int "Maximum number of buffers"
+	default 10
+	depends on BCB_COAP
+
+config BCB_COAP_MAX_USER_DATA_SIZE
+	int "Maximum size of user data"
+	default 24
+	depends on BCB_COAP
+
+config BCB_COAP_THREAD_STACK_SIZE
+	int "Size of the thread stack"
+	default 1024
+	depends on BCB_COAP
+
+config BCB_COAP_THREAD_PRIORITY
+	int "Thread priority"
+	default 1024
+	depends on BCB_COAP
