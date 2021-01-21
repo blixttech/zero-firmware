@@ -149,6 +149,9 @@ static int create_pending_request(struct coap_packet *packet, const struct socka
     }
 
     struct net_buf *buf = bcb_coap_buf_alloc();
+    if (!buf) {
+        return -ENOMEM;
+    }
     net_buf_add_mem(buf, packet->data, packet->offset);
     /* We need the net_buf pointer later to free up. */
     pending->data = (uint8_t *)buf;
@@ -407,6 +410,10 @@ static void bcb_coap_receive_thread(void *p1, void *p2, void *p3)
         struct sockaddr *buf_ud;
 
         buf = bcb_coap_buf_alloc();
+        if (!buf) {
+            LOG_ERR("Cannot allocate buffer");
+            continue;
+        }
         net_buf_add_mem(buf, bcb_coap_data.req_buf, received);
         buf_ud = net_buf_user_data(buf);
         net_ipaddr_copy(buf_ud, &addr);
