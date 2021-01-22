@@ -58,7 +58,8 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 
 int send_notification_status(struct coap_resource *resource, 
                             struct sockaddr *addr, socklen_t addr_len,
-                            uint16_t id, const uint8_t *token, uint8_t token_len, uint8_t notify)
+                            uint16_t id, const uint8_t *token, uint8_t token_len, uint8_t notify, 
+                            uint32_t age)
 {
     uint8_t type;
     if (notify) {
@@ -76,7 +77,6 @@ int send_notification_status(struct coap_resource *resource,
     }
 
     if (notify) {
-        uint32_t age = *((uint32_t *)resource->user_data);
         r = coap_append_option_int(&response, COAP_OPTION_OBSERVE, age);
         if (r < 0) {
             return r;
@@ -111,9 +111,10 @@ int send_notification_status(struct coap_resource *resource,
 void bcb_coap_handlers_status_notify(struct coap_resource *resource, 
                                     struct coap_observer *observer)
 {
+    uint32_t age = bcb_coap_get_observer_sequence(resource, observer);
     send_notification_status(resource, 
                                     &observer->addr, sizeof(observer->addr), 
-                                    coap_next_id(), observer->token, observer->tkl, true);
+                                    coap_next_id(), observer->token, observer->tkl, true, age);
 }
 
 
@@ -154,12 +155,12 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource,
         }
 
         return send_notification_status(resource, addr, addr_len, 
-                                                id, token, token_len, true);
+                                                id, token, token_len, true, 0);
         
 	}
 
     return send_notification_status(resource, addr, addr_len, 
-                                            id, token, token_len, false);
+                                            id, token, token_len, false, 0);
 }
 
 int bcb_coap_handlers_switch_put(struct coap_resource *resource, 

@@ -125,7 +125,6 @@ static void observer_notify_work(struct k_work *work)
             if(notifier->resource->notify) {
                 notifier->seq++;
                 notifier->start = t_now;
-                notifier->resource->user_data = &notifier->seq;
                 notifier->resource->notify(notifier->resource, notifier->observer);
             }
         }
@@ -184,6 +183,21 @@ int bcb_coap_send_response(struct coap_packet *packet, const struct sockaddr *ad
     }
 
     return r;
+}
+
+uint32_t bcb_coap_get_observer_sequence(struct coap_resource *resource, 
+                                        struct coap_observer *observer)
+{
+    sys_snode_t *node;
+    struct bcb_coap_periodic_notifier* notifier;
+    SYS_SLIST_FOR_EACH_NODE(&bcb_coap_data.notifier_list, node) {
+        notifier = (struct bcb_coap_periodic_notifier*) node;
+        if (notifier->resource == resource && notifier->observer == observer) {
+            return notifier->seq;
+        }
+    }
+
+    return 0;
 }
 
 uint8_t* bcb_coap_response_buffer()
