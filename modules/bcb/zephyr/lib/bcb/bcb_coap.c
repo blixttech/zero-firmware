@@ -50,9 +50,15 @@ static struct bcb_coap_data bcb_coap_data = {
         },
         {   .get = bcb_coap_handlers_status_get,
             .notify = bcb_coap_handlers_status_notify,
+            .user_data = &((struct coap_core_metadata){
+                            .attributes = BCB_COAP_RESOURCE_STATUS_ATTRIBUTES,
+                        }),
             .path = BCB_COAP_RESOURCE_STATUS_PATH,
         },
         {   .get = bcb_coap_handlers_switch_put,
+            .user_data = &((struct coap_core_metadata){
+                            .attributes = BCB_COAP_RESOURCE_SWITCH_ATTRIBUTES,
+                        }),
             .path = BCB_COAP_RESOURCE_SWITCH_PATH,
         },
         { },

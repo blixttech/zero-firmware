@@ -33,7 +33,8 @@ manifest:
       revision: 40daca97b478989884bffb5226e9ab73ca54b8c4
       path: zephyr-os/modules/lib/tinycbor                                                 
     - name: zephyr
-      revision: b8c78e254ff875680e99c9f131fbe285c4575927
+      revision: db56973d9864d6f75f9c421281727bde8d90501e
+      remote: blixttech
       path: zephyr-os/zephyr
       west-commands: scripts/west-commands.yml
 
