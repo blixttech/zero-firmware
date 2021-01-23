@@ -10,6 +10,7 @@
 #include <zephyr.h>
 #include <kernel.h>
 #include <net/socket.h>
+#include <net/net_if.h>
 #include <net/coap.h>
 #include <net/coap_link_format.h>
 
@@ -30,6 +31,80 @@ int bcb_coap_handlers_wellknowncore_get(struct coap_resource *resource,
     }
 
     return bcb_coap_send_response(&response, addr);
+}
+
+int bcb_coap_handlers_version_get(struct coap_resource *resource, 
+                                struct coap_packet *request, 
+                                struct sockaddr *addr, socklen_t addr_len)
+{
+    uint16_t id;
+    uint8_t token[8];
+    uint8_t token_len;
+    int r;
+
+    id = coap_header_get_id(request);
+    token_len = coap_header_get_token(request, token);
+
+    struct coap_packet response;
+	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1, 
+                        COAP_TYPE_ACK, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT, id);
+    if (r < 0) {
+        return r;
+    }
+
+    uint8_t format = 0;
+	r = coap_packet_append_option(&response, COAP_OPTION_CONTENT_FORMAT, &format, sizeof(format));
+    if (r < 0) {
+        return r;
+    }
+
+    r = coap_packet_append_payload_marker(&response);
+    if (r < 0) {
+        return r;
+    }
+
+    uint8_t payload[70];
+    uint8_t consumed = 0;
+    r = snprintk((char*)(payload + consumed), sizeof(payload) - consumed, 
+                "%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "%08" PRIx32, 
+                SIM->UIDH, SIM->UIDL, SIM->UIDMH, SIM->UIDML);
+    if (r < 0) {
+        return -EINVAL;
+    }
+    consumed += r;
+
+    r = snprintk((char*)(payload + consumed), sizeof(payload) - consumed, ",");
+    if (r < 0) {
+        return -EINVAL;
+    }
+    consumed += r;
+
+    struct net_if * default_if = net_if_get_default();
+    if (default_if && default_if->if_dev) {
+        uint8_t i;
+        for (i = 0; i < default_if->if_dev->link_addr.len; i++) {
+            r = snprintk((char*)(payload + consumed), sizeof(payload) - consumed, 
+                        "%02" PRIx8, default_if->if_dev->link_addr.addr[i]);
+            if (r < 0) {
+                return -EINVAL;
+            }
+            consumed += r;
+        }
+    }
+
+    /* Power-In, Power-Out, Controller board revisions */
+    r = snprintk((char*)(payload + consumed), sizeof(payload) - consumed, ",1,1,1");
+    if (r < 0) {
+        return -EINVAL;
+    }
+    consumed += r;
+
+	r = coap_packet_append_payload(&response, payload, consumed);
+    if (r < 0) {
+        return r;
+    }
+
+    return bcb_coap_send_response(&response, addr); 
 }
 
 static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
@@ -161,6 +236,13 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource,
 
     return send_notification_status(resource, addr, addr_len, 
                                             id, token, token_len, false, 0);
+}
+
+int bcb_coap_handlers_switch_get(struct coap_resource *resource, 
+                                struct coap_packet *request, 
+                                struct sockaddr *addr, socklen_t addr_len)
+{
+    return -ENOENT; 
 }
 
 int bcb_coap_handlers_switch_put(struct coap_resource *resource, 
