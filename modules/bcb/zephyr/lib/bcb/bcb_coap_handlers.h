@@ -29,7 +29,7 @@ void bcb_coap_handlers_status_notify(struct coap_resource *resource,
 int bcb_coap_handlers_switch_get(struct coap_resource *resource, 
                                 struct coap_packet *request, 
                                 struct sockaddr *addr, socklen_t addr_len);
-int bcb_coap_handlers_switch_put(struct coap_resource *resource, 
+int bcb_coap_handlers_switch_post(struct coap_resource *resource,
                                 struct coap_packet *request, 
                                 struct sockaddr *addr, socklen_t addr_len);
 

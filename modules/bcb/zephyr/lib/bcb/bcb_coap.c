@@ -62,7 +62,7 @@ static struct bcb_coap_data bcb_coap_data = {
             .path = BCB_COAP_RESOURCE_STATUS_PATH,
         },
         {   .get = bcb_coap_handlers_switch_get,
-            .put = bcb_coap_handlers_switch_get,
+            .post = bcb_coap_handlers_switch_post,
             .user_data = &((struct coap_core_metadata){
                             .attributes = BCB_COAP_RESOURCE_SWITCH_ATTRIBUTES,
                         }),

@@ -206,15 +206,14 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource,
     id = coap_header_get_id(request);
     token_len = coap_header_get_token(request, token);
 
-    r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
-	if (r < 0) {
-		return -EINVAL;
-	}
 
 	if (coap_request_is_observe(request)) {
+        r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
+        if (r < 0) {
+            return -EINVAL;
+        }
         int i;
         uint32_t period = 0;
-        r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
         for (i = 0; i < r; i++) {
             if (options[i].len < 3) {
                 continue;
@@ -245,9 +244,38 @@ int bcb_coap_handlers_switch_get(struct coap_resource *resource,
     return -ENOENT; 
 }
 
-int bcb_coap_handlers_switch_put(struct coap_resource *resource, 
+int bcb_coap_handlers_switch_post(struct coap_resource *resource,
                                 struct coap_packet *request, 
                                 struct sockaddr *addr, socklen_t addr_len)
 {
-    return -ENOENT;
+    struct coap_option options[4];
+    uint16_t id;
+    uint8_t token[8];
+    uint8_t token_len;
+    int r;
+
+    id = coap_header_get_id(request);
+    token_len = coap_header_get_token(request, token);
+
+    r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
+    if (r < 0) {
+        return -EINVAL;
+    }
+
+    int i;
+    for (i = 0; i < r; i++) {
+        if (options[i].len < 3) {
+            continue;
+        }
+        if (options[i].len == 4 && !strncmp(options[i].value, "a=on", 4)) {
+            bcb_on();
+        } else if (options[i].len == 5 && !strncmp(options[i].value, "a=off", 5)) {
+            bcb_off();
+        } else {
+            continue;
+        }
+    }
+
+    return send_notification_status(resource, addr, addr_len,
+                                            id, token, token_len, false, 0);
 }
