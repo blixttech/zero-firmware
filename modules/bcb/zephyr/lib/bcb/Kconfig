@@ -67,4 +67,8 @@ config BCB_LIB_MSMNT_RMS_SAMPLES
 	int "Number of samples for RMS calculation as the power of two."
 	default 5
 
+config BCB_LIB_MSMNT_RMS_INTERVAL
+	int "RMS sampling interval (ms)"
+	default 1
+
 endmenu

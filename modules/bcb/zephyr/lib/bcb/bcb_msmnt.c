@@ -235,6 +235,8 @@ int bcb_msmnt_setup_default()
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
     k_timer_init(&bcb_msmnt_data.timer_rms, bcb_msmnt_on_rms_timer, NULL);
+    k_timer_start(&bcb_msmnt_data.timer_rms, K_MSEC(CONFIG_BCB_LIB_MSMNT_RMS_INTERVAL),
+                                            K_MSEC(CONFIG_BCB_LIB_MSMNT_RMS_INTERVAL));
 
     return 0;
 }
