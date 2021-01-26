@@ -9,12 +9,12 @@ LOG_MODULE_REGISTER(zero_app);
 
 void main()
 {
-    LOG_INF("Zero APP (built " __DATE__ " " __TIME__ ")");
+	LOG_INF("Zero APP (built " __DATE__ " " __TIME__ ")");
 
-    networking_init();
-    services_init();
+	networking_init();
+	services_init();
 
-    while(1) {
-        k_sleep(K_MSEC(1000));
-    }
+	while (1) {
+		k_sleep(K_MSEC(1000));
+	}
 }
