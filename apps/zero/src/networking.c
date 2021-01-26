@@ -32,8 +32,8 @@ static void networking_dhcp_work(struct k_work *work)
 	}
 }
 
-static void networking_event_handler(struct net_mgmt_event_callback *cb,
-				     uint32_t event, struct net_if *iface)
+static void networking_event_handler(struct net_mgmt_event_callback *cb, uint32_t event,
+				     struct net_if *iface)
 {
 	if (event == NET_EVENT_IF_UP) {
 		networking_data.current_event = NET_EVENT_IF_UP;
@@ -53,8 +53,7 @@ int networking_init()
 {
 #ifndef CONFIG_NET_CONFIG_AUTO_INIT
 	k_work_init(&networking_data.dhcp_work, networking_dhcp_work);
-	net_mgmt_init_event_callback(&networking_data.callback,
-				     networking_event_handler,
+	net_mgmt_init_event_callback(&networking_data.callback, networking_event_handler,
 				     NET_EVENT_IF_UP | NET_EVENT_IF_DOWN);
 	net_mgmt_add_event_callback(&networking_data.callback);
 #endif // CONFIG_NET_CONFIG_AUTO_INIT

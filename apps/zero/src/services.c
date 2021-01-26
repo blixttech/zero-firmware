@@ -23,10 +23,9 @@ int services_init()
 		img_mgmt_register_group();
 		r = img_mgmt_my_version(&version);
 		if (!r) {
-			LOG_INF("Firmware version %" PRIu8 ".%" PRIu8
-				".%" PRIu16 " (%" PRIu32 ")",
-				version.iv_major, version.iv_minor,
-				version.iv_revision, version.iv_build_num);
+			LOG_INF("Firmware version %" PRIu8 ".%" PRIu8 ".%" PRIu16 " (%" PRIu32 ")",
+				version.iv_major, version.iv_minor, version.iv_revision,
+				version.iv_build_num);
 		}
 	}
 #endif
