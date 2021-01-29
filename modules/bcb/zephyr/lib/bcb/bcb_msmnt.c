@@ -66,9 +66,9 @@ struct bcb_msmnt_data {
     uint16_t                v_mains_cal_a;
     uint16_t                v_mains_cal_b;
     /* RMS calculation related */
-    uint32_t                i_low_gain_diff_sqrd_acc;
-    uint32_t                i_high_gain_diff_sqrd_acc;
-    uint32_t                v_mains_diff_sqrd_acc;
+    uint64_t                i_low_gain_diff_sqrd_acc;
+    uint64_t                i_high_gain_diff_sqrd_acc;
+    uint64_t                v_mains_diff_sqrd_acc;
     uint32_t                i_low_gain_rms;
     uint32_t                i_high_gain_rms;
     uint32_t                v_mains_rms;
@@ -215,7 +215,7 @@ int bcb_msmnt_setup_default()
     BCB_MSMNT_ADC_SEQ_ADD(&bcb_msmnt_data, aread, ref_1v5);
 
     adc_mcux_set_reference(bcb_msmnt_data.dev_adc_0, ADC_MCUX_REF_EXTERNAL);
-    adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_0, ADC_MCUX_PERF_LVL_0);
+    adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_0, ADC_MCUX_PERF_LVL_1);
 
     adc_mcux_set_reference(bcb_msmnt_data.dev_adc_1, ADC_MCUX_REF_EXTERNAL);
     adc_mcux_set_perf_level(bcb_msmnt_data.dev_adc_1, ADC_MCUX_PERF_LVL_0);
@@ -342,21 +342,21 @@ static void bcb_msmnt_on_rms_timer(struct k_timer* timer)
     } else {
         adc_diff = (int32_t)*bcb_msmnt_data.raw_i_low_gain - 32768;
     }
-    bcb_msmnt_data.i_low_gain_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+    bcb_msmnt_data.i_low_gain_diff_sqrd_acc += (uint64_t)(adc_diff * adc_diff);
 
     if (bcb_msmnt_data.i_high_gain_calibrated) {
         adc_diff = (int32_t)*bcb_msmnt_data.raw_i_high_gain - (int32_t)bcb_msmnt_data.i_high_gain_cal_b;
     } else {
         adc_diff = (int32_t)*bcb_msmnt_data.raw_i_high_gain - 32768;
     }
-    bcb_msmnt_data.i_high_gain_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+    bcb_msmnt_data.i_high_gain_diff_sqrd_acc += (uint64_t)(adc_diff * adc_diff);
 
     if (bcb_msmnt_data.v_mains_calibrated) {
         adc_diff = (int32_t)*bcb_msmnt_data.raw_v_mains - (int32_t)bcb_msmnt_data.v_mains_cal_b;
     } else {
         adc_diff = (int32_t)*bcb_msmnt_data.raw_v_mains - 32768;
     }
-    bcb_msmnt_data.v_mains_diff_sqrd_acc += (uint32_t)(adc_diff * adc_diff);
+    bcb_msmnt_data.v_mains_diff_sqrd_acc += (uint64_t)(adc_diff * adc_diff);
 
     bcb_msmnt_data.rms_samples++;
 
@@ -369,7 +369,10 @@ static void bcb_msmnt_on_rms_timer(struct k_timer* timer)
         } else {
             a = 874;
         }
-        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.i_low_gain_diff_sqrd_acc);
+
+        bcb_msmnt_data.i_low_gain_diff_sqrd_acc =
+                            bcb_msmnt_data.i_low_gain_diff_sqrd_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        diff_rms = (uint32_t)sqrtl((double)bcb_msmnt_data.i_low_gain_diff_sqrd_acc);
         bcb_msmnt_data.i_low_gain_rms = (diff_rms * 1000) / a;
 
         if (bcb_msmnt_data.i_high_gain_calibrated) {
@@ -377,7 +380,10 @@ static void bcb_msmnt_on_rms_timer(struct k_timer* timer)
         } else {
             a = 8738U;
         }
-        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.i_high_gain_diff_sqrd_acc);
+
+        bcb_msmnt_data.i_high_gain_diff_sqrd_acc =
+                            bcb_msmnt_data.i_high_gain_diff_sqrd_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        diff_rms = (uint32_t)sqrtl((double)bcb_msmnt_data.i_high_gain_diff_sqrd_acc);
         bcb_msmnt_data.i_high_gain_rms = (diff_rms * 1000) / a;
 
         if (bcb_msmnt_data.v_mains_calibrated) {
@@ -385,7 +391,10 @@ static void bcb_msmnt_on_rms_timer(struct k_timer* timer)
         } else {
             a = 79;
         }
-        diff_rms = (uint32_t)sqrtf((float)bcb_msmnt_data.v_mains_diff_sqrd_acc);
+
+        bcb_msmnt_data.v_mains_diff_sqrd_acc =
+                            bcb_msmnt_data.v_mains_diff_sqrd_acc >> BCB_MSMNT_RMS_SAMPLES_SHIFT;
+        diff_rms = (uint32_t)sqrtl((double)bcb_msmnt_data.v_mains_diff_sqrd_acc);
         bcb_msmnt_data.v_mains_rms = (diff_rms * 1000) / a;
 
         bcb_msmnt_data.rms_samples = 0;
