@@ -70,6 +70,7 @@ struct adc_mcux_config {
     uint8_t dma_src_result;     /* DMA request source used for transfering ADC result */
     uint8_t dma_src_ch;         /* DMA request source used for changing ADC main channel */
     const char* trigger;
+    uint32_t sample_interval;
 };
 
 /**
@@ -504,6 +505,8 @@ static int adc_mcux_read_impl(struct device* dev, const adc_mcux_sequence_config
         LOG_ERR("Trigger device %s not found", config->trigger);
         return -ENODEV;
     }
+
+    adc_trigger_set_interval(trigger_dev, config->sample_interval);
     adc_trigger_start(trigger_dev);
 
     data->started = 1;
@@ -776,6 +779,7 @@ static const struct adc_mcux_driver_api adc_mcux_driver_api = {
         .dma_src_result = DT_INST_PHA_BY_NAME(n, dmas, result, source),                             \
         .dma_src_ch = DT_INST_PHA_BY_NAME(n, dmas, ch, source),                                     \
         .trigger = DT_LABEL(DT_INST_PHANDLE_BY_IDX(n, triggers, 0)),                                \
+        .sample_interval = DT_INST_PROP(n, sample_interval),                                        \
     };                                                                                              \
                                                                                                     \
     static adc_ch_mux_block_t                                                                       \

@@ -34,6 +34,19 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     SET_PINMUX(uart4_pins, uart_rx);
 #endif
 
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(spi2_pins), okay) \
+    && CONFIG_SPI
+    SET_PINMUX(spi2_pins, spi_mosi);
+    SET_PINMUX(spi2_pins, spi_miso);
+    SET_PINMUX(spi2_pins, spi_sclk);
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(eeprom0_pins), okay) \
+    && CONFIG_EEPROM
+    SET_PINMUX(eeprom0_pins, eeprom_ss);
+    SET_PINMUX(eeprom0_pins, eeprom_wp);
+#endif
+
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(breaker_pins), okay)
     SET_PINMUX(breaker_pins, led_red);
     SET_PINMUX(breaker_pins, led_green);

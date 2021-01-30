@@ -2,3 +2,8 @@ config EEPROM_M95080
 	bool "EEPROM M95080 driver"
 	default n
 	depends on SPI_MCUX_DSPI
+
+config EEPROM_M95080_INIT_PRIORITY
+	int "M95080 EEPROM init priority"
+	default 75
+	depends on EEPROM_M95080

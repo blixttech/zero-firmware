@@ -128,6 +128,26 @@
             label = "UART4_PINS";
         };
 
+        spi2_pins: spi2_pins {
+            compatible = "blixt,pins";
+            pinmuxs =   <&portb 23 PORT_PCR_MUX(PORT_PCR_MUX_ALT2)>,    /* SPI_MISO */
+                        <&portb 22 PORT_PCR_MUX(PORT_PCR_MUX_ALT2)>,    /* SPI_MOSI */
+                        <&portb 21 PORT_PCR_MUX(PORT_PCR_MUX_ALT2)>;    /* SPI_SCLK */
+            pinmux-names =  "SPI_MISO",
+                            "SPI_MOSI",
+                            "SPI_SCLK";
+            label = "SPI2_PINS";
+        };
+
+        eeprom0_pins: eeprom0_pins {
+            compatible = "blixt,pins";
+            pinmuxs =   <&portb 20 PORT_PCR_MUX(PORT_PCR_MUX_ALT2)>,    /* EEPROM_SS */
+                        <&portb 19 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>;    /* EEPROM_WP */
+            pinmux-names =  "EEPROM_SS",
+                            "EEPROM_WP";
+            label = "EEPROM0_PINS";
+        };
+
         enet_pins: enet_pins {
             compatible = "blixt,pins";
             pinmuxs =   <&porta 5  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* PHY_RXER */
@@ -489,7 +509,11 @@
         compatible = "st,m95080";
         reg = <0x0>;
         spi-max-frequency = <20000000>;
-        reset-gpios = <&gpiob 19  GPIO_ACTIVE_LOW>;
+        size = <1024>;
+        pagesize = <32>;
+        address-width = <16>;
+        timeout = <5>;
+        wp-gpios = <&gpiob 19  GPIO_ACTIVE_LOW>;
         label = "EEPROM_M95080";
         status = "okay";
     }; 

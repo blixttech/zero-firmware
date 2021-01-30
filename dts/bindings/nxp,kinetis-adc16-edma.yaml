@@ -34,6 +34,11 @@ properties:
       type: string-array
       description: name of each DMA MUX selection
 
+    sample-interval:
+      required: true
+      type: int
+      description: Sample interval (us)
+
     "#io-channel-cells":
       const: 2
 
