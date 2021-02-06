@@ -1,93 +1,98 @@
-#include <bcb_zd.h>
-#include <cmp_mcux.h>
+#include "bcb_zd.h"
+#include "bcb_macros.h"
 #include <device.h>
 #include <devicetree.h>
-#include <bcb_leds.h>
+#include <drivers/input_capture.h>
+#include <drivers/gpio.h>
 
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_zd);
 
-#define BCB_INIT_ZD(ds, dt_node, name)                                                              \
-do {                                                                                                \
-    (ds).dev_cmp_##name = device_get_binding(                                                       \
-                        DT_LABEL(DT_PHANDLE_BY_NAME(DT_NODELABEL(dt_node), comparators, name)));    \
-    if ((ds).dev_cmp_##name == NULL) {                                                              \
-        LOG_ERR("Unknown CMP device");                                                              \
-    } else {                                                                                        \
-        cmp_mcux_set_channels((ds).dev_cmp_##name,                                                  \
-                            DT_PHA_BY_NAME(DT_NODELABEL(dt_node), comparators, name, inp),          \
-                            DT_PHA_BY_NAME(DT_NODELABEL(dt_node), comparators, name, inn));         \
-        cmp_mcux_enable_interrupts((ds).dev_cmp_##name,                                             \
-                                DT_PHA_BY_NAME(DT_NODELABEL(dt_node), comparators, name, edge));    \
-    }                                                                                               \
-} while(0)
+#define BCB_IC_DEV(ch_name) (zd_data.dev_ic_##ch_name)
+#define BCB_GPIO_DEV(pin_name) (zd_data.dev_gpio_##pin_name)
 
-
-struct bcb_zd_data {
-    struct device *dev_cmp_v_zd;
-    struct device *dev_cmp_i_zd;
-    volatile uint32_t zd_cnt_v;
-    volatile uint32_t zd_cnt_i;
-
-    struct k_timer timer_stat;
+struct zd_data {
+	struct device *dev_ic_zd_v_mains;
+	struct device *dev_gpio_zd_v_mains;
+	uint32_t zd_v_last_timestamp;
+	volatile uint32_t zd_v_pulse_ticks;
+	sys_slist_t zd_v_callback_list;
 };
 
-static struct bcb_zd_data bcb_zd_data = {
-    .dev_cmp_v_zd = NULL,
-    .dev_cmp_i_zd = NULL,
-    .zd_cnt_v = 0,
-    .zd_cnt_i = 0,
-};
+static struct zd_data zd_data;
 
-static void bcb_zd_on_v_zd(struct device *dev, bool status)
+static void zd_v_mains_callback(struct device *dev, uint8_t channel, uint8_t edge)
 {
-#if 0
-    if (status) {
-        bcb_zd_data.zd_cnt_v++;
-        bcb_leds_on(BCB_LEDS_RED);
-    } else {
-        bcb_leds_off(BCB_LEDS_RED);
-    }
-#endif
+	bool is_zd_high = BCB_GPIO_PIN_GET_RAW(dctrl, zd_v_mains) == 1;
+	uint32_t now = k_uptime_get_32();
+	uint32_t pulse_duration;
+	sys_snode_t *node;
+
+	pulse_duration = zd_data.zd_v_last_timestamp > now ?
+				 UINT32_MAX - zd_data.zd_v_last_timestamp + now :
+				 now - zd_data.zd_v_last_timestamp;
+	zd_data.zd_v_last_timestamp = now;
+
+	if (pulse_duration < 5) {
+		return;
+	}
+
+	if (is_zd_high) {
+		zd_data.zd_v_pulse_ticks = input_capture_get_value(dev, channel);
+	}
+
+	SYS_SLIST_FOR_EACH_NODE (&zd_data.zd_v_callback_list, node) {
+		struct bcb_zd_callback  *callback = (struct bcb_zd_callback  *)node;
+		if (callback && callback->handler) {
+			callback->handler();
+		}
+	}
 }
 
-static void bcb_zd_on_i_zd(struct device *dev, bool status)
+int bcb_zd_init(void)
 {
-#if 0
-    if (status) {
-        bcb_zd_data.zd_cnt_i++;
-        bcb_leds_on(BCB_LEDS_GREEN);
-    } else {
-        bcb_leds_off(BCB_LEDS_GREEN);
-    }
-#endif
+	sys_slist_init(&zd_data.zd_v_callback_list);
+
+	BCB_IC_INIT(itimestamp, zd_v_mains);
+	BCB_IC_CHANNEL_SET(itimestamp, zd_v_mains);
+
+	input_capture_set_callback(zd_data.dev_ic_zd_v_mains,
+				   BCB_IC_CHANNEL(itimestamp, zd_v_mains), zd_v_mains_callback);
+	input_capture_enable_interrupts(zd_data.dev_ic_zd_v_mains,
+					BCB_IC_CHANNEL(itimestamp, zd_v_mains), true);
+
+	BCB_GPIO_PIN_INIT(dctrl, zd_v_mains);
+	BCB_GPIO_PIN_CONFIG(dctrl, zd_v_mains, GPIO_INPUT);
+
+	return 0;
 }
 
-void on_zd_stat_timer_expired(struct k_timer *timer)
+uint32_t bcb_zd_get_frequency(void)
 {
-    volatile uint32_t c_v = bcb_zd_data.zd_cnt_v;
-    volatile uint32_t c_i = bcb_zd_data.zd_cnt_i;
-    bcb_zd_data.zd_cnt_v = 0;
-    bcb_zd_data.zd_cnt_i = 0;
-    //LOG_DBG("V_ZD %" PRIu32 ", I_ZD %" PRIu32,  c_v, c_i);
+	if (!zd_data.zd_v_pulse_ticks) {
+		return 0;
+	}
+
+	return input_capture_get_frequency(zd_data.dev_ic_zd_v_mains) * 500 /
+	       zd_data.zd_v_pulse_ticks;
 }
 
-static int bcb_zd_init()
+int bcb_zd_voltage_add_callback(struct bcb_zd_callback  *callback)
 {
-    BCB_INIT_ZD(bcb_zd_data, acmp, v_zd);
-    BCB_INIT_ZD(bcb_zd_data, acmp, i_zd);
+	if (!callback || !callback->handler) {
+		return -ENOTSUP;;
+	}
 
-    cmp_mcux_set_callback(bcb_zd_data.dev_cmp_v_zd, bcb_zd_on_v_zd);
-    cmp_mcux_set_callback(bcb_zd_data.dev_cmp_i_zd, bcb_zd_on_i_zd);
+	sys_slist_append(&zd_data.zd_v_callback_list, &callback->node);
 
-    cmp_mcux_set_enable(bcb_zd_data.dev_cmp_v_zd, true);
-    cmp_mcux_set_enable(bcb_zd_data.dev_cmp_i_zd, true);
-
-    k_timer_init(&bcb_zd_data.timer_stat, on_zd_stat_timer_expired, NULL);
-    k_timer_start(&bcb_zd_data.timer_stat, K_SECONDS(1), K_SECONDS(1));
-
-    return 0;
+	return 0;
 }
 
-SYS_INIT(bcb_zd_init, APPLICATION, CONFIG_BCB_LIB_ZD_INIT_PRIORITY);
+void bcb_zd_voltage_remove_callback(struct bcb_zd_callback  *callback)
+{
+	if (!callback) {
+		return;
+	}
+	sys_slist_find_and_remove(&zd_data.zd_v_callback_list, &callback->node);
+}

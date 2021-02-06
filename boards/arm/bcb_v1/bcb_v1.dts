@@ -28,6 +28,8 @@
         zephyr,console = &uart4;
         zephyr,shell-uart = &uart4;
         zephyr,uart-pipe = &uart4;
+
+        breaker,config_eeprom = &eeprom0;
     };
 
     
@@ -205,7 +207,8 @@
                         <&portd 3  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* OCP_TEST_TR_P_M (mirrored) */
                         <&portc 6  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_LOW_GAIN_CMP0_IN0 */
                         <&portc 7  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* I_HIGH_GAIN_CMP0_IN1 */
-                        <&portc 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>;    /* REF_1V5_CMP1_IN1 */
+                        <&portc 3  PORT_PCR_MUX(PORT_PCR_MUX_DISABLED_OR_ANALOG)>,    /* REF_1V5_CMP1_IN1 */
+                        <&portc 5  PORT_PCR_MUX(PORT_PCR_MUX_ALT7)>;                  /* ZD_V_MAINS */
             pinmux-names =  "LED_RED",
                             "LED_GREEN",
                             "SW_FRONT",
@@ -230,7 +233,8 @@
                             "OCP_TEST_TR_P_M",
                             "I_LOW_GAIN_CMP0_IN0",
                             "I_HIGH_GAIN_CMP0_IN1",
-                            "REF_1V5_CMP1_IN1";
+                            "REF_1V5_CMP1_IN1",
+                            "ZD_V_MAINS";
             label = "BREAKER_PINS";
         };
     };
@@ -276,12 +280,14 @@
                         <&gpiod 5  GPIO_ACTIVE_HIGH>,
                         <&gpiod 0  GPIO_ACTIVE_HIGH>,
                         <&gpiod 6  GPIO_ACTIVE_HIGH>,
-                        <&gpiod 7  GPIO_ACTIVE_HIGH>;
+                        <&gpiod 7  GPIO_ACTIVE_HIGH>,
+                        <&gpioc 5  GPIO_ACTIVE_HIGH>;
                 gpio-names =    "ON_OFF", 
                                 "OCP_OTP_RESET",
                                 "ON_OFF_STATUS",
                                 "OCP_TEST_TR_N",
-                                "OCP_TEST_TR_P";
+                                "OCP_TEST_TR_P",
+                                "ZD_V_MAINS";
                 label = "DCTRL_IO";
             };
 
@@ -300,11 +306,13 @@
                 input-captures =    <&ftm3 0 IC_EDGE_SINGLE_RISING>,
                                     <&ftm3 1 IC_EDGE_SINGLE_FALLING>,
                                     <&ftm3 2 IC_EDGE_SINGLE_RISING>,
-                                    <&ftm3 3 IC_EDGE_SINGLE_RISING>;
+                                    <&ftm3 3 IC_EDGE_SINGLE_RISING>,
+                                    <&ftm0 2 IC_EDGE_DUAL_PULSE_RISING>;
                 input-capture-names =   "ON_OFF_STATUS_R",  /* capturing the rising edge */
                                         "ON_OFF_STATUS_F",  /* capturing the falling edge */
-                                        "OCP_TEST_TR_N",     /* only rising edge */
-                                        "OCP_TEST_TR_P";     /* only rising edge */
+                                        "OCP_TEST_TR_N",    /* only rising edge */
+                                        "OCP_TEST_TR_P",    /* only rising edge */
+                                        "ZD_V_MAINS";       /* pulse at rising edge */
                 label = "INPUT_TIMESTAMP";
             };
 
@@ -411,7 +419,7 @@
 
 &adc0 {
     compatible = "nxp,kinetis-adc16-edma";
-    triggers = <&ftm0 KINETIS_ADC_TRG_FTM_0>;
+    triggers = <&ftm1 KINETIS_ADC_TRG_FTM_1>;
     max-channels = <3>;
     dmas =  <&edma0 0 40 0>, <&edma0 0 60 1>;
     dma-names = "RESULT", "CH";
@@ -439,6 +447,19 @@
 
 /* Used to generate ADC0 trigger */
 &ftm0 {
+    compatible = "nxp,kinetis-ftm-input-capture";
+    clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
+    /* FTM prescaler is a 7-bit counter.
+     * So multiply the value of here by two to get the actual precaler value.
+     */
+    prescaler = <1>;
+    glitch-filter = <15>;
+    #input-capture-cells = <2>;
+    status = "okay";
+};
+
+/* Used to generate ADC1 trigger */
+&ftm1 {
     compatible = "nxp,kinetis-ftm-trigger";
     clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
     /* FTM prescaler is a 7-bit counter.
@@ -450,27 +471,15 @@
     status = "okay";
 };
 
-/* Used to generate ADC1 trigger */
-&ftm1 {
-    compatible = "nxp,kinetis-ftm-trigger";
-    clock-source = <KINETIS_FTM_CLK_SRC_FIXED_CLK>;
-    /* FTM prescaler is a 7-bit counter.
-     * So multiply the value of here by two to get the actual precaler value.
-     */
-    prescaler = <32>;
-    trigger-source = <0>;
-    #trigger-cells = <1>;
-    status = "okay";
-};
-
 /* Used for measuring OCP trigger timing. */
 &ftm3 {
     compatible = "nxp,kinetis-ftm-input-capture";
-    clocks = <&sim KINETIS_SIM_CORESYS_CLK 0x1030 25>;
+    clock-source = <KINETIS_FTM_CLK_SRC_SYSTEM_CLK>;
     /* FTM prescaler is a 7-bit counter.
      * So multiply the value of here by two to get the actual precaler value.
      */
     prescaler = <2>;
+    glitch-filter = <0>;
     #input-capture-cells = <2>;
     status = "okay";
 };

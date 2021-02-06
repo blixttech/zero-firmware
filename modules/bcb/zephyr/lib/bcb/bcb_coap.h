@@ -8,7 +8,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+int bcb_coap_init(void);
 int bcb_coap_start_server();
 int bcb_coap_register_observer(struct coap_resource *resource, struct coap_packet *request,
 			       struct sockaddr *addr, uint32_t period);

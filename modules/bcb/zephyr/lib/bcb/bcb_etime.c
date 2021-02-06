@@ -15,7 +15,7 @@ struct bcb_etime_data {
 
 static struct bcb_etime_data bcb_etime_data;
 
-static int bcb_etime_init()
+int bcb_etime_init(void)
 {
     bcb_etime_data.dev_cnt_ctd = device_get_binding(DT_LABEL(DT_NODELABEL(pit0)));
     if (bcb_etime_data.dev_cnt_ctd == NULL) {
@@ -57,5 +57,3 @@ uint32_t bcb_etime_get_frequency()
 {
     return bcb_etime_data.ticks_per_sec;
 }
-
-SYS_INIT(bcb_etime_init, APPLICATION, CONFIG_BCB_LIB_ETIME_INIT_PRIORITY);

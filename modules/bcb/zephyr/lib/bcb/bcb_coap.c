@@ -478,7 +478,7 @@ int bcb_coap_start_server()
 	return 0;
 }
 
-static int bcb_coap_init()
+int bcb_coap_init(void)
 {
 	sys_slist_init(&bcb_coap_data.notifier_list);
 	k_delayed_work_init(&bcb_coap_data.retransmit_work, retransmit_work);
@@ -488,5 +488,3 @@ static int bcb_coap_init()
 
 	return 0;
 }
-
-SYS_INIT(bcb_coap_init, APPLICATION, CONFIG_BCB_LIB_COAP_INIT_PRIORITY);

@@ -7,11 +7,21 @@ compatible: "nxp,kinetis-ftm-input-capture"
 include: ["nxp,kinetis-ftm.yaml"]
 
 properties:
-    "#input-capture-cells":
-      type: int
-      required: true
-      const: 2
-      description: Number of items to expect in a input capture specifier
+  clock-source:
+    type: int
+    required: true
+    description: Clock source of the FTM
+
+  glitch-filter:
+    type: int
+    required: true
+    description: Number of system clock cycles used for glitch filtering
+
+  "#input-capture-cells":
+    type: int
+    required: true
+    const: 2
+    description: Number of items to expect in a input capture specifier
 
 input-capture-cells:
   - channel

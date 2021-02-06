@@ -155,7 +155,7 @@ static int32_t get_temp_mcu(uint32_t adc_ntc)
  * @param sensor    Type of the sensor. 
  * @return int32_t  Temperature in centigrade.
  */
-int32_t bcb_get_temp(bcb_temp_sensor_t sensor)
+int32_t bcb_msmnt_get_temp(bcb_temp_sensor_t sensor)
 {
     switch (sensor) {
         case BCB_TEMP_SENSOR_PWR_IN:
@@ -226,12 +226,14 @@ int bcb_msmnt_setup_default()
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_0;
     adc_seq_cfg.seq_len = bcb_msmnt_data.seq_len_adc_0;
     adc_seq_cfg.seq_samples = 1;
+    adc_seq_cfg.seq_callback = NULL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_0, &adc_seq_cfg);
 
     adc_seq_cfg.buffer = bcb_msmnt_data.buffer_adc_1;
     adc_seq_cfg.buffer_size = bcb_msmnt_data.buffer_size_adc_1;
     adc_seq_cfg.seq_len = bcb_msmnt_data.seq_len_adc_1;
     adc_seq_cfg.seq_samples = 1;
+    adc_seq_cfg.seq_callback = NULL;
     adc_mcux_read(bcb_msmnt_data.dev_adc_1, &adc_seq_cfg);
 
     k_timer_init(&bcb_msmnt_data.timer_rms, bcb_msmnt_on_rms_timer, NULL);
@@ -449,7 +451,7 @@ static int32_t bcb_msmnt_get_i_high_gain()
     return ((((int32_t)*bcb_msmnt_data.raw_i_high_gain) - b) * 1000) / a;
 }
 
-int32_t bcb_get_voltage()
+int32_t bcb_msmnt_get_voltage()
 {
     int32_t a;
     int32_t b;
@@ -463,7 +465,7 @@ int32_t bcb_get_voltage()
     return ((((int32_t)*bcb_msmnt_data.raw_v_mains) - b) * 1000) / a;
 }
 
-int32_t bcb_get_current()
+int32_t bcb_msmnt_get_current()
 {
     if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) || 
         (*bcb_msmnt_data.raw_i_low_gain > 100)) {
@@ -475,12 +477,12 @@ int32_t bcb_get_current()
     return 0;
 }
 
-uint32_t bcb_get_voltage_rms()
+uint32_t bcb_msmnt_get_voltage_rms()
 {
     return bcb_msmnt_data.v_mains_rms;
 }
 
-uint32_t bcb_get_current_rms()
+uint32_t bcb_msmnt_get_current_rms()
 {
     if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) ||
         (*bcb_msmnt_data.raw_i_low_gain > 100)) {
@@ -491,13 +493,10 @@ uint32_t bcb_get_current_rms()
     }
 }
 
-static int bcb_msmnt_init()
+int bcb_msmnt_init(void)
 {
     return bcb_msmnt_setup_default();
 }
-
-
-SYS_INIT(bcb_msmnt_init, APPLICATION, CONFIG_BCB_LIB_MSMNT_INIT_PRIORITY);
 
 /*
  * Current measurement calculation

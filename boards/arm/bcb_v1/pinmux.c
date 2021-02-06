@@ -75,6 +75,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
     SET_PINMUX(breaker_pins, i_low_gain_cmp0_in0);
     SET_PINMUX(breaker_pins, i_high_gain_cmp0_in1);
     SET_PINMUX(breaker_pins, ref_1v5_cmp1_in1);
+    SET_PINMUX(breaker_pins, zd_v_mains);
 #endif
 
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(enet), okay) \

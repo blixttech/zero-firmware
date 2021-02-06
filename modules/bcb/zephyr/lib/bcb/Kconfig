@@ -10,32 +10,20 @@ if BCB_COAP
 rsource "Kconfig.coap"
 endif # BCB_COAP
 
+config BCB_TRIP_CURVE_DEFAULT
+	bool "Default trip curve"
+	default y
+
 menu "Initialisation priorities"
 
-config BCB_LIB_LEDS_INIT_PRIORITY
-	int "LEDs initialisation priority"
+config BCB_LIB_SIM_INIT_PRIORITY
+	int "SIM initialisation priority"
 	default 50
 
-config BCB_LIB_ETIME_INIT_PRIORITY
-	int "Elapsed time timer initialisation priority"
+config BCB_LIB_TRIP_CURVE_DEFAULT_INIT_PRIORITY
+	int "SIM initialisation priority"
 	default 51
-
-config BCB_LIB_MSMNT_INIT_PRIORITY
-	int "Measurement initialisation priority"
-	default 52
-
-config BCB_LIB_CTRL_INIT_PRIORITY
-	int "Control initialisation priority"
-	default 53
-
-config BCB_LIB_ZD_INIT_PRIORITY
-	int "Zero detection initialisation priority"
-	default 54
-
-config BCB_LIB_SHELL_INIT_PRIORITY
-	int "Shell initialisation priority"
-	default 55
-	depends on BCB_SHELL
+	depends on BCB_TRIP_CURVE_DEFAULT
 
 config BCB_LIB_COAP_INIT_PRIORITY
 	int "CoAP initialisation priority"
