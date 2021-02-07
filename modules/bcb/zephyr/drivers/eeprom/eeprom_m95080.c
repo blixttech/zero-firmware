@@ -407,6 +407,7 @@ static int eeprom_m95080_init(struct device *dev)
 			return -EINVAL;
 		}
 		data->spi_cs.gpio_pin = config->cs_pin;
+		data->spi_cs.delay = 0;
 		data->spi_cfg.cs = &data->spi_cs;
 	}
 
