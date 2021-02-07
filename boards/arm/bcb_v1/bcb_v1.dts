@@ -519,7 +519,7 @@
     eeprom0: eeprom@0 {
         compatible = "st,m95080";
         reg = <0x0>;
-        spi-max-frequency = <20000000>;
+        spi-max-frequency = <10000000>;
         size = <1024>;
         pagesize = <32>;
         address-width = <16>;
