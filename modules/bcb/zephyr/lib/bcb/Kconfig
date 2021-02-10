@@ -10,6 +10,10 @@ if BCB_COAP
 rsource "Kconfig.coap"
 endif # BCB_COAP
 
+config BCB_LIB_SW_MAX_CLOSING_TEMPERATURE
+	int "Maximum temperature when the swtich can be closed"
+	default 50
+
 config BCB_TRIP_CURVE_DEFAULT
 	bool "Default trip curve"
 	default y
@@ -58,5 +62,27 @@ config BCB_LIB_MSMNT_RMS_SAMPLES
 config BCB_LIB_MSMNT_RMS_INTERVAL
 	int "RMS sampling interval (ms)"
 	default 1
+
+endmenu
+
+menu "Persistent Configuration Store Offsets"
+
+config BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT
+	int "Offset of the measurement configuration"
+	default 0
+
+config BCB_LIB_PERSISTENT_CONFIG_OFFSET_BCB
+	int "Offset of the breaker state configuration"
+	default 50
+
+config BCB_LIB_PERSISTENT_CONFIG_OFFSET_TRIP_CURVE_DEFAULT
+	int "Offset of the default trip curve configuration"
+	default 60
+	depends on BCB_TRIP_CURVE_DEFAULT
+
+config BCB_LIB_PERSISTENT_CONFIG_OFFSET_COAP
+	int "Offset of the default trip curve configuration"
+	default 80
+	depends on BCB_COAP
 
 endmenu

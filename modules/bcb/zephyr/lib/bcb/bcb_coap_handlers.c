@@ -1,8 +1,9 @@
 #include "bcb_coap_handlers.h"
 #include "bcb_coap.h"
 #include "bcb_coap_buffer.h"
-#include "bcb_ctrl.h"
 #include "bcb_msmnt.h"
+#include "bcb_sw.h"
+#include "bcb.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -110,20 +111,36 @@ int bcb_coap_handlers_version_get(struct coap_resource *resource, struct coap_pa
 static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 {
 	int r;
-	r = snprintk((char *)buf, buf_len,
-		     "%010" PRIu32 ",%1" PRIu8 ",%1" PRIu8 ",%1" PRIu8 ",%07" PRId32 ",%06" PRIu32
-		     ",%07" PRId32 ",%06" PRIu32 ",%04" PRId32 ",%04" PRId32 ",%04" PRId32
-		     ",%04" PRId32,
-		     k_uptime_get_32(), (uint8_t)bcb_is_on(), (uint8_t)0U, (uint8_t)0U,
-		     bcb_get_current(), bcb_get_current_rms(), bcb_get_voltage(),
-		     bcb_get_voltage_rms(), bcb_get_temp(BCB_TEMP_SENSOR_PWR_IN),
-		     bcb_get_temp(BCB_TEMP_SENSOR_PWR_OUT), bcb_get_temp(BCB_TEMP_SENSOR_AMB),
-		     bcb_get_temp(BCB_TEMP_SENSOR_MCU));
+	uint8_t total;
+
+	r = snprintk((char *)buf, buf_len, "%010" PRIu32 ",%1" PRIu8 ",%1" PRIu8 ",%1" PRIu8,
+		     k_uptime_get_32(), (uint8_t)bcb_sw_is_on(), (uint8_t)0U, (uint8_t)0U);
 	if (r < 0) {
 		return 0;
 	}
+	total = r;
 
-	return (uint8_t)r;
+	r = snprintk((char *)buf + total, buf_len - total,
+		     ",%07" PRId32 ",%06" PRIu32 ",%07" PRId32 ",%06" PRIu32,
+		     bcb_msmnt_get_current(), bcb_msmnt_get_current_rms(), bcb_msmnt_get_voltage(),
+		     bcb_msmnt_get_voltage_rms());
+	if (r < 0) {
+		return total;
+	}
+	total += r;
+
+	r = snprintk((char *)buf + total, buf_len - total,
+		     ",%04" PRId32 ",%04" PRId32 ",%04" PRId32 ",%04" PRId32,
+		     bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_IN),
+		     bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT),
+		     bcb_msmnt_get_temp(BCB_TEMP_SENSOR_AMB),
+		     bcb_msmnt_get_temp(BCB_TEMP_SENSOR_MCU));
+	if (r < 0) {
+		return total;
+	}
+	total += r;
+
+	return total;
 }
 
 int send_notification_status(struct coap_resource *resource, struct sockaddr *addr,

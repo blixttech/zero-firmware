@@ -38,9 +38,9 @@ struct ocp_otp_data {
 	struct device *dev_pwm_ocp_test_adj;
 	struct device *dev_dac_ocp_limit_adj;
 
-	bcb_ocp_callback_t ocp_callback;
-	bcb_otp_callback_t otp_callback;
-	bcb_ocp_test_callback_t ocp_test_callback;
+	sys_slist_t ocp_callback_list;
+	sys_slist_t otp_callback_list;
+	sys_slist_t ocp_test_callback_list;
 
 	volatile bool ocp_test_active;
 	bcb_ocp_direction_t ocp_test_direction;
@@ -122,7 +122,42 @@ static inline uint32_t get_ocp_test_duration()
 
 	duration = start > end ? BCB_IC_COUNTER_MAX(on_off_status_f) - start + end : end - start;
 
+	LOG_INF("start %" PRIu32 ", end %" PRIu32, start, end);
+
 	return (uint32_t)(duration * (uint64_t)1e9 / (uint64_t)BCB_IC_FREQUENCY(on_off_status_f));
+}
+
+static inline void call_ocp_callbacks(uint64_t duration)
+{
+	sys_snode_t *node;
+	SYS_SLIST_FOR_EACH_NODE (&ocp_otp_data.ocp_callback_list, node) {
+		struct bcb_ocp_callback *callback = (struct bcb_ocp_callback *)node;
+		if (callback && callback->handler) {
+			callback->handler(duration);
+		}
+	}
+}
+
+static inline void call_otp_callbacks(int8_t temp)
+{
+	sys_snode_t *node;
+	SYS_SLIST_FOR_EACH_NODE (&ocp_otp_data.otp_callback_list, node) {
+		struct bcb_otp_callback *callback = (struct bcb_otp_callback *)node;
+		if (callback && callback->handler) {
+			callback->handler(temp);
+		}
+	}
+}
+
+static inline void call_ocp_test_callbacks(bcb_ocp_direction_t direction, uint32_t duration)
+{
+	sys_snode_t *node;
+	SYS_SLIST_FOR_EACH_NODE (&ocp_otp_data.ocp_test_callback_list, node) {
+		struct bcb_ocp_test_callback *callback = (struct bcb_ocp_test_callback *)node;
+		if (callback && callback->handler) {
+			callback->handler(direction, duration);
+		}
+	}
 }
 
 static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, uint32_t pins)
@@ -151,12 +186,9 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 			bcb_ocp_test_trigger(BCB_OCP_DIRECTION_N, false);
 
 			on_off_duration = get_ocp_test_duration();
-			LOG_DBG("ocp_test %" PRIu32 " ns", (uint32_t)on_off_duration);
-
-			if (ocp_otp_data.ocp_test_callback) {
-				ocp_otp_data.ocp_test_callback(ocp_otp_data.ocp_test_direction,
-							       on_off_duration);
-			}
+			LOG_INF("ocp_test %" PRIu32 " ns", (uint32_t)on_off_duration);
+			call_ocp_test_callbacks(ocp_otp_data.ocp_test_direction,
+						(uint32_t)on_off_duration);
 			return;
 		}
 
@@ -168,23 +200,23 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		if ((temp = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_IN)) > 80 ||
 		    (temp = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT)) > 80) {
 			LOG_DBG("overtemperature protection activated %" PRId8 " C", temp);
-			if (ocp_otp_data.otp_callback) {
-				ocp_otp_data.otp_callback(temp);
-			}
+			call_otp_callbacks(temp);
 			return;
 		}
 
 		LOG_DBG("overcurrent protection activated");
 
-		if (ocp_otp_data.ocp_callback) {
-			ocp_otp_data.ocp_callback(on_off_duration);
-		}
+		call_ocp_callbacks(on_off_duration);
 	}
 }
 
 int bcb_ocp_otp_init(void)
 {
 	memset(&ocp_otp_data, 0, sizeof(ocp_otp_data));
+
+	sys_slist_init(&ocp_otp_data.ocp_callback_list);
+	sys_slist_init(&ocp_otp_data.otp_callback_list);
+	sys_slist_init(&ocp_otp_data.ocp_test_callback_list);
 
 	BCB_GPIO_PIN_INIT(dctrl, ocp_otp_reset);
 	BCB_GPIO_PIN_CONFIG(dctrl, ocp_otp_reset, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
@@ -239,21 +271,6 @@ int bcb_ocp_otp_reset(void)
 	return 0;
 }
 
-void bcb_ocp_set_callback(bcb_ocp_callback_t callback)
-{
-	ocp_otp_data.ocp_callback = callback;
-}
-
-void bcb_otp_set_callback(bcb_otp_callback_t callback)
-{
-	ocp_otp_data.otp_callback = callback;
-}
-
-void bcb_otp_test_set_callback(bcb_ocp_test_callback_t callback)
-{
-	ocp_otp_data.ocp_test_callback = callback;
-}
-
 int bcb_ocp_set_limit(uint8_t current)
 {
 	return 0;
@@ -287,4 +304,64 @@ int bcb_ocp_test_trigger(bcb_ocp_direction_t direction, bool enable)
 	}
 
 	return 0;
+}
+
+int bcb_ocp_add_callback(struct bcb_ocp_callback *callback)
+{
+	if (!callback || !callback->handler) {
+		return -ENOTSUP;
+	}
+
+	sys_slist_append(&ocp_otp_data.ocp_callback_list, &callback->node);
+
+	return 0;
+}
+
+int bcb_otp_add_callback(struct bcb_otp_callback *callback)
+{
+	if (!callback || !callback->handler) {
+		return -ENOTSUP;
+	}
+
+	sys_slist_append(&ocp_otp_data.otp_callback_list, &callback->node);
+
+	return 0;
+}
+
+int bcb_ocp_test_add_callback(struct bcb_ocp_test_callback *callback)
+{
+	if (!callback || !callback->handler) {
+		return -ENOTSUP;
+	}
+
+	sys_slist_append(&ocp_otp_data.ocp_test_callback_list, &callback->node);
+
+	return 0;
+}
+
+void bcb_ocp_remove_callback(struct bcb_ocp_callback *callback)
+{
+	if (!callback) {
+		return;
+	}
+
+	sys_slist_find_and_remove(&ocp_otp_data.ocp_callback_list, &callback->node);
+}
+
+void bcb_otp_remove_callback(struct bcb_otp_callback *callback)
+{
+	if (!callback) {
+		return;
+	}
+
+	sys_slist_find_and_remove(&ocp_otp_data.otp_callback_list, &callback->node);
+}
+
+void bcb_ocp_test_remove_callback(struct bcb_ocp_test_callback *callback)
+{
+	if (!callback) {
+		return;
+	}
+
+	sys_slist_find_and_remove(&ocp_otp_data.ocp_test_callback_list, &callback->node);
 }

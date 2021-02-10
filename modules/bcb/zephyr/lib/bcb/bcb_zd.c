@@ -79,21 +79,26 @@ uint32_t bcb_zd_get_frequency(void)
 	       zd_data.zd_v_pulse_ticks;
 }
 
-int bcb_zd_voltage_add_callback(struct bcb_zd_callback *callback)
+int bcb_zd_add_callback(bcb_zd_type_t type, struct bcb_zd_callback *callback)
 {
 	if (!callback || !callback->handler) {
 		return -ENOTSUP;
 	}
 
-	sys_slist_append(&zd_data.zd_v_callback_list, &callback->node);
+	if (type == BCB_ZD_TYPE_VOLTAGE) {
+		sys_slist_append(&zd_data.zd_v_callback_list, &callback->node);
+	}
 
 	return 0;
 }
 
-void bcb_zd_voltage_remove_callback(struct bcb_zd_callback *callback)
+void bcb_zd_remove_callback(bcb_zd_type_t type, struct bcb_zd_callback *callback)
 {
 	if (!callback) {
 		return;
 	}
-	sys_slist_find_and_remove(&zd_data.zd_v_callback_list, &callback->node);
+
+	if (type == BCB_ZD_TYPE_VOLTAGE) {
+		sys_slist_find_and_remove(&zd_data.zd_v_callback_list, &callback->node);
+	}
 }

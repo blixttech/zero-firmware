@@ -2,6 +2,7 @@
 #include "bcb_macros.h"
 #include "bcb_config.h"
 #include "bcb_ocp_otp.h"
+#include "bcb_msmnt.h"
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
@@ -37,6 +38,13 @@ int bcb_sw_on(void)
 {
 	if (bcb_sw_is_on()) {
 		return 0;
+	}
+
+	if ((bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_IN) >
+	     CONFIG_BCB_LIB_SW_MAX_CLOSING_TEMPERATURE) ||
+	    (bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT) >
+	     CONFIG_BCB_LIB_SW_MAX_CLOSING_TEMPERATURE)) {
+		     return -EACCES;
 	}
 
 	bcb_ocp_otp_reset();
