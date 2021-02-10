@@ -24,7 +24,7 @@ static struct zd_data zd_data;
 
 static void zd_v_mains_callback(struct device *dev, uint8_t channel, uint8_t edge)
 {
-	bool is_zd_high = BCB_GPIO_PIN_GET_RAW(dctrl, zd_v_mains) == 1;
+	bool is_zd_low = BCB_GPIO_PIN_GET_RAW(dctrl, zd_v_mains) == 0;
 	uint32_t now = k_uptime_get_32();
 	uint32_t pulse_duration;
 	sys_snode_t *node;
@@ -38,12 +38,12 @@ static void zd_v_mains_callback(struct device *dev, uint8_t channel, uint8_t edg
 		return;
 	}
 
-	if (is_zd_high) {
+	if (is_zd_low) {
 		zd_data.zd_v_pulse_ticks = input_capture_get_value(dev, channel);
 	}
 
 	SYS_SLIST_FOR_EACH_NODE (&zd_data.zd_v_callback_list, node) {
-		struct bcb_zd_callback  *callback = (struct bcb_zd_callback  *)node;
+		struct bcb_zd_callback *callback = (struct bcb_zd_callback *)node;
 		if (callback && callback->handler) {
 			callback->handler();
 		}
@@ -52,6 +52,7 @@ static void zd_v_mains_callback(struct device *dev, uint8_t channel, uint8_t edg
 
 int bcb_zd_init(void)
 {
+	memset(&zd_data, 0, sizeof(zd_data));
 	sys_slist_init(&zd_data.zd_v_callback_list);
 
 	BCB_IC_INIT(itimestamp, zd_v_mains);
@@ -78,10 +79,10 @@ uint32_t bcb_zd_get_frequency(void)
 	       zd_data.zd_v_pulse_ticks;
 }
 
-int bcb_zd_voltage_add_callback(struct bcb_zd_callback  *callback)
+int bcb_zd_voltage_add_callback(struct bcb_zd_callback *callback)
 {
 	if (!callback || !callback->handler) {
-		return -ENOTSUP;;
+		return -ENOTSUP;
 	}
 
 	sys_slist_append(&zd_data.zd_v_callback_list, &callback->node);
@@ -89,7 +90,7 @@ int bcb_zd_voltage_add_callback(struct bcb_zd_callback  *callback)
 	return 0;
 }
 
-void bcb_zd_voltage_remove_callback(struct bcb_zd_callback  *callback)
+void bcb_zd_voltage_remove_callback(struct bcb_zd_callback *callback)
 {
 	if (!callback) {
 		return;
