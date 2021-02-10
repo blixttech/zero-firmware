@@ -106,7 +106,7 @@ static inline uint64_t get_on_off_duration(void)
 	return etime_duration * (uint64_t)1e9 / (uint64_t)bcb_etime_get_frequency();
 }
 
-static inline uint32_t get_ocp_test_duration()
+static inline uint64_t get_ocp_test_duration()
 {
 	uint32_t start;
 	uint32_t end;
@@ -119,12 +119,9 @@ static inline uint32_t get_ocp_test_duration()
 	}
 
 	end = BCB_IC_VALUE(itimestamp, on_off_status_f);
-
 	duration = start > end ? BCB_IC_COUNTER_MAX(on_off_status_f) - start + end : end - start;
 
-	LOG_INF("start %" PRIu32 ", end %" PRIu32, start, end);
-
-	return (uint32_t)(duration * (uint64_t)1e9 / (uint64_t)BCB_IC_FREQUENCY(on_off_status_f));
+	return duration * (uint64_t)1e9 / (uint64_t)BCB_IC_FREQUENCY(on_off_status_f);
 }
 
 static inline void call_ocp_callbacks(uint64_t duration)
@@ -186,7 +183,8 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 			bcb_ocp_test_trigger(BCB_OCP_DIRECTION_N, false);
 
 			on_off_duration = get_ocp_test_duration();
-			LOG_INF("ocp_test %" PRIu32 " ns", (uint32_t)on_off_duration);
+			LOG_DBG("direction %d, duration %" PRIu32 " ns",
+				ocp_otp_data.ocp_test_direction, (uint32_t)on_off_duration);
 			call_ocp_test_callbacks(ocp_otp_data.ocp_test_direction,
 						(uint32_t)on_off_duration);
 			return;

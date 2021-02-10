@@ -53,7 +53,7 @@ int bcb_init()
 	return 0;
 }
 
-int bcb_on(void)
+int bcb_close(void)
 {
 	int r;
 
@@ -70,10 +70,10 @@ int bcb_on(void)
 		LOG_WRN("Cannot save configuration: %d", r);
 	}
 
-	return bcb_data.trip_curve->on();
+	return bcb_data.trip_curve->close();
 }
 
-int bcb_off(void)
+int bcb_open(void)
 {
 	int r;
 
@@ -90,10 +90,10 @@ int bcb_off(void)
 		LOG_WRN("Cannot save configuration: %d", r);
 	}
 
-	return bcb_data.trip_curve->off();
+	return bcb_data.trip_curve->open();
 }
 
-bool bcb_is_on()
+bool bcb_is_closed()
 {
 	return bcb_data.config.state == BCB_STATE_ON;
 }
@@ -120,10 +120,10 @@ int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
 
 	bcb_data.trip_curve->set_callback(trip_curve_callback);
 
-	if (bcb_is_on()) {
-		return bcb_data.trip_curve->on();
+	if (bcb_is_closed()) {
+		return bcb_data.trip_curve->close();
 	} else {
-		return bcb_data.trip_curve->off();
+		return bcb_data.trip_curve->open();
 	}
 
 	return 0;

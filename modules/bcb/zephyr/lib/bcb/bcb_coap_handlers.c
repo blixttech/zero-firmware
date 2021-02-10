@@ -271,9 +271,9 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 			continue;
 		}
 		if (options[i].len == 4 && !strncmp(options[i].value, "a=on", 4)) {
-			bcb_on();
+			bcb_close();
 		} else if (options[i].len == 5 && !strncmp(options[i].value, "a=off", 5)) {
-			bcb_off();
+			bcb_open();
 		} else {
 			continue;
 		}

@@ -66,7 +66,6 @@ static void process_timed_event(void)
 	} else if (curve_data.state == CURVE_STATE_EMERGENCY_OPENED) {
 		/* Nothing to be done for the moment */
 	} else {
-
 	}
 }
 
@@ -81,8 +80,8 @@ static void on_ocp_activated(uint64_t on_off_duration)
 	k_delayed_work_cancel(&curve_data.transient_work);
 	curve_data.events_to_wait = 500;
 	curve_data.state = CURVE_STATE_CLOSING;
-	k_delayed_work_submit(&curve_data.transient_work,
-				K_MSEC(TRANSIENT_WORK_TIMEOUT));
+	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
+
 	if (curve_data.callback) {
 		curve_data.callback(curve_data.trip_curve, BCB_TRIP_CAUSE_OCP_HW, 0);
 	}
@@ -93,8 +92,8 @@ static void on_otp_activated(int8_t temp)
 	k_delayed_work_cancel(&curve_data.transient_work);
 	curve_data.events_to_wait = 500;
 	curve_data.state = CURVE_STATE_CLOSING;
-	k_delayed_work_submit(&curve_data.transient_work,
-				K_MSEC(TRANSIENT_WORK_TIMEOUT));
+	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
+
 	if (curve_data.callback) {
 		curve_data.callback(curve_data.trip_curve, BCB_TRIP_CAUSE_OTP, 0);
 	}
@@ -105,9 +104,7 @@ static void on_ocp_test_activated(bcb_ocp_direction_t direction, uint32_t durati
 	k_delayed_work_cancel(&curve_data.transient_work);
 	curve_data.events_to_wait = 0;
 	curve_data.state = CURVE_STATE_CLOSING;
-	k_delayed_work_submit(&curve_data.transient_work,
-				K_MSEC(TRANSIENT_WORK_TIMEOUT));
-	LOG_INF("OCP Test completed: direction %d, duration %" PRIu32 " ns", direction, duration);
+	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 }
 
 static void delayed_transient_work(struct k_work *work)
@@ -118,11 +115,13 @@ static void delayed_transient_work(struct k_work *work)
 static int trip_curve_init(void)
 {
 	LOG_INF("init");
+
 	if (bcb_sw_is_on()) {
 		curve_data.state = CURVE_STATE_CLOSED;
 	} else {
 		curve_data.state = CURVE_STATE_OPENED;
 	}
+
 	bcb_zd_add_callback(BCB_ZD_TYPE_VOLTAGE, &curve_data.zd_callback);
 	bcb_ocp_add_callback(&curve_data.ocp_callback);
 	bcb_otp_add_callback(&curve_data.otp_callback);
@@ -133,6 +132,7 @@ static int trip_curve_init(void)
 static int trip_curve_shutdown(void)
 {
 	LOG_INF("shutdown");
+
 	bcb_zd_remove_callback(BCB_ZD_TYPE_VOLTAGE, &curve_data.zd_callback);
 	bcb_ocp_remove_callback(&curve_data.ocp_callback);
 	bcb_otp_remove_callback(&curve_data.otp_callback);
@@ -141,7 +141,7 @@ static int trip_curve_shutdown(void)
 	return 0;
 }
 
-static int trip_curve_on(void)
+static int trip_curve_close(void)
 {
 	if (curve_data.state == CURVE_STATE_OPENED) {
 		curve_data.state = CURVE_STATE_CLOSING;
@@ -151,12 +151,13 @@ static int trip_curve_on(void)
 	return 0;
 }
 
-static int trip_curve_off(void)
+static int trip_curve_open(void)
 {
 	if (curve_data.state == CURVE_STATE_CLOSED) {
 		curve_data.state = CURVE_STATE_OPENING;
 		k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 	}
+	
 	return 0;
 }
 
@@ -184,8 +185,8 @@ static int trip_curve_set_callback(bcb_trip_curve_callback_t callback)
 const struct bcb_trip_curve trip_curve_default = {
 	.init = trip_curve_init,
 	.shutdown = trip_curve_shutdown,
-	.on = trip_curve_on,
-	.off = trip_curve_off,
+	.close = trip_curve_close,
+	.open = trip_curve_open,
 	.set_limit = trip_curve_set_current_limit,
 	.get_limit = trip_curve_get_current_limit,
 	.set_callback = trip_curve_set_callback,

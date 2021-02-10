@@ -17,9 +17,9 @@ struct bcb_trip_callback {
 };
 
 int bcb_init(void);
-int bcb_on(void);
-int bcb_off(void);
-bool bcb_is_on();
+int bcb_close(void);
+int bcb_open(void);
+bool bcb_is_closed();
 
 int bcb_set_trip_curve(const struct bcb_trip_curve *curve);
 int bcb_set_trip_limit(uint8_t limit);

@@ -12,21 +12,27 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_shell);
 
-static int cmd_off_params(const struct shell *shell, size_t argc, char **argv)
+struct bcb_shell_data {
+	struct bcb_ocp_test_callback ocp_test_callback;
+};
+
+static struct bcb_shell_data shell_data;
+
+static int cmd_open_params(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	bcb_off();
+	bcb_open();
 	return 0;
 }
 
-static int cmd_on_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_close_params(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	bcb_on();
+	bcb_close();
 	return 0;
 }
 
@@ -101,9 +107,25 @@ static int cmd_frequency_params(const struct shell *shell, size_t argc, char **a
 	return 0;
 }
 
+static void on_ocp_test_activated(bcb_ocp_direction_t direction, uint32_t duration)
+{
+	LOG_INF("OCP Test completed: direction %c, duration %" PRIu32 " ns",
+		direction == BCB_OCP_DIRECTION_N ? 'N' : 'P', duration);
+}
+
+int bcb_shell_init(void)
+{
+	memset(&shell_data, 0, sizeof(shell_data));
+	shell_data.ocp_test_callback.handler = on_ocp_test_activated;
+
+	bcb_ocp_test_add_callback(&shell_data.ocp_test_callback);
+
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub, 
-			       SHELL_CMD(on, NULL, "Turn on.", cmd_on_params),
-			       SHELL_CMD(off, NULL, "Turn off.", cmd_off_params),
+			       SHELL_CMD(close, NULL, "Close switch.", cmd_close_params),
+			       SHELL_CMD(open, NULL, "Open switch.", cmd_open_params),
 			       SHELL_CMD(ocpt, NULL, "Trigger OCP.", cmd_ocp_trigger_params),
 			       SHELL_CMD(temp, NULL, "Get temperature.", cmd_temp_params),
 			       SHELL_CMD(voltage, NULL, "Get voltage.", cmd_voltage_params),

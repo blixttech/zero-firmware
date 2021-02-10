@@ -167,7 +167,7 @@ static int ic_mcux_ftm_set_channel(struct device *dev, uint8_t channel, uint8_t 
 		break;
 	case IC_EDGE_SINGLE_FALLING:
 		dual_edge = false;
-		current_edge = kFTM_RisingEdge;
+		current_edge = kFTM_FallingEdge;
 		break;
 	case IC_EDGE_SINGLE_RISING_FALLING:
 		dual_edge = false;
