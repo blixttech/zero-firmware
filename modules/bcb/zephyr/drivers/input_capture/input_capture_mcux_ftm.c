@@ -28,6 +28,7 @@ struct ic_mcux_ftm_config {
 struct ic_mcux_ftm_data {
 	bool started;
 	uint32_t ticks_per_sec;
+	volatile bool enabled_interrupts[MAX_CHANNELS];
 	volatile uint8_t edges[MAX_CHANNELS];
 	volatile input_capture_callback_t callbacks[MAX_CHANNELS];
 };
@@ -82,9 +83,9 @@ static void ftm_irq_handler(void *arg)
 	int i;
 
 	for (i = 0; i < config->channel_count;) {
-		bool is_base_set = status & (kFTM_Chnl0Flag << i);
+		bool is_first_set = status & (kFTM_Chnl0Flag << i);
 
-		if (!is_base_set) {
+		if (!is_first_set) {
 			i++;
 			continue;
 		}
@@ -100,10 +101,20 @@ static void ftm_irq_handler(void *arg)
 		}
 
 		if (is_dual_edge_base(i)) {
-			bool is_other_set = status & (kFTM_Chnl0Flag << (i + 1));
-			if (is_other_set) {
+			bool is_next_set = status & (kFTM_Chnl0Flag << (i + 1));
+
+			if (!is_next_set) {
+				if (data->enabled_interrupts[i]) {
+					FTM_DisableInterrupts(config->base,
+							      kFTM_Chnl0InterruptEnable << i);
+				}
+			} else {
 				uint32_t mask = (kFTM_Chnl0Flag << i) | (kFTM_Chnl0Flag << (i + 1));
 				FTM_ClearStatusFlags(config->base, mask);
+				if (data->enabled_interrupts[i]) {
+					FTM_EnableInterrupts(config->base,
+							     kFTM_Chnl0InterruptEnable << i);
+				}
 			}
 			i += 2;
 			continue;
@@ -291,11 +302,13 @@ static int ic_mcux_ftm_enable_interrupts(struct device *dev, uint8_t channel, bo
 
 	interrupt_mask = kFTM_Chnl0InterruptEnable << channel;
 	channel_mask = kFTM_Chnl0Flag << channel;
+	data->enabled_interrupts[channel] = enable;
 
 	if (is_dual_edge(data->edges[channel])) {
 		uint8_t base = get_dual_edge_base(channel);
 		interrupt_mask |= kFTM_Chnl0InterruptEnable << (base + 1);
 		channel_mask |= kFTM_Chnl0Flag << (base + 1);
+		data->enabled_interrupts[base + 1] = enable;
 	}
 
 	FTM_ClearStatusFlags(config->base, channel_mask);
