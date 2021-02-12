@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 set(lib_sources
+    bcb_sim.c
+    bcb_user_if.c
     bcb_etime.c
-    #bcb_ctrl.c
-    bcb_msmnt.c
-    bcb_zd.c
-    bcb_leds.c
     bcb_config.c
+    bcb_zd.c
+    bcb_msmnt.c
     bcb_sw.c
     bcb_ocp_otp.c
-    bcb_sim.c
     bcb.c
 )
 

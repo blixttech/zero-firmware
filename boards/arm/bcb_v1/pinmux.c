@@ -50,7 +50,7 @@ static int frdm_k64f_pinmux_init(struct device *dev)
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(breaker_pins), okay)
     SET_PINMUX(breaker_pins, led_red);
     SET_PINMUX(breaker_pins, led_green);
-    SET_PINMUX(breaker_pins, sw_front);
+    SET_PINMUX(breaker_pins, switch_front);
 
     SET_PINMUX(breaker_pins, on_off);
     SET_PINMUX(breaker_pins, ocp_otp_reset);

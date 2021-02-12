@@ -15,9 +15,6 @@
 
     /* These aliases are provided for compatibility with the samples */
     aliases {
-        //led0 = &led_red;
-        //led1 = &led_green;
-        sw1 = &sw_front;
         breaker = &breaker;
     };
 
@@ -185,7 +182,7 @@
             compatible = "blixt,pins";
             pinmuxs =   <&portc 14 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_RED */
                         <&portc 15 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* LED_GREEN */
-                        <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SW_FRONT */
+                        <&portc 13 PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* SWITCH_FRONT */
                         <&portd 4  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* ON_OFF */
                         <&portd 5  PORT_PCR_MUX(PORT_PCR_MUX_GPIO)>,    /* OCP_OTP_RESET */
                         <&portd 0  PORT_PCR_MUX(PORT_PCR_MUX_ALT4)>,    /* ON_OFF_STATUS */
@@ -211,7 +208,7 @@
                         <&portc 5  PORT_PCR_MUX(PORT_PCR_MUX_ALT7)>;                  /* ZD_V_MAINS */
             pinmux-names =  "LED_RED",
                             "LED_GREEN",
-                            "SW_FRONT",
+                            "SWITCH_FRONT",
                             "ON_OFF",
                             "OCP_OTP_RESET",
                             "ON_OFF_STATUS",
@@ -243,35 +240,16 @@
         breaker: breaker {
             compatible = "blixt,breaker";
             label = "BLIXT_BREAKER";
-            leds {
-                compatible = "gpio-leds";
-                led_red: led_red {
-                    gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
-                    label = "LED_RED";
-                };
-                led_green: led_green {
-                    gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
-                    label = "LED_GREEN";
-                };
-            };
 
             user_iface: user_iface {
                 compatible = "blixt,breaker-gpio";
                 gpios = <&gpioc 14 GPIO_ACTIVE_LOW>, 
                         <&gpioc 15 GPIO_ACTIVE_LOW>,
-                        <&gpiod 4 GPIO_ACTIVE_LOW>;
+                        <&gpioc 13 GPIO_ACTIVE_LOW>;
                 gpio-names =    "LED_RED", 
                                 "LED_GREEN", 
-                                "SW_FRONT";
+                                "SWITCH_FRONT";
                 label = "USER_IFACE";
-            };
-
-            switches {
-                compatible = "gpio-keys";
-                sw_front: sw_front {
-                    gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
-                    label = "SW_FRONT";
-                };
             };
 
             dctrl: dctrl {

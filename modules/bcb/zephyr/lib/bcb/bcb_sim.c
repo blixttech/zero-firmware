@@ -1,4 +1,4 @@
-#include "bcb_leds.h"
+#include "bcb_user_if.h"
 #include "bcb_etime.h"
 #include "bcb_config.h"
 #include "bcb_msmnt.h"
@@ -12,7 +12,7 @@
 
 static int bcb_sim_init()
 {
-	bcb_leds_init();
+	bcb_user_if_init();
 	bcb_etime_init();
 	bcb_config_init();
 	bcb_zd_init();

@@ -1,7 +1,6 @@
 #include "bcb_trip_curve.h"
 #include "bcb_common.h"
 #include "bcb.h"
-#include "bcb_leds.h"
 #include "bcb_sw.h"
 #include "bcb_zd.h"
 #include "bcb_ocp_otp.h"
