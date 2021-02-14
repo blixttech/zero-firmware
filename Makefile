@@ -1,41 +1,59 @@
-mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
-BCB_ROOT := $(abspath $(dir $(mkfile_path)))
-ZERO_APP_DIR := $(BCB_ROOT)/apps/zero
-MCUBOOT_DIR := $(BCB_ROOT)/zephyr-os/bootloader/mcuboot/boot/zephyr
-MCUBOOT_KEY := $(BCB_ROOT)/zephyr-os/bootloader/mcuboot/root-rsa-2048.pem
-DTS_ROOT := $(BCB_ROOT)
-ZEPHYR_MODULE_BCB := $(BCB_ROOT)/modules/bcb
-OVERLAY_CONFIG := $(BCB_ROOT)/boards/arm/bcb_v1/bcb_v1_overlay_mcuboot.conf 
+MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+SOURCE_ROOT_DIR := $(abspath $(dir $(MAKEFILE_PATH)))
+BINARY_DIR := $(SOURCE_ROOT_DIR)/build
 
-BUILD_DIR = build/zephyr
-ARTIFACTS = build
+# TODO: Create an overlay config file to set the key pair for MCUBoot bootloader
+#       and Zero application 
+KEY_PAIR := $(SOURCE_ROOT_DIR)/zephyr-os/bootloader/mcuboot/root-rsa-2048.pem
 
+# Bootloader variables
+MCUBOOT_APP_DIR := $(SOURCE_ROOT_DIR)/zephyr-os/bootloader/mcuboot/boot/zephyr
+MCUBOOT_BOARD_ROOT := $(SOURCE_ROOT_DIR)
+MCUBOOT_DTS_ROOT := $(SOURCE_ROOT_DIR)
+MCUBOOT_EXTRA_MODULES := $(SOURCE_ROOT_DIR)/modules/bcb
+MCUBOOT_OVERLAY_CONFIG := $(SOURCE_ROOT_DIR)/boards/arm/bcb_v1/bcb_v1_overlay_mcuboot.conf 
+MCUBOOT_BUILD_DIR := $(MCUBOOT_APP_DIR)/build
+MCUBOOT_BIN := $(MCUBOOT_BUILD_DIR)/zephyr/zephyr.bin
 
-basics: 
+# Zero variables
+ZERO_APP_DIR := $(SOURCE_ROOT_DIR)/apps/zero
+ZERO_BUILD_DIR := $(ZERO_APP_DIR)/build
+ZERO_BIN := $(ZERO_BUILD_DIR)/zephyr/zephyr.signed.bin
+
+.PHONY: all mcuboot mcuboot-flash zero zero-flash binaries clean
+
+all: zero
+
+init: 
 	west update
 	pip install -r scripts/requirements.txt
 
-build_dir:
-	mkdir -p $(ARTIFACTS)
+$(MCUBOOT_BIN):
+	cd $(MCUBOOT_APP_DIR) && west build -b bcb_v1 -- -DBOARD_ROOT=$(MCUBOOT_BOARD_ROOT) \
+	-DDTS_ROOT=$(MCUBOOT_DTS_ROOT) -DZEPHYR_EXTRA_MODULES=$(MCUBOOT_EXTRA_MODULES) \
+	-DOVERLAY_CONFIG=$(MCUBOOT_OVERLAY_CONFIG) -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 
-mcuboot: build_dir
-	cd $(MCUBOOT_DIR) && west build -b bcb_v1 -- -DBOARD_ROOT=$(BCB_ROOT) -DDTS_ROOT=$(DTS_ROOT) -DZEPHYR_EXTRA_MODULES=$(ZEPHYR_MODULE_BCB) -DOVERLAY_CONFIG=$(OVERLAY_CONFIG)
-	cp $(MCUBOOT_DIR)/$(BUILD_DIR)/zephyr.bin $(ARTIFACTS)/mcuboot.bin
+$(ZERO_BIN):
+	cd $(ZERO_APP_DIR) && west build -- -DCMAKE_EXPORT_COMPILE_COMMANDS=1 && \
+	west sign -t imgtool -- --key $(KEY_PAIR)
 
-mcuboot-flash: mcuboot
-	cd $(MCUBOOT_DIR) && west flash
+mcuboot: $(MCUBOOT_BIN)
 
-zero: build_dir
-	cd $(ZERO_APP_DIR) && west build && \
-	west sign -t imgtool -- --key $(MCUBOOT_KEY)
-	cp $(ZERO_APP_DIR)/$(BUILD_DIR)/zephyr.signed.bin $(ARTIFACTS)/zero.signed.bin
+mcuboot-flash: $(MCUBOOT_BIN)
+	cd $(MCUBOOT_APP_DIR) && west flash --bin-file $<
 
-zero-flash: zero
-	cd $(ZERO_APP_DIR) && west flash --bin-file $(ZERO_APP_DIR)/$(BUILD_DIR)/zephyr.signed.bin
+zero: $(ZERO_BIN)
+
+zero-flash: $(ZERO_BIN)
+	cd $(ZERO_APP_DIR) && west flash --bin-file $<
+
+$(BINARY_DIR):
+	mkdir -p $@
+
+binaries: $(BINARY_DIR) $(MCUBOOT_BIN) $(ZERO_BIN)
+	cp $(MCUBOOT_BIN) $(BINARY_DIR)/mcuboot.bin && \
+	cp $(ZERO_BIN) $(BINARY_DIR)/zero.signed.bin
 
 clean:
-	rm -rf build $(MCUBOOT_DIR)/build apps/zero/build
-
-all: basics mcuboot zero
-
+	rm -rf $(BINARY_DIR) $(MCUBOOT_BUILD_DIR) $(ZERO_BUILD_DIR)
 
