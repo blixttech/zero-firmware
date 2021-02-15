@@ -1,5 +1,6 @@
 #include "bcb.h"
 #include "bcb_msmnt.h"
+#include "bcb_msmnt_calib.h"
 #include "bcb_ocp_otp.h"
 #include "bcb_zd.h"
 #include <stdlib.h>
@@ -18,7 +19,7 @@ struct bcb_shell_data {
 
 static struct bcb_shell_data shell_data;
 
-static int cmd_open_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_open_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -27,7 +28,7 @@ static int cmd_open_params(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 
-static int cmd_close_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_close_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -36,7 +37,7 @@ static int cmd_close_params(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 
-static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_ocp_trigger_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	int direction = BCB_OCP_DIRECTION_P;
 	if (argc > 1) {
@@ -60,7 +61,7 @@ static int cmd_ocp_trigger_params(const struct shell *shell, size_t argc, char *
 	return 0;
 }
 
-static int cmd_temp_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_temp_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	if (argc != 2) {
 		shell_print(shell, "Invalid sensor");
@@ -76,7 +77,7 @@ static int cmd_temp_params(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 
-static int cmd_voltage_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_voltage_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -86,7 +87,7 @@ static int cmd_voltage_params(const struct shell *shell, size_t argc, char **arg
 	return 0;
 }
 
-static int cmd_current_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_current_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -96,13 +97,112 @@ static int cmd_current_params(const struct shell *shell, size_t argc, char **arg
 	return 0;
 }
 
-static int cmd_frequency_params(const struct shell *shell, size_t argc, char **argv)
+static int cmd_frequency_handler(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
 	uint32_t frequency = bcb_zd_get_frequency();
 	shell_print(shell, "%" PRIu32 ".%03" PRIu32 " Hz", frequency / 1000, frequency % 1000);
+
+	return 0;
+}
+
+static int cmd_calib_adc_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	int r;
+	uint16_t samples;
+
+	if (argc < 2) {
+		shell_error(shell, "%s - number of samples not given", argv[0]);
+		shell_print(shell, "%s - <samples>", argv[0]);
+		return -EINVAL;
+	}
+
+	samples = (uint16_t)atoi(argv[1]);
+
+	shell_print(shell, "Starting ADC calibration with %" PRIu16 " samples", samples);
+	r = bcb_msmnt_calib_adc(samples);
+	shell_print(shell, "ADC calibration completed: %d", r);
+
+	return 0;
+}
+
+static int cmd_calib_param_a_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	bcb_msmnt_type_t type;
+	uint16_t samples;
+	int32_t input_x;
+	int r;
+
+	if (argc != 4) {
+		shell_error(shell, "invalid arguments", argv[0]);
+		shell_print(shell, "%s - <l|h|v> <input-x> <samples>", argv[0]);
+		shell_print(shell, " - l: current low gain");
+		shell_print(shell, " - h: current high gain");
+		shell_print(shell, " - v: mains voltage");
+		return -EINVAL;
+	}
+
+	if (argv[1][0] == 'l' || argv[1][0] == 'L') {
+		type = BCB_MSMNT_TYPE_I_LOW_GAIN;
+	} else if (argv[1][0] == 'h' || argv[1][0] == 'H') {
+		type = BCB_MSMNT_TYPE_I_HIGH_GAIN;
+	} else if (argv[1][0] == 'v' || argv[1][0] == 'V') {
+		type = BCB_MSMNT_TYPE_V_MAINS;
+	} else {
+		shell_error(shell, "invalid type %c", argv[0], argv[1][0]);
+		return -EINVAL;
+	}
+
+	input_x = (int32_t)atoi(argv[2]);
+	samples = (uint16_t)atoi(argv[3]);
+
+	shell_print(shell, "starting parameter a calibration: samples %" PRIu16, samples);
+	r = bcb_msmnt_calib_a(type, input_x, samples);
+	if (r) {
+		shell_error(shell, "calibration failed %d", r);
+		return r;
+	}
+	shell_print(shell, "calbration completed");
+
+	return 0;
+}
+
+static int cmd_calib_param_b_handler(const struct shell *shell, size_t argc, char **argv)
+{
+	bcb_msmnt_type_t type;
+	uint16_t samples;
+	int r;
+
+	if (argc != 3) {
+		shell_error(shell, "invalid arguments", argv[0]);
+		shell_print(shell, "%s - <l|h|v> <samples>", argv[0]);
+		shell_print(shell, " - l: current low gain");
+		shell_print(shell, " - h: current high gain");
+		shell_print(shell, " - v: mains voltage");
+		return -EINVAL;
+	}
+
+	if (argv[1][0] == 'l' || argv[1][0] == 'L') {
+		type = BCB_MSMNT_TYPE_I_LOW_GAIN;
+	} else if (argv[1][0] == 'h' || argv[1][0] == 'H') {
+		type = BCB_MSMNT_TYPE_I_HIGH_GAIN;
+	} else if (argv[1][0] == 'v' || argv[1][0] == 'V') {
+		type = BCB_MSMNT_TYPE_V_MAINS;
+	} else {
+		shell_error(shell, "invalid type %c", argv[0], argv[1][0]);
+		return -EINVAL;
+	}
+
+	samples = (uint16_t)atoi(argv[2]);
+	shell_print(shell, "starting parameter b calibration: samples %" PRIu16, samples);
+	r = bcb_msmnt_calib_b(type, samples);
+	if (r) {
+		shell_error(shell, "calibration failed %d", r);
+		return r;
+	}
+	shell_print(shell, "calbration completed");
 
 	return 0;
 }
@@ -123,14 +223,24 @@ int bcb_shell_init(void)
 	return 0;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub, 
-			       SHELL_CMD(close, NULL, "Close switch.", cmd_close_params),
-			       SHELL_CMD(open, NULL, "Open switch.", cmd_open_params),
-			       SHELL_CMD(ocpt, NULL, "Trigger OCP.", cmd_ocp_trigger_params),
-			       SHELL_CMD(temp, NULL, "Get temperature.", cmd_temp_params),
-			       SHELL_CMD(voltage, NULL, "Get voltage.", cmd_voltage_params),
-			       SHELL_CMD(current, NULL, "Get current.", cmd_current_params),
-			       SHELL_CMD(frequency, NULL, "Get frequency.", cmd_frequency_params),
+SHELL_STATIC_SUBCMD_SET_CREATE(calibrate_sub,
+			       SHELL_CMD(adc, NULL, "Calibrate ADCs", cmd_calib_adc_handler),
+			       SHELL_CMD(param_a, NULL, "Calibrate parameter a",
+					 cmd_calib_param_a_handler),
+			       SHELL_CMD(param_b, NULL, "Calibrate parameter b",
+					 cmd_calib_param_b_handler),
+			       SHELL_SUBCMD_SET_END /* Array terminated. */);
+
+SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
+			       SHELL_CMD(close, NULL, "Close switch.", cmd_close_handler),
+			       SHELL_CMD(open, NULL, "Open switch.", cmd_open_handler),
+			       SHELL_CMD(ocpt, NULL, "Trigger OCP.", cmd_ocp_trigger_handler),
+			       SHELL_CMD(temp, NULL, "Get temperature.", cmd_temp_handler),
+			       SHELL_CMD(voltage, NULL, "Get voltage.", cmd_voltage_handler),
+			       SHELL_CMD(current, NULL, "Get current.", cmd_current_handler),
+			       SHELL_CMD(frequency, NULL, "Get frequency.", cmd_frequency_handler),
+			       SHELL_CMD(calibrate, &calibrate_sub, "Calibrate measurement system.",
+					 NULL),
 			       SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(breaker, &breaker_sub, "Breaker commands", NULL);

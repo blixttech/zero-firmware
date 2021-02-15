@@ -7,6 +7,7 @@ set(lib_sources
     bcb_config.c
     bcb_zd.c
     bcb_msmnt.c
+    bcb_msmnt_calib.c
     bcb_sw.c
     bcb_ocp_otp.c
     bcb.c

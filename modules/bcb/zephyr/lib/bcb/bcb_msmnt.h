@@ -34,8 +34,10 @@ uint32_t bcb_msmnt_get_voltage_rms(void);
 uint32_t bcb_msmnt_get_current_rms(void);
 uint16_t bcb_msmnt_get_raw(bcb_msmnt_type_t type);
 
-int bcb_msmnt_set_calib_params(bcb_msmnt_type_t type, uint16_t a, uint16_t b);
-int bcb_msmnt_get_calib_params(bcb_msmnt_type_t type, uint16_t *a, uint16_t *b);
+int bcb_msmnt_set_calib_param_a(bcb_msmnt_type_t type, uint16_t a);
+int bcb_msmnt_set_calib_param_b(bcb_msmnt_type_t type, uint16_t b);
+int bcb_msmnt_get_calib_param_a(bcb_msmnt_type_t type, uint16_t *a);
+int bcb_msmnt_get_calib_param_b(bcb_msmnt_type_t type, uint16_t *b);
 
 int bcb_msmnt_start(void);
 int bcb_msmnt_stop(void);

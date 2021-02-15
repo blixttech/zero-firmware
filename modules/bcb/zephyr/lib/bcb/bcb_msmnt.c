@@ -208,7 +208,7 @@ uint16_t bcb_msmnt_get_raw(bcb_msmnt_type_t type)
 	return 0;
 }
 
-int bcb_msmnt_set_calib_params(bcb_msmnt_type_t type, uint16_t a, uint16_t b)
+int bcb_msmnt_set_calib_param_a(bcb_msmnt_type_t type, uint16_t a)
 {
 	if (!a) {
 		LOG_ERR("Invalid calibration value");
@@ -218,14 +218,36 @@ int bcb_msmnt_set_calib_params(bcb_msmnt_type_t type, uint16_t a, uint16_t b)
 	switch (type) {
 	case BCB_MSMNT_TYPE_I_LOW_GAIN:
 		bcb_msmnt_data.config.i_low_gain_cal_a = a;
-		bcb_msmnt_data.config.i_low_gain_cal_b = b;
 		break;
 	case BCB_MSMNT_TYPE_I_HIGH_GAIN:
 		bcb_msmnt_data.config.i_high_gain_cal_a = a;
-		bcb_msmnt_data.config.i_high_gain_cal_b = b;
 		break;
 	case BCB_MSMNT_TYPE_V_MAINS:
 		bcb_msmnt_data.config.v_mains_cal_a = a;
+		break;
+	default:
+		LOG_ERR("Invalid measurement type");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int bcb_msmnt_set_calib_param_b(bcb_msmnt_type_t type, uint16_t b)
+{
+	if (!b) {
+		LOG_ERR("Invalid calibration value");
+		return -EINVAL;
+	}
+
+	switch (type) {
+	case BCB_MSMNT_TYPE_I_LOW_GAIN:
+		bcb_msmnt_data.config.i_low_gain_cal_b = b;
+		break;
+	case BCB_MSMNT_TYPE_I_HIGH_GAIN:
+		bcb_msmnt_data.config.i_high_gain_cal_b = b;
+		break;
+	case BCB_MSMNT_TYPE_V_MAINS:
 		bcb_msmnt_data.config.v_mains_cal_b = b;
 		break;
 	default:
@@ -236,19 +258,36 @@ int bcb_msmnt_set_calib_params(bcb_msmnt_type_t type, uint16_t a, uint16_t b)
 	return 0;
 }
 
-int bcb_msmnt_get_calib_params(bcb_msmnt_type_t type, uint16_t *a, uint16_t *b)
+int bcb_msmnt_get_calib_param_a(bcb_msmnt_type_t type, uint16_t *a)
 {
 	switch (type) {
 	case BCB_MSMNT_TYPE_I_LOW_GAIN:
 		*a = bcb_msmnt_data.config.i_low_gain_cal_a;
-		*b = bcb_msmnt_data.config.i_low_gain_cal_b;
 		break;
 	case BCB_MSMNT_TYPE_I_HIGH_GAIN:
 		*a = bcb_msmnt_data.config.i_high_gain_cal_a;
-		*b = bcb_msmnt_data.config.i_high_gain_cal_b;
 		break;
 	case BCB_MSMNT_TYPE_V_MAINS:
 		*a = bcb_msmnt_data.config.v_mains_cal_a;
+		break;
+	default:
+		LOG_ERR("Invalid measurement type");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int bcb_msmnt_get_calib_param_b(bcb_msmnt_type_t type, uint16_t *b)
+{
+	switch (type) {
+	case BCB_MSMNT_TYPE_I_LOW_GAIN:
+		*b = bcb_msmnt_data.config.i_low_gain_cal_b;
+		break;
+	case BCB_MSMNT_TYPE_I_HIGH_GAIN:
+		*b = bcb_msmnt_data.config.i_high_gain_cal_b;
+		break;
+	case BCB_MSMNT_TYPE_V_MAINS:
 		*b = bcb_msmnt_data.config.v_mains_cal_b;
 		break;
 	default:
@@ -417,7 +456,7 @@ int bcb_msmnt_init(void)
 	adc_dma_set_reference(bcb_msmnt_data.dev_adc_0, ADC_DMA_REF_EXTERNAL0);
 	adc_dma_set_reference(bcb_msmnt_data.dev_adc_1, ADC_DMA_REF_EXTERNAL0);
 
-	adc_dma_set_performance_level(bcb_msmnt_data.dev_adc_0, ADC_DMA_PERF_LEVEL_0);
+	adc_dma_set_performance_level(bcb_msmnt_data.dev_adc_0, ADC_DMA_PERF_LEVEL_1);
 	adc_dma_set_performance_level(bcb_msmnt_data.dev_adc_1, ADC_DMA_PERF_LEVEL_0);
 
 	bcb_msmnt_start();
@@ -477,83 +516,52 @@ int bcb_msmnt_stop(void)
 	return 0;
 }
 
-static int adc_calibration_load(struct device *dev, off_t offset, size_t len)
-{
-	uint8_t *buf;
-	int r;
-
-	if (len != adc_dma_get_calibration_values_length(dev)) {
-		return -EINVAL;
-	}
-
-	buf = k_malloc(len);
-	if (!buf) {
-		return -ENOMEM;
-	}
-
-	r = bcb_config_load(offset, buf, len);
-	if (r) {
-		k_free(buf);
-		return r;
-	}
-
-	r = adc_dma_set_calibration_values(dev, buf, len);
-
-	k_free(buf);
-
-	return r;
-}
-
-static int adc_calibration_store(struct device *dev, off_t offset, size_t len)
-{
-	uint8_t *buf;
-	int r;
-
-	if (len != adc_dma_get_calibration_values_length(dev)) {
-		return -EINVAL;
-	}
-
-	buf = k_malloc(len);
-	if (!buf) {
-		return -ENOMEM;
-	}
-
-	r = adc_dma_get_calibration_values(dev, buf, len);
-	if (r) {
-		k_free(buf);
-		return r;
-	}
-
-	r = bcb_config_store(offset, buf, len);
-
-	k_free(buf);
-
-	return r;
-}
-
 int bcb_msmnt_config_load(void)
 {
 	int r;
-	off_t offset;
-	size_t len;
+	off_t buf_offset;
+	size_t size_config;
+	size_t size_adc_0;
+	size_t size_adc_1;
+	size_t size_total;
+	uint8_t *buf;
 
-	offset = CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT;
-	r = bcb_config_load(offset, (uint8_t *)&bcb_msmnt_data.config,
-			    sizeof(bcb_msmnt_data.config));
-	if (r) {
-		return r;
+	size_config = sizeof(bcb_msmnt_data.config);
+	size_adc_0 = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_0);
+	size_adc_1 = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_1);
+	size_total = size_config + size_adc_0 + size_adc_1;
+
+	buf = k_malloc(size_total);
+	if (!buf) {
+		return -ENOMEM;
 	}
 
-	offset += sizeof(bcb_msmnt_data.config);
-	len = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_0);
-	r = adc_calibration_load(bcb_msmnt_data.dev_adc_0, offset, len);
+	r = bcb_config_load(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT, buf, size_total);
 	if (r) {
-		return r;
+		LOG_ERR("configuration loading error: %d", r);
+		goto cleanup;
 	}
 
-	offset += len;
-	len = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_1);
-	r = adc_calibration_load(bcb_msmnt_data.dev_adc_1, offset, len);
+	LOG_INF("configuration loaded: %d", size_total);
+
+	buf_offset = 0;
+	memcpy(&bcb_msmnt_data.config, buf + buf_offset, size_config);
+
+	buf_offset += size_config;
+	r = adc_dma_set_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_0);
+	if (r) {
+		LOG_ERR("cannot set ADC0 configuration: %d", r);
+		goto cleanup;
+	}
+
+	buf_offset += size_adc_0;
+	r = adc_dma_set_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_1);
+	if (r) {
+		LOG_ERR("cannot set ADC1 configuration: %d", r);
+	}
+
+cleanup:
+	k_free(buf);
 
 	return r;
 }
@@ -561,26 +569,49 @@ int bcb_msmnt_config_load(void)
 int bcb_msmnt_config_store(void)
 {
 	int r;
-	off_t offset;
-	size_t len;
+	off_t buf_offset;
+	size_t size_config;
+	size_t size_adc_0;
+	size_t size_adc_1;
+	size_t size_total;
+	uint8_t *buf;
 
-	offset = CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT;
-	r = bcb_config_store(offset, (uint8_t *)&bcb_msmnt_data.config,
-			     sizeof(bcb_msmnt_data.config));
-	if (r) {
-		return r;
+	size_config = sizeof(bcb_msmnt_data.config);
+	size_adc_0 = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_0);
+	size_adc_1 = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_1);
+	size_total = size_config + size_adc_0 + size_adc_1;
+
+	buf = k_malloc(size_total);
+	if (!buf) {
+		return -ENOMEM;
 	}
 
-	offset += sizeof(bcb_msmnt_data.config);
-	len = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_0);
-	r = adc_calibration_store(bcb_msmnt_data.dev_adc_0, offset, len);
+	buf_offset = 0;
+	memcpy(buf + buf_offset, &bcb_msmnt_data.config, size_config);
+
+	buf_offset += size_config;
+	r = adc_dma_get_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_0);
 	if (r) {
-		return r;
+		LOG_ERR("cannot get ADC0 configuration: %d", r);
+		goto cleanup;
 	}
 
-	offset += len;
-	len = adc_dma_get_calibration_values_length(bcb_msmnt_data.dev_adc_1);
-	r = adc_calibration_store(bcb_msmnt_data.dev_adc_1, offset, len);
+	buf_offset += size_adc_0;
+	r = adc_dma_get_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_1);
+	if (r) {
+		LOG_ERR("cannot get ADC1 configuration: %d", r);
+		goto cleanup;
+	}
+
+	r = bcb_config_store(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT, buf, size_total);
+	if (r) {
+		LOG_ERR("configuration storing error: %d", r);
+	}
+
+	LOG_INF("configuration stored: %d", size_total);
+
+cleanup:
+	k_free(buf);
 
 	return r;
 }
