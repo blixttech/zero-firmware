@@ -81,11 +81,11 @@ config BCB_LIB_PERSISTENT_CONFIG_OFFSET_MSMNT
 
 config BCB_LIB_PERSISTENT_CONFIG_SIZE_MSMNT
 	int "Max size of the measurement configurations"
-	default 80
+	default 160
 
 config BCB_LIB_PERSISTENT_CONFIG_OFFSET_BCB
 	int "Offset of the breaker state configurations"
-	default 120
+	default 200
 
 config BCB_LIB_PERSISTENT_CONFIG_SIZE_BCB
 	int "Max size of the breaker state configurations"
@@ -93,7 +93,7 @@ config BCB_LIB_PERSISTENT_CONFIG_SIZE_BCB
 
 config BCB_LIB_PERSISTENT_CONFIG_OFFSET_TRIP_CURVE_DEFAULT
 	int "Offset of the default trip curve configurations"
-	default 140
+	default 220
 	depends on BCB_TRIP_CURVE_DEFAULT
 
 config BCB_LIB_PERSISTENT_CONFIG_SIZE_TRIP_CURVE_DEFAULT
@@ -103,7 +103,7 @@ config BCB_LIB_PERSISTENT_CONFIG_SIZE_TRIP_CURVE_DEFAULT
 
 config BCB_LIB_PERSISTENT_CONFIG_OFFSET_COAP
 	int "Offset of the CoAP configurations"
-	default 160
+	default 240
 	depends on BCB_COAP
 
 config BCB_LIB_PERSISTENT_CONFIG_SIZE_COAP
