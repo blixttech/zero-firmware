@@ -39,7 +39,7 @@ int bcb_config_load(off_t offset, uint8_t *data, size_t size)
 	}
 
 	if (header.magic != BCB_CONFIG_MAGIC) {
-		LOG_ERR("Invalid magic: %d", header.magic);
+		LOG_ERR("Invalid magic: 0x%04x", header.magic);
 		return -EINVAL;
 	}
 
