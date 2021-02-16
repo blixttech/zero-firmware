@@ -30,6 +30,8 @@ int bcb_msmnt_config_store(void);
 int32_t bcb_msmnt_get_temp(bcb_temp_sensor_t sensor);
 int32_t bcb_msmnt_get_voltage(void);
 int32_t bcb_msmnt_get_current(void);
+int32_t bcb_msmnt_get_current_low_gain(void);
+int32_t bcb_msmnt_get_current_high_gain(void);
 uint32_t bcb_msmnt_get_voltage_rms(void);
 uint32_t bcb_msmnt_get_current_rms(void);
 uint16_t bcb_msmnt_get_raw(bcb_msmnt_type_t type);

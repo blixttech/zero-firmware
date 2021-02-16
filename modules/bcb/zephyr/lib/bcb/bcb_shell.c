@@ -92,7 +92,12 @@ static int cmd_current_handler(const struct shell *shell, size_t argc, char **ar
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_print(shell, "%" PRId32 " mA", bcb_msmnt_get_current());
+	shell_print(shell, "%06" PRId32 " mA, [h: %06" PRId32 " mA, %" PRIu16 "|l: %06" PRId32 " mA, %" PRIu16 "]", 
+		    bcb_msmnt_get_current(),
+		    bcb_msmnt_get_current_high_gain(),
+		    bcb_msmnt_get_raw(BCB_MSMNT_TYPE_I_HIGH_GAIN),
+		    bcb_msmnt_get_current_low_gain(),
+		    bcb_msmnt_get_raw(BCB_MSMNT_TYPE_I_LOW_GAIN));
 
 	return 0;
 }
@@ -223,13 +228,11 @@ int bcb_shell_init(void)
 	return 0;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(calibrate_sub,
-			       SHELL_CMD(adc, NULL, "Calibrate ADCs", cmd_calib_adc_handler),
-			       SHELL_CMD(param_a, NULL, "Calibrate parameter a",
-					 cmd_calib_param_a_handler),
-			       SHELL_CMD(param_b, NULL, "Calibrate parameter b",
-					 cmd_calib_param_b_handler),
-			       SHELL_SUBCMD_SET_END /* Array terminated. */);
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	calibrate_sub, SHELL_CMD(adc, NULL, "Calibrate ADCs", cmd_calib_adc_handler),
+	SHELL_CMD(param_a, NULL, "Calibrate parameter a", cmd_calib_param_a_handler),
+	SHELL_CMD(param_b, NULL, "Calibrate parameter b", cmd_calib_param_b_handler),
+	SHELL_SUBCMD_SET_END /* Array terminated. */);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
 			       SHELL_CMD(close, NULL, "Close switch.", cmd_close_handler),

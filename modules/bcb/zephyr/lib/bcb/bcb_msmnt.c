@@ -362,7 +362,7 @@ void bcb_msmnt_rms_stop(void)
 	k_timer_stop(&bcb_msmnt_data.timer_rms);
 }
 
-static int32_t bcb_msmnt_get_i_low_gain(void)
+int32_t bcb_msmnt_get_current_low_gain(void)
 {
 	int32_t a = bcb_msmnt_data.config.i_low_gain_cal_a;
 	int32_t b = bcb_msmnt_data.config.i_low_gain_cal_b;
@@ -370,7 +370,7 @@ static int32_t bcb_msmnt_get_i_low_gain(void)
 	return ((((int32_t)*bcb_msmnt_data.raw_i_low_gain) - b) * 1000) / a;
 }
 
-static int32_t bcb_msmnt_get_i_high_gain(void)
+int32_t bcb_msmnt_get_current_high_gain(void)
 {
 	int32_t a = bcb_msmnt_data.config.i_high_gain_cal_a;
 	int32_t b = bcb_msmnt_data.config.i_high_gain_cal_b;
@@ -388,12 +388,12 @@ int32_t bcb_msmnt_get_voltage(void)
 
 int32_t bcb_msmnt_get_current(void)
 {
-	if ((*bcb_msmnt_data.raw_i_low_gain < (UINT16_MAX - 100)) ||
-	    (*bcb_msmnt_data.raw_i_low_gain > 100)) {
-		return bcb_msmnt_get_i_low_gain();
+	if ((*bcb_msmnt_data.raw_i_high_gain < (UINT16_MAX - 100)) &&
+	    (*bcb_msmnt_data.raw_i_high_gain > 100)) {
+		return bcb_msmnt_get_current_high_gain();
 	} else {
-		/* Low gain amplifer is about get saturated or already saturated. */
-		return bcb_msmnt_get_i_high_gain();
+		/* high gain amplifer is about get saturated or already saturated. */
+		return bcb_msmnt_get_current_low_gain();
 	}
 	return 0;
 }
@@ -542,8 +542,6 @@ int bcb_msmnt_config_load(void)
 		goto cleanup;
 	}
 
-	LOG_INF("configuration loaded: %d", size_total);
-
 	buf_offset = 0;
 	memcpy(&bcb_msmnt_data.config, buf + buf_offset, size_config);
 
@@ -607,8 +605,6 @@ int bcb_msmnt_config_store(void)
 	if (r) {
 		LOG_ERR("configuration storing error: %d", r);
 	}
-
-	LOG_INF("configuration stored: %d", size_total);
 
 cleanup:
 	k_free(buf);
