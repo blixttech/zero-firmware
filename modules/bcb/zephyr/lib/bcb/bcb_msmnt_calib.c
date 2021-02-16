@@ -185,7 +185,7 @@ int bcb_msmnt_calib_a(bcb_msmnt_type_t type, int32_t x, uint16_t samples)
 		return -EINVAL;
 	}
 
-	a = (uint16_t)(((uint32_t)raw - (uint32_t)b) * 1e3 / (uint32_t)x);
+	a = (uint16_t)((raw - (uint32_t)b) * (uint32_t)1e3 / (uint32_t)x);
 	r = bcb_msmnt_set_calib_param_a(type, a);
 	if (r) {
 		LOG_ERR("cannot set a parameter: %d", r);
