@@ -1,4 +1,6 @@
 #include "services.h"
+#include "bcb_user_if.h"
+#include "bcb.h"
 #include <stdint.h>
 #include <mgmt/smp_udp.h>
 #include <os_mgmt/os_mgmt.h>
@@ -10,8 +12,27 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(zero_services);
 
+struct services_data {
+	struct bcb_user_button_callback button_callback;
+};
+
+static struct services_data services_data;
+
+static void button_callback_handler(bool is_pressed)
+{
+	if (is_pressed) {
+		if (bcb_is_closed()) {
+			bcb_open();
+		} else {
+			bcb_close();
+		}
+	}
+}
+
 int services_init()
 {
+	memset(&services_data, 0, sizeof(services_data));
+
 #if CONFIG_MCUMGR_CMD_OS_MGMT
 	os_mgmt_register_group();
 #endif
@@ -49,6 +70,9 @@ int services_init()
 		}
 	}
 #endif
+
+	services_data.button_callback.handler = button_callback_handler;
+	bcb_user_button_add_callback(&services_data.button_callback);
 
 	return 0;
 }
