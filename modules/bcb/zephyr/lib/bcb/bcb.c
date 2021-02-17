@@ -132,9 +132,9 @@ int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
 	bcb_data.trip_curve->set_callback(trip_curve_callback);
 
 	if (bcb_is_closed()) {
-		return bcb_data.trip_curve->close();
+		return bcb_open();
 	} else {
-		return bcb_data.trip_curve->open();
+		return bcb_close();
 	}
 
 	return 0;
