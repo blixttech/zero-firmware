@@ -143,19 +143,15 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 	return total;
 }
 
-int send_notification_status(struct coap_resource *resource, struct sockaddr *addr,
-			     socklen_t addr_len, uint16_t id, const uint8_t *token,
-			     uint8_t token_len, uint8_t notify, uint32_t age)
+int send_notification_status(struct coap_resource *resource, struct sockaddr *addr, uint8_t type,
+			     uint16_t id, const uint8_t *token, uint8_t token_len, bool notify,
+			     uint32_t obs_seq)
 {
-	uint8_t type;
-	if (notify) {
-		type = COAP_TYPE_NON_CON;
-	} else {
-		type = COAP_TYPE_ACK;
-	}
-
 	int r;
 	struct coap_packet response;
+	uint8_t format = 0;
+	uint8_t payload[70];
+
 	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
 			     type, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT, id);
 	if (r < 0) {
@@ -163,13 +159,13 @@ int send_notification_status(struct coap_resource *resource, struct sockaddr *ad
 	}
 
 	if (notify) {
-		r = coap_append_option_int(&response, COAP_OPTION_OBSERVE, age);
+		r = coap_append_option_int(&response, COAP_OPTION_OBSERVE, obs_seq);
 		if (r < 0) {
 			return r;
 		}
 	}
 
-	uint8_t format = 0;
+	format = 0;
 	r = coap_packet_append_option(&response, COAP_OPTION_CONTENT_FORMAT, &format,
 				      sizeof(format));
 	if (r < 0) {
@@ -181,7 +177,6 @@ int send_notification_status(struct coap_resource *resource, struct sockaddr *ad
 		return r;
 	}
 
-	uint8_t payload[70];
 	r = create_status_payload(payload, sizeof(payload));
 	if (r < 0) {
 		return r;
@@ -197,9 +192,36 @@ int send_notification_status(struct coap_resource *resource, struct sockaddr *ad
 
 void bcb_coap_handlers_status_notify(struct coap_resource *resource, struct coap_observer *observer)
 {
-	uint32_t age = bcb_coap_get_observer_sequence(resource, observer);
-	send_notification_status(resource, &observer->addr, sizeof(observer->addr), coap_next_id(),
-				 observer->token, observer->tkl, true, age);
+	struct bcb_coap_notifier *notifier = bcb_coap_get_notifier(resource, observer);
+	bool pending;
+	uint8_t type;
+
+	if (!notifier) {
+		return;
+	}
+
+	if (!notifier->msgs_no_ack) {
+		return;
+	}
+
+	pending = bcb_coap_has_pending(&observer->addr);
+
+	if (pending) {
+		if (notifier->msgs_no_ack > 0) {
+			notifier->msgs_no_ack--;
+		}
+	} else {
+		notifier->msgs_no_ack = CONFIG_BCB_COAP_MAX_MSGS_NO_ACK;
+	}
+
+	if (notifier->seq % 4 == 0 && !pending) {
+		type = COAP_TYPE_CON;
+	} else {
+		type = COAP_TYPE_NON_CON;
+	}
+
+	send_notification_status(resource, &observer->addr, type, coap_next_id(), observer->token,
+				 observer->tkl, true, notifier->seq);
 }
 
 int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_packet *request,
@@ -208,19 +230,24 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_pac
 	struct coap_option options[4];
 	uint16_t id;
 	uint8_t token[8];
-	uint8_t token_len;
+	uint8_t tkl;
+	int obs_opt;
 	int r;
 
 	id = coap_header_get_id(request);
-	token_len = coap_header_get_token(request, token);
+	tkl = coap_header_get_token(request, token);
+	obs_opt = coap_get_option_int(request, COAP_OPTION_OBSERVE);
 
-	if (coap_request_is_observe(request)) {
+	if (obs_opt == 0) {
+		bool has_notifier;
+		int i;
+		uint32_t period = CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD;
+
 		r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
 		if (r < 0) {
 			return -EINVAL;
 		}
-		int i;
-		uint32_t period = 0;
+
 		for (i = 0; i < r; i++) {
 			if (options[i].len < 3) {
 				continue;
@@ -230,16 +257,24 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_pac
 				period = strtoul((char *)&options[i].value[2], NULL, 0);
 			}
 		}
-		r = bcb_coap_register_observer(resource, request, addr, period);
+
+		r = bcb_coap_notifier_add(resource, request, addr, period);
 		if (r < 0) {
-			return r;
+			has_notifier = false;
+		} else {
+			has_notifier = true;
 		}
 
-		return send_notification_status(resource, addr, addr_len, id, token, token_len,
-						true, 0);
+		return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl,
+						has_notifier, 0);
 	}
 
-	return send_notification_status(resource, addr, addr_len, id, token, token_len, false, 0);
+	if (obs_opt == 1) {
+		/* Observer deregister request. Refer RFC7641 section 3.6 */
+		bcb_coap_notifier_remove(addr, token, tkl);
+	}
+
+	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
 int bcb_coap_handlers_switch_get(struct coap_resource *resource, struct coap_packet *request,

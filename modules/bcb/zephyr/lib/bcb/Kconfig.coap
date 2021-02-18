@@ -23,6 +23,11 @@ config BCB_COAP_MIN_OBSERVE_PERIOD
 	default 100
 	depends on BCB_COAP
 
+config BCB_COAP_MAX_MSGS_NO_ACK
+	int "Maximum notification massages sent while waiting for an ACK"
+	default 10
+	depends on BCB_COAP
+
 config BCB_COAP_MAX_BUF_COUNT
 	int "Maximum number of buffers"
 	default 10

@@ -1,3 +1,4 @@
+#include "bcb_coap.h"
 #include "bcb_coap_handlers.h"
 #include "bcb_coap_buffer.h"
 #include <stdbool.h>
@@ -6,6 +7,7 @@
 #include <sys/slist.h>
 #include <zephyr.h>
 #include <init.h>
+#include <kernel.h>
 #include <net/socket.h>
 #include <net/net_ip.h>
 #include <net/udp.h>
@@ -16,24 +18,13 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_coap);
 
-struct bcb_coap_periodic_notifier {
-	sys_snode_t node;
-	struct coap_resource *resource;
-	struct coap_observer *observer;
-	uint32_t seq;
-	uint32_t period;
-	uint32_t start;
-	uint8_t used;
-};
-
 struct bcb_coap_data {
 	int socket;
 	uint8_t req_buf[CONFIG_BCB_COAP_MAX_MSG_LEN];
 	uint8_t res_buf[CONFIG_BCB_COAP_MAX_MSG_LEN];
 	struct coap_pending pendings[CONFIG_BCB_COAP_MAX_PENDING];
 	struct coap_observer observers[CONFIG_BCB_COAP_MAX_OBSERVERS];
-	struct bcb_coap_periodic_notifier notifiers[CONFIG_BCB_COAP_MAX_OBSERVERS];
-	sys_slist_t notifier_list;
+	struct bcb_coap_notifier notifiers[CONFIG_BCB_COAP_MAX_OBSERVERS];
 	struct k_delayed_work retransmit_work;
 	struct k_delayed_work observer_work;
 	struct k_fifo fifo;
@@ -72,209 +63,7 @@ static struct bcb_coap_data bcb_coap_data = {
     },
 };
 
-static void retransmit_work(struct k_work *work)
-{
-	struct coap_pending *pending;
-	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
-	if (!pending) {
-		/* Something went wrong. */
-		return;
-	}
-
-	struct net_buf *buf = (struct net_buf *)pending->data;
-	int r = sendto(bcb_coap_data.socket, buf->data, buf->len, 0, &pending->addr,
-		       sizeof(struct sockaddr));
-	if (r < 0) {
-		LOG_ERR("Failed to send %d", errno);
-	}
-
-	if (!coap_pending_cycle(pending)) {
-		/* This is the last retransmission */
-		bcb_coap_buf_free(buf);
-		coap_pending_clear(pending);
-	}
-
-	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
-	if (pending) {
-		k_delayed_work_submit(&bcb_coap_data.retransmit_work, K_MSEC(pending->timeout));
-	}
-}
-
-static void periodic_notifier_schedule()
-{
-	if (sys_slist_is_empty(&bcb_coap_data.notifier_list)) {
-		return;
-	}
-
-	sys_snode_t *node = sys_slist_peek_head(&bcb_coap_data.notifier_list);
-	struct bcb_coap_periodic_notifier *notifier = (struct bcb_coap_periodic_notifier *)node;
-	uint32_t t_d;
-	uint32_t t_p;
-	uint32_t t_now = k_uptime_get_32();
-
-	/* Find how soon the delayed work has to be scheduled */
-	t_d = notifier->start + notifier->period - t_now;
-	t_p = notifier->period;
-	SYS_SLIST_FOR_EACH_NODE (&bcb_coap_data.notifier_list, node) {
-		notifier = (struct bcb_coap_periodic_notifier *)node;
-		if (notifier->start + notifier->period - t_now < t_d) {
-			t_d = notifier->start + notifier->period - t_now;
-			t_p = notifier->period;
-		}
-	}
-	t_d = t_d ? t_d : t_p;
-	k_delayed_work_submit(&bcb_coap_data.observer_work, K_MSEC(t_d));
-}
-
-static void observer_notify_work(struct k_work *work)
-{
-	sys_snode_t *node;
-	struct bcb_coap_periodic_notifier *notifier;
-	SYS_SLIST_FOR_EACH_NODE (&bcb_coap_data.notifier_list, node) {
-		notifier = (struct bcb_coap_periodic_notifier *)node;
-		uint32_t t_now = k_uptime_get_32();
-		if (t_now - notifier->start >= notifier->period) {
-			if (notifier->resource->notify) {
-				notifier->seq++;
-				notifier->start = t_now;
-				notifier->resource->notify(notifier->resource, notifier->observer);
-			}
-		}
-	}
-	periodic_notifier_schedule();
-}
-
-static int create_pending_request(struct coap_packet *packet, const struct sockaddr *addr)
-{
-	struct coap_pending *pending;
-	int r;
-
-	pending = coap_pending_next_unused(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
-	if (!pending) {
-		return -ENOMEM;
-	}
-
-	r = coap_pending_init(pending, packet, addr);
-	if (r < 0) {
-		return -EINVAL;
-	}
-
-	struct net_buf *buf = bcb_coap_buf_alloc();
-	if (!buf) {
-		return -ENOMEM;
-	}
-	net_buf_add_mem(buf, packet->data, packet->offset);
-	/* We need the net_buf pointer later to free up. */
-	pending->data = (uint8_t *)buf;
-
-	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
-	if (!pending) {
-		/* Something went wrong. We just added one */
-		return 0;
-	}
-
-	k_delayed_work_submit(&bcb_coap_data.retransmit_work, K_MSEC(pending->timeout));
-
-	return 0;
-}
-
-int bcb_coap_send_response(struct coap_packet *packet, const struct sockaddr *addr)
-{
-	int r;
-	uint8_t type = coap_header_get_type(packet);
-	if (type == COAP_TYPE_CON) {
-		r = create_pending_request(packet, addr);
-		if (r < 0) {
-			LOG_WRN("Unable to create pending");
-		}
-	}
-
-	r = sendto(bcb_coap_data.socket, packet->data, packet->offset, 0, addr,
-		   sizeof(struct sockaddr));
-	if (r < 0) {
-		LOG_ERR("Failed to send %d", errno);
-	}
-
-	return r;
-}
-
-uint32_t bcb_coap_get_observer_sequence(struct coap_resource *resource,
-					struct coap_observer *observer)
-{
-	sys_snode_t *node;
-	struct bcb_coap_periodic_notifier *notifier;
-	SYS_SLIST_FOR_EACH_NODE (&bcb_coap_data.notifier_list, node) {
-		notifier = (struct bcb_coap_periodic_notifier *)node;
-		if (notifier->resource == resource && notifier->observer == observer) {
-			return notifier->seq;
-		}
-	}
-
-	return 0;
-}
-
-uint8_t *bcb_coap_response_buffer()
-{
-	return bcb_coap_data.res_buf;
-}
-
-static struct bcb_coap_periodic_notifier *periodic_notifier_new()
-{
-	int i;
-	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
-		if (!bcb_coap_data.notifiers[i].used) {
-			return &bcb_coap_data.notifiers[i];
-		}
-	}
-
-	return NULL;
-}
-
-static struct bcb_coap_periodic_notifier *periodic_notifier_find(struct coap_resource *resource,
-								 struct coap_observer *observer)
-{
-	int i;
-	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
-		if (bcb_coap_data.notifiers[i].resource == resource &&
-		    bcb_coap_data.notifiers[i].observer == observer) {
-			return &bcb_coap_data.notifiers[i];
-		}
-	}
-
-	return NULL;
-}
-
-static struct bcb_coap_periodic_notifier *periodic_notifier_add(struct coap_resource *resource,
-								struct coap_observer *observer,
-								uint32_t period)
-{
-	if (!period) {
-		return NULL;
-	}
-
-	struct bcb_coap_periodic_notifier *notifier = periodic_notifier_new();
-	if (notifier) {
-		sys_slist_append(&bcb_coap_data.notifier_list, &notifier->node);
-		notifier->used = true;
-		notifier->observer = observer;
-		notifier->resource = resource;
-		notifier->period = period;
-		notifier->seq = 0;
-		notifier->start = k_uptime_get_32();
-	}
-	return notifier;
-}
-
-static void periodic_notifier_remove(struct coap_resource *resource, struct coap_observer *observer)
-{
-	struct bcb_coap_periodic_notifier *notifier = periodic_notifier_find(resource, observer);
-	if (notifier) {
-		sys_slist_find_and_remove(&bcb_coap_data.notifier_list, &notifier->node);
-		notifier->used = false;
-	}
-}
-
-static bool bcb_coap_sockaddr_equal(const struct sockaddr *a, const struct sockaddr *b)
+static bool is_sockaddr_equal(const struct sockaddr *a, const struct sockaddr *b)
 {
 	/* FIXME: Should we consider ipv6-mapped ipv4 addresses as equal to  ipv4 addresses? */
 	if (a->sa_family != b->sa_family) {
@@ -302,53 +91,281 @@ static bool bcb_coap_sockaddr_equal(const struct sockaddr *a, const struct socka
 	return false;
 }
 
-int bcb_coap_register_observer(struct coap_resource *resource, struct coap_packet *request,
-			       struct sockaddr *addr, uint32_t period)
+static void notifier_remove_by_addr(const struct sockaddr *addr)
 {
-	period = period < CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD ? CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD :
-							       period;
-	if (!resource->notify) {
-		LOG_WRN("Notification not implemented");
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		if (!notifier->is_used) {
+			continue;
+		}
+
+		if (is_sockaddr_equal(addr, &notifier->observer->addr)) {
+			coap_remove_observer(notifier->resource, notifier->observer);
+			notifier->is_used = false;
+		}
+	}
+}
+
+int bcb_coap_notifier_remove(const struct sockaddr *addr, const uint8_t *token, uint8_t tkl)
+{
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		if (!notifier->is_used) {
+			continue;
+		}
+
+		if (is_sockaddr_equal(addr, &notifier->observer->addr) &&
+		    memcmp(token, notifier->observer->token, tkl) == 0) {
+			coap_remove_observer(notifier->resource, notifier->observer);
+			notifier->is_used = false;
+			return 0;
+		}
+	}
+
+	return -ENOENT;
+}
+
+bool bcb_coap_has_pending(const struct sockaddr *addr)
+{
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_PENDING; i++) {
+		if (bcb_coap_data.pendings[i].timeout != 0 &&
+		    is_sockaddr_equal(addr, &bcb_coap_data.pendings[i].addr)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void pending_remove_by_addr(const struct sockaddr *addr)
+{
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_PENDING; i++) {
+		if (bcb_coap_data.pendings[i].timeout != 0 &&
+		    is_sockaddr_equal(addr, &bcb_coap_data.pendings[i].addr)) {
+			coap_pending_clear(&bcb_coap_data.pendings[i]);
+		}
+	}
+}
+
+static void retransmit_work(struct k_work *work)
+{
+	struct coap_pending *pending;
+	struct net_buf *buf;
+	int r;
+
+	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
+	if (!pending) {
+		return;
+	}
+
+	buf = (struct net_buf *)pending->data;
+	r = sendto(bcb_coap_data.socket, buf->data, buf->len, 0, &pending->addr,
+		   sizeof(struct sockaddr));
+	if (r < 0) {
+		LOG_ERR("failed to send %d", errno);
+	}
+
+	if (!coap_pending_cycle(pending)) {
+		/* This is the last retransmission */
+		notifier_remove_by_addr(&pending->addr);
+		bcb_coap_buf_free(buf);
+		coap_pending_clear(pending);
+		LOG_INF("removed stale observer");
+	}
+
+	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
+	if (pending) {
+		k_delayed_work_submit(&bcb_coap_data.retransmit_work, K_MSEC(pending->timeout));
+	}
+}
+
+static void periodic_notifier_schedule()
+{
+	int i;
+	uint32_t t_now;
+	uint32_t t_d = UINT32_MAX;
+
+	t_now = k_uptime_get_32();
+
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		if (!notifier->is_used) {
+			continue;
+		}
+
+		if (!notifier->period) {
+			continue;
+		}
+
+		if (notifier->start + notifier->period - t_now < t_d) {
+			t_d = notifier->start + notifier->period - t_now;
+		}
+	}
+
+	if (t_d == UINT32_MAX) {
+		return;
+	}
+
+	k_delayed_work_submit(&bcb_coap_data.observer_work, K_MSEC(t_d));
+}
+
+static void observer_notify_work(struct k_work *work)
+{
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		uint32_t t_now;
+
+		if (!notifier->is_used) {
+			continue;
+		}
+
+		if (!notifier->period) {
+			continue;
+		}
+
+		t_now = k_uptime_get_32();
+		if (t_now - notifier->start < notifier->period) {
+			continue;
+		}
+
+		notifier->seq++;
+		notifier->start = t_now;
+
+		if (!notifier->resource->notify) {
+			continue;
+		}
+
+		notifier->resource->notify(notifier->resource, notifier->observer);
+	}
+
+	periodic_notifier_schedule();
+}
+
+static int create_pending_request(struct coap_packet *packet, const struct sockaddr *addr)
+{
+	struct coap_pending *pending;
+	struct net_buf *buf;
+	int r;
+
+	pending = coap_pending_next_unused(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
+	if (!pending) {
+		return -ENOMEM;
+	}
+
+	r = coap_pending_init(pending, packet, addr);
+	if (r < 0) {
 		return -EINVAL;
 	}
 
+	buf = bcb_coap_buf_alloc();
+	if (!buf) {
+		return -ENOMEM;
+	}
+	net_buf_add_mem(buf, packet->data, packet->offset);
+	/* We need the net_buf pointer later to free up. */
+	pending->data = (uint8_t *)buf;
+
+	coap_pending_cycle(pending);
+
+	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
+	if (!pending) {
+		return -EINVAL;
+	}
+
+	k_delayed_work_submit(&bcb_coap_data.retransmit_work, K_MSEC(pending->timeout));
+
+	return 0;
+}
+
+int bcb_coap_send_response(struct coap_packet *packet, const struct sockaddr *addr)
+{
+	int r;
+	uint8_t type = coap_header_get_type(packet);
+	if (type == COAP_TYPE_CON) {
+		r = create_pending_request(packet, addr);
+		if (r < 0) {
+			LOG_WRN("unable to create pending");
+		}
+	}
+
+	r = sendto(bcb_coap_data.socket, packet->data, packet->offset, 0, addr,
+		   sizeof(struct sockaddr));
+	if (r < 0) {
+		LOG_ERR("failed to send %d", errno);
+	}
+
+	return r;
+}
+
+uint8_t *bcb_coap_response_buffer()
+{
+	return bcb_coap_data.res_buf;
+}
+
+int bcb_coap_notifier_add(struct coap_resource *resource, struct coap_packet *request,
+			  struct sockaddr *addr, uint32_t period)
+{
+	int i;
 	struct coap_observer *observer;
+
+	if (!resource->notify) {
+		LOG_WRN("notification not implemented");
+		return -EINVAL;
+	}
+
+	if (period != 0 && period < CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD) {
+		period = CONFIG_BCB_COAP_MIN_OBSERVE_PERIOD;
+	}
+
 	observer =
 		coap_observer_next_unused(bcb_coap_data.observers, CONFIG_BCB_COAP_MAX_OBSERVERS);
+
 	if (!observer) {
-		LOG_WRN("Cannot find unused observer");
+		LOG_WRN("cannot find unused observer");
 		return -ENOMEM;
 	}
 
 	coap_observer_init(observer, request, addr);
 	coap_register_observer(resource, observer);
 
-	struct bcb_coap_periodic_notifier *notifier =
-		periodic_notifier_add(resource, observer, period);
-	if (notifier) {
-		periodic_notifier_schedule();
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		if (!notifier->is_used) {
+			notifier = &bcb_coap_data.notifiers[i];
+			notifier->is_used = true;
+			notifier->resource = resource;
+			notifier->observer = observer;
+			notifier->seq = 0;
+			notifier->period = period;
+			notifier->msgs_no_ack = CONFIG_BCB_COAP_MAX_MSGS_NO_ACK;
+			notifier->start = k_uptime_get_32();
+			break;
+		}
 	}
+
+	periodic_notifier_schedule();
 
 	return 0;
 }
 
-int bcb_coap_deregister_observer(struct sockaddr *addr, uint8_t *token, uint8_t tkl)
+struct bcb_coap_notifier *bcb_coap_get_notifier(struct coap_resource *resource,
+						struct coap_observer *observer)
 {
-	sys_snode_t *node;
-	SYS_SLIST_FOR_EACH_NODE (&bcb_coap_data.notifier_list, node) {
-		struct bcb_coap_periodic_notifier *notifier =
-			(struct bcb_coap_periodic_notifier *)node;
-		if (bcb_coap_sockaddr_equal(addr, &notifier->observer->addr) &&
-		    !memcmp(token, notifier->observer->token, tkl)) {
-			periodic_notifier_remove(notifier->resource, notifier->observer);
-			coap_remove_observer(notifier->resource, notifier->observer);
-			memset(notifier->observer, 0, sizeof(struct coap_observer));
-			periodic_notifier_schedule();
-			return 0;
+	int i;
+	for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+		struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+		if (notifier->is_used && notifier->resource == resource &&
+		    notifier->observer == observer) {
+			return notifier;
 		}
 	}
 
-	return -ENOENT;
+	return NULL;
 }
 
 static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr *client_addr,
@@ -362,7 +379,7 @@ static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr 
 
 	r = coap_packet_parse(&packet, data, data_len, options, opt_num);
 	if (r < 0) {
-		LOG_ERR("Invalid data received %d", r);
+		LOG_ERR("invalid data received %d", r);
 		return -EINVAL;
 	}
 
@@ -373,7 +390,7 @@ static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr 
 		pending = coap_pending_received(&packet, bcb_coap_data.pendings,
 						CONFIG_BCB_COAP_MAX_PENDING);
 		if (!pending) {
-			LOG_WRN("Recevied ACK, but no pending");
+			LOG_WRN("recevied ACK, but no pending");
 			return -EINVAL;
 		}
 		/* pending->data has been replaced with the pointer to net_buf  */
@@ -382,20 +399,15 @@ static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr 
 		return 0;
 
 	} else if (type == COAP_TYPE_RESET) {
-		uint8_t token[8];
-		uint8_t token_len;
-		token_len = coap_header_get_token(&packet, token);
-		r = bcb_coap_deregister_observer(client_addr, token, token_len);
-		if (r < 0) {
-			LOG_WRN("Cannot deregister observer");
-		}
-		return r;
+		notifier_remove_by_addr(client_addr);
+		pending_remove_by_addr(client_addr);
+		return 0;
 
 	} else {
 		r = coap_handle_request(&packet, bcb_coap_data.resources, options, opt_num,
 					client_addr, client_addr_len);
 		if (r < 0) {
-			LOG_ERR("Request handdling error %d", r);
+			LOG_ERR("request handdling error %d", r);
 		}
 		return r;
 	}
@@ -424,20 +436,20 @@ static void bcb_coap_receive_thread(void *p1, void *p2, void *p3)
 	while (1) {
 		struct sockaddr addr;
 		socklen_t addr_len = sizeof(addr);
+		struct net_buf *buf;
+		struct sockaddr *buf_ud;
 		int received;
+
 		received = recvfrom(bcb_coap_data.socket, bcb_coap_data.req_buf,
 				    CONFIG_BCB_COAP_MAX_MSG_LEN, 0, &addr, &addr_len);
 		if (received < 0) {
-			LOG_ERR("Reception error %d", errno);
+			LOG_ERR("reception error %d", errno);
 			continue;
 		}
 
-		struct net_buf *buf;
-		struct sockaddr *buf_ud;
-
 		buf = bcb_coap_buf_alloc();
 		if (!buf) {
-			LOG_ERR("Cannot allocate buffer");
+			LOG_ERR("cannot allocate buffer");
 			continue;
 		}
 		net_buf_add_mem(buf, bcb_coap_data.req_buf, received);
@@ -451,21 +463,22 @@ static void bcb_coap_receive_thread(void *p1, void *p2, void *p3)
 
 int bcb_coap_start_server()
 {
+	int r;
+	struct sockaddr_in addr;
+
 	bcb_coap_data.socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (bcb_coap_data.socket < 0) {
-		LOG_ERR("Failed to create UDP socket %d", errno);
+		LOG_ERR("failed to create UDP socket %d", errno);
 		return -errno;
 	}
 
-	int r;
-	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(CONFIG_BCB_COAP_SERVER_PORT);
 
 	r = bind(bcb_coap_data.socket, (struct sockaddr *)&addr, sizeof(addr));
 	if (r < 0) {
-		LOG_ERR("Failed to bind UDP socket %d", errno);
+		LOG_ERR("failed to bind UDP socket %d", errno);
 		return -errno;
 	}
 
@@ -480,7 +493,7 @@ int bcb_coap_start_server()
 
 int bcb_coap_init(void)
 {
-	sys_slist_init(&bcb_coap_data.notifier_list);
+	memset(&bcb_coap_data.notifiers, 0, sizeof(bcb_coap_data.notifiers));
 	k_delayed_work_init(&bcb_coap_data.retransmit_work, retransmit_work);
 	k_delayed_work_init(&bcb_coap_data.observer_work, observer_notify_work);
 	k_fifo_init(&bcb_coap_data.fifo);
