@@ -305,11 +305,11 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 	struct coap_option options[4];
 	uint16_t id;
 	uint8_t token[8];
-	uint8_t token_len;
+	uint8_t tkl;
 	int r;
 
 	id = coap_header_get_id(request);
-	token_len = coap_header_get_token(request, token);
+	tkl = coap_header_get_token(request, token);
 
 	r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
 	if (r < 0) {
@@ -332,10 +332,11 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 		}
 	}
 
-	return send_notification_status(resource, addr, addr_len, id, token, token_len, false, 0);
+	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
-void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type, uint8_t limit)
+void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type,
+			     uint8_t limit)
 {
 	if (!handler_data.res_status) {
 		return;
