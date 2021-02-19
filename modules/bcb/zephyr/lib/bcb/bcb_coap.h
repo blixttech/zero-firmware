@@ -16,6 +16,7 @@ struct bcb_coap_notifier {
 	uint32_t period;
 	uint32_t start;
 	uint8_t msgs_no_ack;
+	bool is_async;
 	bool is_used;
 };
 
@@ -29,6 +30,8 @@ struct bcb_coap_notifier *bcb_coap_get_notifier(struct coap_resource *resource,
 						struct coap_observer *observer);
 bool bcb_coap_has_pending(const struct sockaddr *addr);
 uint8_t *bcb_coap_response_buffer();
+struct coap_resource *bcb_coap_get_resource(const char *const *path);
+int bcb_coap_notify_async(struct coap_resource *resource);
 
 #ifdef __cplusplus
 }

@@ -18,6 +18,10 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_coap);
 
+struct async_notify_item {
+	struct coap_resource *resource;
+};
+
 struct bcb_coap_data {
 	int socket;
 	uint8_t req_buf[CONFIG_BCB_COAP_MAX_MSG_LEN];
@@ -27,12 +31,15 @@ struct bcb_coap_data {
 	struct bcb_coap_notifier notifiers[CONFIG_BCB_COAP_MAX_OBSERVERS];
 	struct k_delayed_work retransmit_work;
 	struct k_delayed_work observer_work;
-	struct k_fifo fifo;
+	struct k_work async_notify_work;
 	struct k_work receive_work;
+	struct k_fifo fifo;
 	struct k_thread thread;
 	K_THREAD_STACK_MEMBER(stack, CONFIG_BCB_COAP_THREAD_STACK_SIZE);
 	struct coap_resource resources[];
 };
+
+K_MSGQ_DEFINE(async_notify_msgq, sizeof(struct async_notify_item), 10, 4);
 
 static struct bcb_coap_data bcb_coap_data = {
     .resources = {
@@ -248,6 +255,33 @@ static void observer_notify_work(struct k_work *work)
 	periodic_notifier_schedule();
 }
 
+static void async_notify_work(struct k_work *work)
+{
+	struct async_notify_item item;
+
+	while (!k_msgq_get(&async_notify_msgq, &item, K_NO_WAIT)) {
+		int i;
+		for (i = 0; i < CONFIG_BCB_COAP_MAX_OBSERVERS; i++) {
+			struct bcb_coap_notifier *notifier = &bcb_coap_data.notifiers[i];
+			if (!notifier->is_used) {
+				continue;
+			}
+
+			if (notifier->resource != item.resource) {
+				continue;
+			}
+
+			if (!notifier->resource->notify) {
+				continue;
+			}
+
+			notifier->is_async = true;
+			notifier->resource->notify(notifier->resource, notifier->observer);
+			notifier->is_async = false;
+		}
+	}
+}
+
 static int create_pending_request(struct coap_packet *packet, const struct sockaddr *addr)
 {
 	struct coap_pending *pending;
@@ -368,6 +402,59 @@ struct bcb_coap_notifier *bcb_coap_get_notifier(struct coap_resource *resource,
 	}
 
 	return NULL;
+}
+
+static bool is_uri_path_equal(const char *const *path1, const char *const *path2)
+{
+	int i;
+	bool is_equal = true;
+
+	for (i = 0; path1[i] && path2[i]; i++) {
+		size_t len1 = strlen(path1[i]);
+		size_t len2 = strlen(path2[i]);
+
+		if (len1 != len2) {
+			is_equal = false;
+			break;
+		}
+
+		if (memcmp(path1[i], path2[i], len1) != 0) {
+			is_equal = false;
+			break;
+		}
+	}
+
+	return is_equal;
+}
+
+struct coap_resource *bcb_coap_get_resource(const char *const *path)
+{
+	struct coap_resource *resource;
+
+	for (resource = bcb_coap_data.resources; resource && resource->path; resource++) {
+		if (is_uri_path_equal(path, resource->path)) {
+			return resource;
+		}
+	}
+
+	return NULL;
+}
+
+int bcb_coap_notify_async(struct coap_resource *resource)
+{
+	struct async_notify_item item;
+	int r;
+
+	item.resource = resource;
+	r = k_msgq_put(&async_notify_msgq, &item, K_NO_WAIT);
+
+	if (r < 0) {
+		return r;
+	}
+
+	k_work_submit(&bcb_coap_data.async_notify_work);
+
+	return 0;
 }
 
 static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr *client_addr,
@@ -498,6 +585,7 @@ int bcb_coap_init(void)
 	memset(&bcb_coap_data.notifiers, 0, sizeof(bcb_coap_data.notifiers));
 	k_delayed_work_init(&bcb_coap_data.retransmit_work, retransmit_work);
 	k_delayed_work_init(&bcb_coap_data.observer_work, observer_notify_work);
+	k_work_init(&bcb_coap_data.async_notify_work, async_notify_work);
 	k_fifo_init(&bcb_coap_data.fifo);
 	k_work_init(&bcb_coap_data.receive_work, bcb_coap_receive_work);
 
