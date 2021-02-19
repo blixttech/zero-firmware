@@ -6,6 +6,7 @@
 #include "bcb_sw.h"
 #include "bcb_ocp_otp.h"
 #include "bcb_coap.h"
+#include "bcb_coap_handlers.h"
 #include "bcb_shell.h"
 #include "bcb.h"
 #include <init.h>
@@ -23,6 +24,7 @@ static int bcb_sim_init()
 
 #if CONFIG_BCB_COAP
 	bcb_coap_init();
+	bcb_coap_handlers_init();
 #endif
 
 #if CONFIG_BCB_SHELL

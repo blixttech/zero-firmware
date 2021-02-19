@@ -242,7 +242,6 @@ static void observer_notify_work(struct k_work *work)
 			continue;
 		}
 
-		notifier->seq++;
 		notifier->start = t_now;
 
 		if (!notifier->resource->notify) {

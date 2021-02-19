@@ -19,6 +19,13 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_coap_handlers);
 
+struct coap_handler_data {
+	struct coap_resource *res_status;
+	struct bcb_trip_callback trip_callback;
+};
+
+static struct coap_handler_data handler_data;
+
 int bcb_coap_handlers_wellknowncore_get(struct coap_resource *resource, struct coap_packet *request,
 					struct sockaddr *addr, socklen_t addr_len)
 {
@@ -214,11 +221,13 @@ void bcb_coap_handlers_status_notify(struct coap_resource *resource, struct coap
 		notifier->msgs_no_ack = CONFIG_BCB_COAP_MAX_MSGS_NO_ACK;
 	}
 
-	if (notifier->seq % 4 == 0 && !pending) {
+	if (notifier->is_async || (notifier->seq % 4 == 0 && !pending)) {
 		type = COAP_TYPE_CON;
 	} else {
 		type = COAP_TYPE_NON_CON;
 	}
+
+	notifier->seq++;
 
 	send_notification_status(resource, &observer->addr, type, coap_next_id(), observer->token,
 				 observer->tkl, true, notifier->seq);
@@ -280,7 +289,14 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_pac
 int bcb_coap_handlers_switch_get(struct coap_resource *resource, struct coap_packet *request,
 				 struct sockaddr *addr, socklen_t addr_len)
 {
-	return -ENOENT;
+	uint16_t id;
+	uint8_t token[8];
+	uint8_t tkl;
+
+	id = coap_header_get_id(request);
+	tkl = coap_header_get_token(request, token);
+
+	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
 int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_packet *request,
@@ -315,4 +331,29 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 	}
 
 	return send_notification_status(resource, addr, addr_len, id, token, token_len, false, 0);
+}
+
+void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type, uint8_t limit)
+{
+	if (!handler_data.res_status) {
+		return;
+	}
+
+	bcb_coap_notify_async(handler_data.res_status);
+}
+
+int bcb_coap_handlers_init(void)
+{
+	memset(&handler_data, 0, sizeof(handler_data));
+
+	handler_data.res_status = bcb_coap_get_resource(BCB_COAP_RESOURCE_STATUS_PATH);
+	if (!handler_data.res_status) {
+		LOG_ERR("cannot get switch resource");
+		return -ENOENT;
+	}
+
+	handler_data.trip_callback.handler = bcb_trip_curve_callback;
+	bcb_add_trip_callback(&handler_data.trip_callback);
+
+	return 0;
 }

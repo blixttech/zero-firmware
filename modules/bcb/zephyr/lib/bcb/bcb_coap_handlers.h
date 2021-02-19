@@ -13,7 +13,7 @@ extern "C" {
 #define BCB_COAP_RESOURCE_STATUS_PATH		((const char *const[]){ "status", NULL })
 #define BCB_COAP_RESOURCE_STATUS_ATTRIBUTES	((const char *const[]){ "obs", NULL })
 #define BCB_COAP_RESOURCE_SWITCH_PATH		((const char *const[]){ "switch", NULL })
-#define BCB_COAP_RESOURCE_SWITCH_ATTRIBUTES	((const char *const[]){ "obs", NULL })
+#define BCB_COAP_RESOURCE_SWITCH_ATTRIBUTES	((const char *const[]){ NULL })
 
 int bcb_coap_handlers_wellknowncore_get(struct coap_resource *resource, struct coap_packet *request,
 					struct sockaddr *addr, socklen_t addr_len);
@@ -27,6 +27,7 @@ int bcb_coap_handlers_switch_get(struct coap_resource *resource, struct coap_pac
 				 struct sockaddr *addr, socklen_t addr_len);
 int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_packet *request,
 				  struct sockaddr *addr, socklen_t addr_len);
+int bcb_coap_handlers_init(void);
 
 #ifdef __cplusplus
 }
