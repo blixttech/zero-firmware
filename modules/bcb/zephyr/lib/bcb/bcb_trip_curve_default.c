@@ -172,7 +172,7 @@ static uint8_t trip_curve_get_current_limit(void)
 
 static int trip_curve_set_callback(bcb_trip_curve_callback_t callback)
 {
-	if (callback) {
+	if (!callback) {
 		return -ENOTSUP;
 	}
 
