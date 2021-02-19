@@ -104,6 +104,18 @@ int bcb_open(void)
 	return 0;
 }
 
+int bcb_toggle(void)
+{
+	int r;
+	if (bcb_is_closed()) {
+		r = bcb_open();
+	} else {
+		r = bcb_close();
+	}
+
+	return r;
+}
+
 bool bcb_is_closed()
 {
 	return !bcb_data.config.is_open;

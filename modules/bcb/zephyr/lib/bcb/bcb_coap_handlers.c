@@ -321,10 +321,12 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 		if (options[i].len < 3) {
 			continue;
 		}
-		if (options[i].len == 4 && !strncmp(options[i].value, "a=on", 4)) {
+		if (options[i].len == 7 && !strncmp(options[i].value, "a=close", 7)) {
 			bcb_close();
-		} else if (options[i].len == 5 && !strncmp(options[i].value, "a=off", 5)) {
+		} else if (options[i].len == 6 && !strncmp(options[i].value, "a=open", 6)) {
 			bcb_open();
+		} else if (options[i].len == 8 && !strncmp(options[i].value, "a=toggle", 8)) {
+			bcb_toggle();
 		} else {
 			continue;
 		}
