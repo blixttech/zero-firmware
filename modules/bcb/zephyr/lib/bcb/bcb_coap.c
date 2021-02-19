@@ -102,6 +102,7 @@ static void notifier_remove_by_addr(const struct sockaddr *addr)
 
 		if (is_sockaddr_equal(addr, &notifier->observer->addr)) {
 			coap_remove_observer(notifier->resource, notifier->observer);
+			memset(notifier->observer, 0, sizeof(struct coap_observer));
 			notifier->is_used = false;
 		}
 	}
@@ -119,6 +120,7 @@ int bcb_coap_notifier_remove(const struct sockaddr *addr, const uint8_t *token, 
 		if (is_sockaddr_equal(addr, &notifier->observer->addr) &&
 		    memcmp(token, notifier->observer->token, tkl) == 0) {
 			coap_remove_observer(notifier->resource, notifier->observer);
+			memset(notifier->observer, 0, sizeof(struct coap_observer));
 			notifier->is_used = false;
 			return 0;
 		}
