@@ -165,7 +165,7 @@ static inline size_t z_impl_adc_dma_get_calibration_values_length(struct device 
 }
 
 __syscall size_t adc_dma_get_sampling_time(struct device *dev);
-static inline size_t z_impl_adc_dma_sampling_time(struct device *dev)
+static inline size_t z_impl_adc_dma_get_sampling_time(struct device *dev)
 {
 	struct adc_dma_driver_api *api;
 	api = (struct adc_dma_driver_api *)dev->driver_api;
