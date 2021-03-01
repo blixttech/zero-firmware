@@ -4,7 +4,6 @@
 #include "bcb_msmnt.h"
 #include "bcb_zd.h"
 #include "bcb_sw.h"
-#include "bcb_ocp_otp.h"
 #include "bcb_coap.h"
 #include "bcb_coap_handlers.h"
 #include "bcb_shell.h"
@@ -19,7 +18,6 @@ static int bcb_sim_init()
 	bcb_zd_init();
 	bcb_msmnt_init();
 	bcb_sw_init();
-	bcb_ocp_otp_init();
 	bcb_init();
 
 #if CONFIG_BCB_COAP

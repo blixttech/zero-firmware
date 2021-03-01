@@ -9,32 +9,43 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb);
 
-typedef struct __attribute__((packed)) bcb_config_data {
-	bool is_open;
-} bcb_config_data_t;
+typedef struct __attribute__((packed)) bcb_state {
+	bool is_closed;
+} bcb_state_t;
 
 struct bcb_data {
 	const struct bcb_trip_curve *trip_curve;
 	sys_slist_t callback_list;
-	bcb_config_data_t config;
+	bcb_state_t state;
 	struct k_work bcb_work;
 };
 
+typedef enum {
+	BCB_ACTION_OPEN = 0,
+	BCB_ACTION_CLOSE,
+	BCB_ACTION_TOGGLE,
+} bcb_action_t;
+
+struct bcb_action_item {
+	bcb_action_t action;
+};
+
+K_MSGQ_DEFINE(async_action_msgq, sizeof(struct bcb_action_item), 4, 4);
+
 static struct bcb_data bcb_data;
 
-static inline void load_default_config(void)
+static inline void load_default_state(void)
 {
-	bcb_data.config.is_open = false;
+	bcb_data.state.is_closed = false;
 }
 
-static void trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type,
-				uint8_t limit)
+static void trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)
 {
 	sys_snode_t *node;
 	SYS_SLIST_FOR_EACH_NODE (&bcb_data.callback_list, node) {
 		struct bcb_trip_callback *callback = (struct bcb_trip_callback *)node;
 		if (callback && callback->handler) {
-			callback->handler(curve, type, limit);
+			callback->handler(curve, type);
 		}
 	}
 }
@@ -42,19 +53,37 @@ static void trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cau
 static void bcb_work(struct k_work *work)
 {
 	int r;
+	struct bcb_action_item item;
 
-	if (bcb_data.config.is_open) {
-		r = bcb_data.trip_curve->open();
-	} else {
-		r = bcb_data.trip_curve->close();
-	}
+	while (!k_msgq_get(&async_action_msgq, &item, K_NO_WAIT)) {
+		bcb_curve_state_t curve_state;
+		curve_state = bcb_data.trip_curve->get_state();
 
-	if (r) {
-		LOG_WRN("cannot perform operation: %d", r);
+		if (item.action == BCB_ACTION_OPEN) {
+			bcb_data.state.is_closed = false;
+			r = bcb_data.trip_curve->open();
+		} else if (item.action == BCB_ACTION_CLOSE) {
+			bcb_data.state.is_closed = true;
+			r = bcb_data.trip_curve->close();
+		} else {
+			if (curve_state != BCB_CURVE_STATE_OPENED &&
+			curve_state != BCB_CURVE_STATE_CLOSED) {
+				LOG_WRN("not in opened/closed state");
+				continue;
+			}
+
+			if (curve_state == BCB_CURVE_STATE_OPENED) {
+				bcb_data.state.is_closed = true;
+				r = bcb_data.trip_curve->close();
+			} else {
+				bcb_data.state.is_closed = false;
+				r = bcb_data.trip_curve->open();
+			}
+		}
 	}
 
 	r = bcb_config_store(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_BCB,
-			     (uint8_t *)&bcb_data.config, sizeof(bcb_data.config));
+			     (uint8_t *)&bcb_data.state, sizeof(bcb_data.state));
 
 	if (r) {
 		LOG_WRN("cannot save configuration: %d", r);
@@ -70,9 +99,9 @@ int bcb_init()
 	k_work_init(&bcb_data.bcb_work, bcb_work);
 
 	r = bcb_config_load(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_BCB,
-			    (uint8_t *)&bcb_data.config, sizeof(bcb_data.config));
+			    (uint8_t *)&bcb_data.state, sizeof(bcb_data.state));
 	if (r) {
-		load_default_config();
+		load_default_state();
 	}
 
 	return 0;
@@ -80,12 +109,21 @@ int bcb_init()
 
 int bcb_close(void)
 {
+	struct bcb_action_item item;
+	int r;
+
 	if (!bcb_data.trip_curve) {
-		LOG_ERR("Trip cruve not set");
+		LOG_ERR("trip cruve not set");
 		return -EINVAL;
 	}
 
-	bcb_data.config.is_open = false;
+	item.action = BCB_ACTION_CLOSE;
+	r = k_msgq_put(&async_action_msgq, &item, K_NO_WAIT);
+
+	if (r < 0) {
+		return r;
+	}
+
 	k_work_submit(&bcb_data.bcb_work);
 
 	return 0;
@@ -93,12 +131,21 @@ int bcb_close(void)
 
 int bcb_open(void)
 {
+	struct bcb_action_item item;
+	int r;
+
 	if (!bcb_data.trip_curve) {
-		LOG_ERR("Trip cruve not set");
+		LOG_ERR("trip cruve not set");
 		return -EINVAL;
 	}
 
-	bcb_data.config.is_open = true;
+	item.action = BCB_ACTION_OPEN;
+	r = k_msgq_put(&async_action_msgq, &item, K_NO_WAIT);
+
+	if (r < 0) {
+		return r;
+	}
+
 	k_work_submit(&bcb_data.bcb_work);
 
 	return 0;
@@ -106,50 +153,85 @@ int bcb_open(void)
 
 int bcb_toggle(void)
 {
+	struct bcb_action_item item;
 	int r;
-	if (bcb_is_closed()) {
-		r = bcb_open();
-	} else {
-		r = bcb_close();
+
+	if (!bcb_data.trip_curve) {
+		LOG_ERR("trip cruve not set");
+		return -EINVAL;
 	}
 
-	return r;
+	item.action = BCB_ACTION_TOGGLE;
+	r = k_msgq_put(&async_action_msgq, &item, K_NO_WAIT);
+
+	if (r < 0) {
+		return r;
+	}
+
+	k_work_submit(&bcb_data.bcb_work);
+
+	return 0;
 }
 
-bool bcb_is_closed()
+bcb_curve_state_t bcb_get_state(void)
 {
-	return !bcb_data.config.is_open;
+	if (!bcb_data.trip_curve) {
+		LOG_ERR("trip cruve not set");
+		return -EINVAL;
+	}
+
+	return bcb_data.trip_curve->get_state();
 }
 
 int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
 {
 	int r;
 	if (!curve) {
-		LOG_ERR("Invalid trip cruve");
+		LOG_ERR("invalid trip cruve");
 		return -EINVAL;
 	}
 
 	if (bcb_data.trip_curve) {
 		if ((r = bcb_data.trip_curve->shutdown())) {
-			LOG_WRN("Trip curve shutdown failed: %d", r);
+			LOG_WRN("trip curve shutdown failed: %d", r);
 		}
 	}
 
 	bcb_data.trip_curve = curve;
 	r = bcb_data.trip_curve->init();
 	if (r) {
-		LOG_WRN("Cannot initialise curve: %d", r);
+		LOG_WRN("cannot initialise curve: %d", r);
 	}
 
 	bcb_data.trip_curve->set_callback(trip_curve_callback);
 
-	if (bcb_is_closed()) {
-		return bcb_open();
-	} else {
+	if (bcb_data.state.is_closed) {
 		return bcb_close();
+	} else {
+		return bcb_open();
 	}
 
 	return 0;
+}
+
+int bcb_set_trip_limit(uint8_t limit, bcb_curve_limit_type_t type)
+{
+	if (!bcb_data.trip_curve) {
+		LOG_ERR("trip cruve not set");
+		return -EINVAL;
+	}
+
+	return bcb_data.trip_curve->set_limit(limit, type);
+}
+
+uint8_t bcb_get_trip_limit(bcb_curve_limit_type_t type)
+{
+	if (!bcb_data.trip_curve) {
+		LOG_ERR("trip cruve not set");
+		return 0;
+	}
+
+	return bcb_data.trip_curve->get_limit(type);
 }
 
 int bcb_add_trip_callback(struct bcb_trip_callback *callback)

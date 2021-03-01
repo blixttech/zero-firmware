@@ -121,7 +121,8 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 	uint8_t total;
 
 	r = snprintk((char *)buf, buf_len, "%010" PRIu32 ",%1" PRIu8 ",%1" PRIu8 ",%1" PRIu8,
-		     k_uptime_get_32(), (uint8_t)bcb_sw_is_on(), (uint8_t)0U, (uint8_t)0U);
+		     k_uptime_get_32(), (uint8_t)bcb_sw_is_on(), (uint8_t)bcb_sw_get_cause(),
+		     (uint8_t)bcb_get_state());
 	if (r < 0) {
 		return 0;
 	}
@@ -335,8 +336,7 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
-void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type,
-			     uint8_t limit)
+void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)
 {
 	if (!handler_data.res_status) {
 		return;

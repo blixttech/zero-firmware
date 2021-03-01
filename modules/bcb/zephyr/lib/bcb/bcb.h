@@ -20,11 +20,10 @@ int bcb_init(void);
 int bcb_close(void);
 int bcb_open(void);
 int bcb_toggle(void);
-bool bcb_is_closed();
-
+bcb_curve_state_t bcb_get_state(void);
 int bcb_set_trip_curve(const struct bcb_trip_curve *curve);
-int bcb_set_trip_limit(uint8_t limit);
-uint8_t bcb_get_trip_limit(void);
+int bcb_set_trip_limit(uint8_t limit, bcb_curve_limit_type_t type);
+uint8_t bcb_get_trip_limit(bcb_curve_limit_type_t type);
 int bcb_add_trip_callback(struct bcb_trip_callback *callback);
 
 #ifdef __cplusplus

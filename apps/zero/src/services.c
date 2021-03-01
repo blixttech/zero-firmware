@@ -21,11 +21,7 @@ static struct services_data services_data;
 static void button_callback_handler(bool is_pressed)
 {
 	if (is_pressed) {
-		if (bcb_is_closed()) {
-			bcb_open();
-		} else {
-			bcb_close();
-		}
+		bcb_toggle();
 	}
 }
 

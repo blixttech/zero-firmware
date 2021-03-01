@@ -1,7 +1,7 @@
 #include "bcb.h"
 #include "bcb_msmnt.h"
 #include "bcb_msmnt_calib.h"
-#include "bcb_ocp_otp.h"
+#include "bcb_sw.h"
 #include "bcb_zd.h"
 #include <stdlib.h>
 #include <zephyr.h>
@@ -14,7 +14,7 @@
 LOG_MODULE_REGISTER(bcb_shell);
 
 struct bcb_shell_data {
-	struct bcb_ocp_test_callback ocp_test_callback;
+	struct bcb_sw_callback sw_callback;
 };
 
 static struct bcb_shell_data shell_data;
@@ -39,22 +39,22 @@ static int cmd_close_handler(const struct shell *shell, size_t argc, char **argv
 
 static int cmd_ocp_trigger_handler(const struct shell *shell, size_t argc, char **argv)
 {
-	int direction = BCB_OCP_DIRECTION_P;
+	int direction = BCB_OCP_DIRECTION_POSITIVE;
 	if (argc > 1) {
 		switch ((int)argv[1][0]) {
 		case 'p':
 		case 'P':
-			direction = BCB_OCP_DIRECTION_P;
+			direction = BCB_OCP_DIRECTION_POSITIVE;
 			break;
 		case 'n':
 		case 'N':
-			direction = BCB_OCP_DIRECTION_N;
+			direction = BCB_OCP_DIRECTION_NEGATIVE;
 			break;
 		default:
-			direction = BCB_OCP_DIRECTION_P;
+			direction = BCB_OCP_DIRECTION_POSITIVE;
 		}
 	} else {
-		direction = BCB_OCP_DIRECTION_P;
+		direction = BCB_OCP_DIRECTION_POSITIVE;
 	}
 
 	bcb_ocp_test_trigger(direction, true);
@@ -92,11 +92,11 @@ static int cmd_current_handler(const struct shell *shell, size_t argc, char **ar
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_print(shell, "%06" PRId32 " mA, [h: %06" PRId32 " mA, %" PRIu16 "|l: %06" PRId32 " mA, %" PRIu16 "]", 
-		    bcb_msmnt_get_current(),
-		    bcb_msmnt_get_current_high_gain(),
-		    bcb_msmnt_get_raw(BCB_MSMNT_TYPE_I_HIGH_GAIN),
-		    bcb_msmnt_get_current_low_gain(),
+	shell_print(shell,
+		    "%06" PRId32 " mA, [h: %06" PRId32 " mA, %" PRIu16 "|l: %06" PRId32
+		    " mA, %" PRIu16 "]",
+		    bcb_msmnt_get_current(), bcb_msmnt_get_current_high_gain(),
+		    bcb_msmnt_get_raw(BCB_MSMNT_TYPE_I_HIGH_GAIN), bcb_msmnt_get_current_low_gain(),
 		    bcb_msmnt_get_raw(BCB_MSMNT_TYPE_I_LOW_GAIN));
 
 	return 0;
@@ -212,18 +212,26 @@ static int cmd_calib_param_b_handler(const struct shell *shell, size_t argc, cha
 	return 0;
 }
 
-static void on_ocp_test_activated(bcb_ocp_direction_t direction, uint32_t duration)
+static void on_swtich_event(bool is_closed, bcb_sw_cause_t cause)
 {
-	LOG_INF("OCP Test completed: direction %c, duration %" PRIu32 " ns",
-		direction == BCB_OCP_DIRECTION_N ? 'N' : 'P', duration);
+	if (!is_closed) {
+		if (cause == BCB_SW_CAUSE_OCP_TEST) {
+			char direction;
+			direction = bcb_ocp_test_get_direction() == BCB_OCP_DIRECTION_NEGATIVE ?
+					    'N' :
+					    'P';
+			LOG_INF("OCP Test completed: direction %c, duration %" PRIu32 " ns",
+				direction, bcb_ocp_test_get_duration());
+		}
+	}
 }
 
 int bcb_shell_init(void)
 {
 	memset(&shell_data, 0, sizeof(shell_data));
-	shell_data.ocp_test_callback.handler = on_ocp_test_activated;
+	shell_data.sw_callback.handler = on_swtich_event;
 
-	bcb_ocp_test_add_callback(&shell_data.ocp_test_callback);
+	bcb_sw_add_callback(&shell_data.sw_callback);
 
 	return 0;
 }
