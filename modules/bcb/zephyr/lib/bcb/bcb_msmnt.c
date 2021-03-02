@@ -553,7 +553,7 @@ int bcb_msmnt_config_load(void)
 	}
 
 	buf_offset += size_adc_0;
-	r = adc_dma_set_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_1);
+	r = adc_dma_set_calibration_values(bcb_msmnt_data.dev_adc_1, buf + buf_offset, size_adc_1);
 	if (r) {
 		LOG_ERR("cannot set ADC1 configuration: %d", r);
 	}
@@ -595,7 +595,7 @@ int bcb_msmnt_config_store(void)
 	}
 
 	buf_offset += size_adc_0;
-	r = adc_dma_get_calibration_values(bcb_msmnt_data.dev_adc_0, buf + buf_offset, size_adc_1);
+	r = adc_dma_get_calibration_values(bcb_msmnt_data.dev_adc_1, buf + buf_offset, size_adc_1);
 	if (r) {
 		LOG_ERR("cannot get ADC1 configuration: %d", r);
 		goto cleanup;
