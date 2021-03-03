@@ -4,6 +4,7 @@
 #include "bcb_msmnt.h"
 #include "bcb_etime.h"
 #include <device.h>
+#include <kernel.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
 #include <drivers/input_capture.h>
@@ -42,9 +43,12 @@ struct bcb_sw_data {
 	uint32_t ic_frequency;
 	struct gpio_callback on_off_status_callback;
 	sys_slist_t callback_list;
+	struct k_delayed_work vitals_check_work;
 };
 
 static struct bcb_sw_data sw_data;
+
+static void vitals_check_work(struct k_work *work);
 
 /**
  * @brief Compare the time duration represented by elapsed time ticks and input capcure time ticks
@@ -140,7 +144,6 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 
 	if (is_on) {
 		sw_data.etime_on = etime_now;
-		sw_data.cause = BCB_SW_CAUSE_EXT;
 		call_callbacks();
 		return;
 	}
@@ -150,7 +153,6 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 
 	if (!is_on_cmd_active) {
 		/* The switch has been turned off via software */
-		sw_data.cause = BCB_SW_CAUSE_EXT;
 		call_callbacks();
 		return;
 	}
@@ -184,7 +186,8 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		return;
 	}
 
-	if (temp_in > 80 || temp_out > 80) {
+	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
+	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
 		/* overtemperature protection has been activated. */
 		LOG_DBG("oct activated: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
@@ -246,6 +249,8 @@ int bcb_sw_init(void)
 	BCB_DAC_INIT(actrl, ocp_limit_adj);
 	BCB_DAC_SET(actrl, ocp_limit_adj, 4095);
 
+	k_delayed_work_init(&sw_data.vitals_check_work, vitals_check_work);
+
 	return 0;
 }
 
@@ -278,17 +283,25 @@ int bcb_sw_on(void)
 	sw_data.cause = BCB_SW_CAUSE_EXT;
 	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 1);
 
+	k_delayed_work_submit(&sw_data.vitals_check_work,
+			      K_MSEC(CONFIG_BCB_LIB_SW_VITALS_CHECK_INTERVAL));
+
+	return 0;
+}
+
+static int sw_open(void)
+{
+	k_delayed_work_cancel(&sw_data.vitals_check_work);
+	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_POSITIVE, false);
+	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
+	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 0);
 	return 0;
 }
 
 int bcb_sw_off(void)
 {
-	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_POSITIVE, false);
-	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
 	sw_data.cause = BCB_SW_CAUSE_EXT;
-	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 0);
-
-	return 0;
+	return sw_open();
 }
 
 bool bcb_sw_is_on()
@@ -364,4 +377,31 @@ void bcb_sw_remove_callback(bcb_sw_callback_t *callback)
 	}
 
 	sys_slist_find_and_remove(&sw_data.callback_list, &callback->node);
+}
+
+static void vitals_check_work(struct k_work *work)
+{
+	int32_t temp_in;
+	int32_t temp_out;
+
+	temp_in = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_IN);
+	temp_out = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT);
+
+	if (temp_out > 200) {
+		LOG_DBG("uvp activated");
+		sw_data.cause = BCB_SW_CAUSE_UVP;
+		sw_open();
+		return;
+	}
+
+	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
+	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
+		LOG_DBG("oct activated: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
+		sw_data.cause = BCB_SW_CAUSE_OTP;
+		sw_open();
+		return;
+	}
+
+	k_delayed_work_submit(&sw_data.vitals_check_work,
+			      K_MSEC(CONFIG_BCB_LIB_SW_VITALS_CHECK_INTERVAL));
 }

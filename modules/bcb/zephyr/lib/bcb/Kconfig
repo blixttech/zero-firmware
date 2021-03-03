@@ -14,6 +14,14 @@ config BCB_LIB_SW_MAX_CLOSING_TEMPERATURE
 	int "Maximum temperature when the swtich can be closed"
 	default 50
 
+config BCB_LIB_SW_MAX_TEMPERATURE
+	int "Maximum temperature that the swtich stays closed"
+	default 90
+
+config BCB_LIB_SW_VITALS_CHECK_INTERVAL
+	int "Vitals monitoring interval in milliseconds"
+	default 100
+
 config BCB_TRIP_CURVE_DEFAULT
 	bool "Default trip curve"
 	default y
