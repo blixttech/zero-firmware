@@ -4,6 +4,7 @@
 #include "bcb_msmnt.h"
 #include "bcb_sw.h"
 #include "bcb.h"
+#include "bcb_trip_curve_default.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -47,11 +48,14 @@ int bcb_coap_handlers_version_get(struct coap_resource *resource, struct coap_pa
 	uint8_t token[8];
 	uint8_t token_len;
 	int r;
+	struct coap_packet response;
+	uint8_t format = 0;
+	uint8_t payload[70];
+	uint8_t total = 0;
 
 	id = coap_header_get_id(request);
 	token_len = coap_header_get_token(request, token);
 
-	struct coap_packet response;
 	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
 			     COAP_TYPE_ACK, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT,
 			     id);
@@ -59,7 +63,6 @@ int bcb_coap_handlers_version_get(struct coap_resource *resource, struct coap_pa
 		return r;
 	}
 
-	uint8_t format = 0;
 	r = coap_packet_append_option(&response, COAP_OPTION_CONTENT_FORMAT, &format,
 				      sizeof(format));
 	if (r < 0) {
@@ -71,43 +74,41 @@ int bcb_coap_handlers_version_get(struct coap_resource *resource, struct coap_pa
 		return r;
 	}
 
-	uint8_t payload[70];
-	uint8_t consumed = 0;
-	r = snprintk((char *)(payload + consumed), sizeof(payload) - consumed,
+	r = snprintk((char *)payload, sizeof(payload),
 		     "%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "%08" PRIx32, SIM->UIDH, SIM->UIDL,
 		     SIM->UIDMH, SIM->UIDML);
 	if (r < 0) {
 		return -EINVAL;
 	}
-	consumed += r;
+	total += r;
 
-	r = snprintk((char *)(payload + consumed), sizeof(payload) - consumed, ",");
+	r = snprintk((char *)(payload + total), sizeof(payload) - total, ",");
 	if (r < 0) {
 		return -EINVAL;
 	}
-	consumed += r;
+	total += r;
 
 	struct net_if *default_if = net_if_get_default();
 	if (default_if && default_if->if_dev) {
 		uint8_t i;
 		for (i = 0; i < default_if->if_dev->link_addr.len; i++) {
-			r = snprintk((char *)(payload + consumed), sizeof(payload) - consumed,
+			r = snprintk((char *)(payload + total), sizeof(payload) - total,
 				     "%02" PRIx8, default_if->if_dev->link_addr.addr[i]);
 			if (r < 0) {
 				return -EINVAL;
 			}
-			consumed += r;
+			total += r;
 		}
 	}
 
 	/* Power-In, Power-Out, Controller board revisions */
-	r = snprintk((char *)(payload + consumed), sizeof(payload) - consumed, ",1,1,1");
+	r = snprintk((char *)(payload + total), sizeof(payload) - total, ",1,1,1");
 	if (r < 0) {
 		return -EINVAL;
 	}
-	consumed += r;
+	total += r;
 
-	r = coap_packet_append_payload(&response, payload, consumed);
+	r = coap_packet_append_payload(&response, payload, total);
 	if (r < 0) {
 		return r;
 	}
@@ -151,9 +152,9 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 	return total;
 }
 
-int send_notification_status(struct coap_resource *resource, struct sockaddr *addr, uint8_t type,
-			     uint16_t id, const uint8_t *token, uint8_t token_len, bool notify,
-			     uint32_t obs_seq)
+static int send_notification_status(struct coap_resource *resource, struct sockaddr *addr,
+				    uint8_t type, uint16_t id, const uint8_t *token,
+				    uint8_t token_len, bool notify, uint32_t obs_seq)
 {
 	int r;
 	struct coap_packet response;
@@ -322,11 +323,11 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 		if (options[i].len < 3) {
 			continue;
 		}
-		if (options[i].len == 7 && !strncmp(options[i].value, "a=close", 7)) {
+		if (options[i].len == 7 && strncmp(options[i].value, "a=close", 7) == 0) {
 			bcb_close();
-		} else if (options[i].len == 6 && !strncmp(options[i].value, "a=open", 6)) {
+		} else if (options[i].len == 6 && strncmp(options[i].value, "a=open", 6) == 0) {
 			bcb_open();
-		} else if (options[i].len == 8 && !strncmp(options[i].value, "a=toggle", 8)) {
+		} else if (options[i].len == 8 && strncmp(options[i].value, "a=toggle", 8) == 0) {
 			bcb_toggle();
 		} else {
 			continue;
@@ -334,6 +335,96 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 	}
 
 	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
+}
+
+static int send_tc_default_config(struct sockaddr *addr, uint16_t id, const uint8_t *token,
+				  uint8_t token_len)
+{
+	int r;
+	struct coap_packet response;
+	uint8_t format = 0;
+	uint8_t payload[70];
+	const struct bcb_trip_curve *tc_default = bcb_trip_curve_get_default();
+
+	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
+			     COAP_TYPE_ACK, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT,
+			     id);
+	if (r < 0) {
+		return r;
+	}
+
+	format = 0;
+	r = coap_packet_append_option(&response, COAP_OPTION_CONTENT_FORMAT, &format,
+				      sizeof(format));
+	if (r < 0) {
+		return r;
+	}
+
+	r = coap_packet_append_payload_marker(&response);
+	if (r < 0) {
+		return r;
+	}
+
+	r = snprintk((char *)payload, sizeof(payload),
+		     "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%06" PRIu32,
+		     (uint8_t)tc_default->get_state(), (uint8_t)tc_default->get_cause(),
+		     tc_default->get_limit(BCB_CURVE_LIMIT_TYPE_HW),
+		     tc_default->get_limit(BCB_CURVE_LIMIT_TYPE_SW),
+		     bcb_trip_curve_default_get_recovery());
+
+	if (r < 0) {
+		return r;
+	}
+
+	r = coap_packet_append_payload(&response, payload, r);
+	if (r < 0) {
+		return r;
+	}
+
+	return bcb_coap_send_response(&response, addr);
+}
+
+int bcb_coap_handlers_tc_default_get(struct coap_resource *resource, struct coap_packet *request,
+				     struct sockaddr *addr, socklen_t addr_len)
+{
+	uint16_t id;
+	uint8_t token[8];
+	uint8_t tkl;
+
+	id = coap_header_get_id(request);
+	tkl = coap_header_get_token(request, token);
+
+	return send_tc_default_config(addr, id, token, tkl);
+}
+
+int bcb_coap_handlers_tc_default_post(struct coap_resource *resource, struct coap_packet *request,
+				      struct sockaddr *addr, socklen_t addr_len)
+{
+	struct coap_option options[4];
+	uint16_t id;
+	uint8_t token[8];
+	uint8_t tkl;
+	int r;
+	uint32_t recovery_duration;
+
+	id = coap_header_get_id(request);
+	tkl = coap_header_get_token(request, token);
+
+	r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
+	if (r < 0) {
+		return -EINVAL;
+	}
+
+	int i;
+	for (i = 0; i < r; i++) {
+		if (options[i].len > 3 && strncmp(options[i].value, "rd=", 3) == 0) {
+			options[i].value[sizeof(options[i].value) - 1] = '\0';
+			recovery_duration = strtoul((char *)&options[i].value[3], NULL, 0);
+			bcb_trip_curve_default_set_recovery(recovery_duration);
+		}
+	}
+
+	return send_tc_default_config(addr, id, token, tkl);
 }
 
 void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)

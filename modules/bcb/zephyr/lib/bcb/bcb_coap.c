@@ -66,6 +66,13 @@ static struct bcb_coap_data bcb_coap_data = {
                         }),
             .path = BCB_COAP_RESOURCE_SWITCH_PATH,
         },
+        {   .get = bcb_coap_handlers_tc_default_get,
+            .post = bcb_coap_handlers_tc_default_post,
+            .user_data = &((struct coap_core_metadata){
+                            .attributes = BCB_COAP_RESOURCE_TC_DEFAULT_ATTRIBUTES,
+                        }),
+            .path = BCB_COAP_RESOURCE_TC_DEFAULT_PATH,
+        },
         { },
     },
 };

@@ -12,12 +12,6 @@ typedef enum {
     BCB_TEMP_SENSOR_MCU
 } bcb_temp_sensor_t;
 
-typedef enum {
-	BCB_TRIP_CAUSE_OCP_HW = 0,
-	BCB_TRIP_CAUSE_OCP_SW,
-	BCB_TRIP_CAUSE_OTP
-} bcb_trip_cause_t;
-
 #ifdef __cplusplus
 }
 #endif

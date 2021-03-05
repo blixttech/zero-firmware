@@ -177,10 +177,20 @@ bcb_curve_state_t bcb_get_state(void)
 {
 	if (!bcb_data.trip_curve) {
 		LOG_ERR("trip cruve not set");
-		return -EINVAL;
+		return BCB_CURVE_STATE_UNDEFINED;
 	}
 
 	return bcb_data.trip_curve->get_state();
+}
+
+bcb_trip_cause_t bcb_get_cause(void)
+{
+	if (!bcb_data.trip_curve) {
+		LOG_ERR("trip cruve not set");
+		return BCB_TRIP_CAUSE_NONE;
+	}
+
+	return bcb_data.trip_curve->get_cause();
 }
 
 int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
