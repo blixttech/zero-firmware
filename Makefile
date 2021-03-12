@@ -20,6 +20,9 @@ ZERO_APP_DIR := $(SOURCE_ROOT_DIR)/apps/zero
 ZERO_BUILD_DIR := $(ZERO_APP_DIR)/build
 ZERO_BIN := $(ZERO_BUILD_DIR)/zephyr/zephyr.signed.bin
 
+VERSION := $(shell git name-rev --tags --name-only $$(git rev-parse HEAD) | \
+           sed 's/v//g;s/\^.*//g;s/undefined/0.0.0/g')
+
 .PHONY: all mcuboot mcuboot-flash zero zero-flash binaries clean
 
 all: zero
@@ -35,7 +38,7 @@ $(MCUBOOT_BIN):
 
 $(ZERO_BIN):
 	cd $(ZERO_APP_DIR) && west build -- -DCMAKE_EXPORT_COMPILE_COMMANDS=1 && \
-	west sign -t imgtool -- --key $(KEY_PAIR)
+	west sign -t imgtool -- --key $(KEY_PAIR) --version $(VERSION)
 
 mcuboot: $(MCUBOOT_BIN)
 
