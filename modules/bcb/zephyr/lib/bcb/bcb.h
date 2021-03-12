@@ -23,8 +23,7 @@ int bcb_toggle(void);
 bcb_curve_state_t bcb_get_state(void);
 bcb_trip_cause_t bcb_get_cause(void);
 int bcb_set_trip_curve(const struct bcb_trip_curve *curve);
-int bcb_set_trip_limit(uint8_t limit, bcb_curve_limit_type_t type);
-uint8_t bcb_get_trip_limit(bcb_curve_limit_type_t type);
+const struct bcb_trip_curve * bcb_get_trip_curve(void);
 int bcb_add_trip_callback(struct bcb_trip_callback *callback);
 
 #ifdef __cplusplus

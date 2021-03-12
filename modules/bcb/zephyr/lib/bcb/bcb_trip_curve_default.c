@@ -8,8 +8,10 @@
 #include <init.h>
 
 #define TRANSIENT_WORK_TIMEOUT CONFIG_BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT
+#define MONITOR_WORK_INTERVAL CONFIG_BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
 
-#define LOG_LEVEL CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
+//#define LOG_LEVEL CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
+#define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_tc_default);
 
@@ -21,24 +23,35 @@ typedef enum {
 	CURVE_STATE_OPENING,
 } curve_state_t;
 
-typedef struct __attribute__((packed)) tc_default_config {
-	volatile uint32_t recovery_duration;
-	volatile bool recovery_enabled;
-} tc_default_config_t;
+typedef struct __attribute__((packed)) persistent_state {
+	uint32_t recovery_duration;
+	bool recovery_enabled;
+	uint8_t limit_hw;
+	uint8_t limit_sw;
+	uint8_t limit_sw_hist;
+	uint32_t limit_sw_duration;
+} persistent_state_t;
 
 struct curve_data {
 	const struct bcb_trip_curve *trip_curve;
 	bcb_trip_curve_callback_t callback;
 	struct bcb_zd_callback zd_callback;
 	struct bcb_sw_callback sw_callback;
-	tc_default_config_t config;
 	volatile curve_state_t state;
 	volatile bcb_trip_cause_t cause;
+	volatile uint32_t recovery_duration;
+	volatile bool recovery_enabled;
 	volatile bool max_events_waiting_updated;
 	volatile uint32_t max_events_waiting;
 	volatile uint32_t events_waiting;
+	volatile uint8_t limit_hw;
+	volatile uint8_t limit_sw;
+	volatile uint8_t limit_sw_hist;
+	volatile uint32_t limit_sw_duration;
 	volatile bool initialized;
 	struct k_delayed_work transient_work;
+	struct k_delayed_work monitor_work;
+	struct k_work store_work;
 };
 
 static struct curve_data curve_data;
@@ -60,7 +73,7 @@ static void set_cause_from_sw_cause(void)
 		break;
 	default:
 		if (curve_data.cause != BCB_TRIP_CAUSE_OCP_SW) {
-			curve_data.cause = BCB_TRIP_CAUSE_NONE;
+			curve_data.cause = BCB_TRIP_CAUSE_EXT;
 		}
 	}
 }
@@ -94,11 +107,11 @@ static void process_timed_event(void)
 
 static void on_voltage_zero_detect(void)
 {
-	if (curve_data.config.recovery_enabled && !curve_data.max_events_waiting_updated) {
-		curve_data.max_events_waiting = (uint64_t)curve_data.config.recovery_duration * 2U *
+	if (curve_data.recovery_enabled && !curve_data.max_events_waiting_updated) {
+		curve_data.max_events_waiting = (uint64_t)curve_data.recovery_duration * 2U *
 						(uint64_t)bcb_zd_get_frequency() / 1e6;
 		curve_data.max_events_waiting_updated = true;
-		LOG_INF("recovery events %" PRIu32, curve_data.max_events_waiting);
+		LOG_DBG("recovery events %" PRIu32, curve_data.max_events_waiting);
 	}
 
 	k_delayed_work_cancel(&curve_data.transient_work);
@@ -118,11 +131,12 @@ static void on_switch_event(bool is_closed, bcb_sw_cause_t cause)
 		curve_data.state = CURVE_STATE_OPENED;
 		set_cause_from_sw_cause();
 
-		if (curve_data.cause == BCB_TRIP_CAUSE_NONE) {
+		if (curve_data.cause == BCB_TRIP_CAUSE_EXT ||
+		    curve_data.cause == BCB_TRIP_CAUSE_NONE) {
 			return;
 		}
 
-		if (!curve_data.config.recovery_enabled) {
+		if (!curve_data.recovery_enabled) {
 			return;
 		}
 
@@ -134,46 +148,77 @@ static void on_switch_event(bool is_closed, bcb_sw_cause_t cause)
 
 static void transient_work(struct k_work *work)
 {
-	if (curve_data.config.recovery_enabled && !curve_data.max_events_waiting_updated) {
+	if (curve_data.recovery_enabled && !curve_data.max_events_waiting_updated) {
 		curve_data.max_events_waiting =
-			curve_data.config.recovery_duration / TRANSIENT_WORK_TIMEOUT;
+			curve_data.recovery_duration / TRANSIENT_WORK_TIMEOUT;
 		curve_data.max_events_waiting_updated = true;
-		LOG_INF("recovery events %" PRIu32, curve_data.max_events_waiting);
+		LOG_DBG("recovery events %" PRIu32, curve_data.max_events_waiting);
 	}
 
 	process_timed_event();
 }
 
-static void config_load_default(void)
+static void monitor_work(struct k_work *work)
 {
-	curve_data.config.recovery_enabled = false;
-	curve_data.config.recovery_duration = 0;
+	/* TODO: Implement current monitoring function */
 }
 
-static int config_load(void)
+static void restore_state_default(void)
+{
+	curve_data.recovery_enabled = false;
+	curve_data.recovery_duration = 0;
+	curve_data.limit_hw = 50;
+	curve_data.limit_sw = 18;
+	curve_data.limit_sw_hist = 1;
+	curve_data.limit_sw_duration = 7200;
+}
+
+static int restore_state(void)
 {
 	int r;
+	persistent_state_t state;
 
 	r = bcb_config_load(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TRIP_CURVE_DEFAULT,
-			    (uint8_t *)&curve_data.config, sizeof(curve_data.config));
+			    (uint8_t *)&state, sizeof(state));
 	if (r) {
-		LOG_ERR("configuration loading error: %d", r);
+		LOG_ERR("state restroing error: %d", r);
+		restore_state_default();
+		return r;
 	}
 
-	return r;
+	curve_data.recovery_enabled = state.recovery_enabled;
+	curve_data.recovery_duration = state.recovery_duration;
+	curve_data.limit_hw = state.limit_hw;
+	curve_data.limit_sw = state.limit_sw;
+	curve_data.limit_sw_hist = state.limit_sw_hist;
+	curve_data.limit_sw_duration = state.limit_sw_duration;
+
+	r = bcb_ocp_set_limit(curve_data.limit_hw);
+	if (r) {
+		LOG_ERR("cannot set hw current limit: %d", r);
+		return r;
+	}
+
+	return 0;
 }
 
-static int config_store(void)
+static void state_store_work(struct k_work *work)
 {
 	int r;
+	persistent_state_t state;
+
+	state.recovery_enabled = curve_data.recovery_enabled;
+	state.recovery_duration = curve_data.recovery_duration;
+	state.limit_hw = curve_data.limit_hw;
+	state.limit_sw = curve_data.limit_sw;
+	state.limit_sw_hist = curve_data.limit_sw_hist;
+	state.limit_sw_duration = curve_data.limit_sw_duration;
 
 	r = bcb_config_store(CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TRIP_CURVE_DEFAULT,
-			     (uint8_t *)&curve_data.config, sizeof(curve_data.config));
+			     (uint8_t *)&state, sizeof(state));
 	if (r) {
-		LOG_ERR("configuration storing error: %d", r);
+		LOG_ERR("state storing error: %d", r);
 	}
-
-	return r;
 }
 
 static int trip_curve_init(void)
@@ -191,11 +236,10 @@ static int trip_curve_init(void)
 	bcb_sw_add_callback(&curve_data.sw_callback);
 	curve_data.initialized = true;
 
-	if (config_load()) {
-		config_load_default();
-	}
+	restore_state();
 
 	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
+	k_delayed_work_submit(&curve_data.monitor_work, K_MSEC(MONITOR_WORK_INTERVAL));
 
 	return 0;
 }
@@ -223,7 +267,7 @@ static int trip_curve_close(void)
 
 	curve_data.events_waiting = 0;
 	curve_data.state = CURVE_STATE_CLOSING;
-	curve_data.cause = BCB_TRIP_CAUSE_NONE;
+	curve_data.cause = BCB_TRIP_CAUSE_EXT;
 	k_delayed_work_cancel(&curve_data.transient_work);
 	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 
@@ -240,7 +284,7 @@ static int trip_curve_open(void)
 
 	curve_data.events_waiting = 0;
 	curve_data.state = CURVE_STATE_OPENING;
-	curve_data.cause = BCB_TRIP_CAUSE_NONE;
+	curve_data.cause = BCB_TRIP_CAUSE_EXT;
 	k_delayed_work_cancel(&curve_data.transient_work);
 	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 
@@ -268,16 +312,42 @@ static bcb_trip_cause_t trip_curve_get_cause(void)
 	return curve_data.cause;
 }
 
-static int trip_curve_set_limit(uint8_t limit, bcb_curve_limit_type_t type)
+static int trip_curve_set_limit_hw(uint8_t limit)
 {
-	config_store();
+	int r;
+
+	r = bcb_ocp_set_limit(limit);
+	if (r) {
+		LOG_ERR("cannot set hw current limit: %d", r);
+		return r;
+	}
+
+	curve_data.limit_hw = limit;
+	k_work_submit(&curve_data.store_work);
 
 	return 0;
 }
 
-static uint8_t trip_curve_get_limit(bcb_curve_limit_type_t type)
+static uint8_t trip_curve_get_limit_hw(void)
 {
+	return curve_data.limit_hw;
+}
+
+static int trip_curve_set_limit_sw(uint8_t limit, uint8_t hist, uint32_t duration)
+{
+	curve_data.limit_sw = limit;
+	curve_data.limit_sw_duration = duration;
+	curve_data.limit_sw_hist = hist;
+	k_work_submit(&curve_data.store_work);
+
 	return 0;
+}
+
+static void trip_curve_get_limit_sw(uint8_t *limit, uint8_t *hist, uint32_t *duration)
+{
+	*limit = curve_data.limit_sw;
+	*hist = curve_data.limit_sw_hist;
+	*duration = curve_data.limit_sw_duration;
 }
 
 static int trip_curve_set_callback(bcb_trip_curve_callback_t callback)
@@ -297,22 +367,22 @@ int bcb_trip_curve_default_set_recovery(uint32_t duration)
 		return -ENOTSUP;
 	}
 
-	curve_data.config.recovery_enabled = duration > 0 ? true : false;
-	curve_data.config.recovery_duration = duration;
+	curve_data.recovery_enabled = duration > 0 ? true : false;
+	curve_data.recovery_duration = duration;
 
-	config_store();
-
-	if (curve_data.config.recovery_enabled) {
+	if (curve_data.recovery_enabled) {
 		curve_data.max_events_waiting_updated = false;
 		k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 	}
+
+	k_work_submit(&curve_data.store_work);
 
 	return 0;
 }
 
 uint32_t bcb_trip_curve_default_get_recovery(void)
 {
-	return curve_data.config.recovery_duration;
+	return curve_data.recovery_duration;
 }
 
 const struct bcb_trip_curve trip_curve_default = {
@@ -322,8 +392,10 @@ const struct bcb_trip_curve trip_curve_default = {
 	.open = trip_curve_open,
 	.get_state = trip_curve_get_state,
 	.get_cause = trip_curve_get_cause,
-	.set_limit = trip_curve_set_limit,
-	.get_limit = trip_curve_get_limit,
+	.set_limit_hw = trip_curve_set_limit_hw,
+	.get_limit_hw = trip_curve_get_limit_hw,
+	.set_limit_sw = trip_curve_set_limit_sw,
+	.get_limit_sw = trip_curve_get_limit_sw,
 	.set_callback = trip_curve_set_callback,
 };
 
@@ -336,6 +408,8 @@ static int trip_curve_system_init()
 {
 	memset(&curve_data, 0, sizeof(curve_data));
 	k_delayed_work_init(&curve_data.transient_work, transient_work);
+	k_delayed_work_init(&curve_data.monitor_work, monitor_work);
+	k_work_init(&curve_data.store_work, state_store_work);
 	curve_data.trip_curve = &trip_curve_default;
 	curve_data.zd_callback.handler = on_voltage_zero_detect;
 	curve_data.sw_callback.handler = on_switch_event;

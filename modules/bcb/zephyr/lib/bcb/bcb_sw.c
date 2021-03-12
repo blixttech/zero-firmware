@@ -349,6 +349,19 @@ bcb_ocp_direction_t bcb_ocp_test_get_direction(void)
 	return sw_data.ocp_test_direction;
 }
 
+int bcb_ocp_set_limit(uint8_t current)
+{
+	int32_t dac = (int32_t)(((102 * (int64_t)current) - 3000) * 4096 / 3000);
+	LOG_DBG("current %" PRIu8 ", dac %" PRId32, current, dac);
+	if (dac < 0 || dac > 4095) {
+		return -ENOTSUP;
+	}
+
+	BCB_DAC_SET(actrl, ocp_limit_adj, (uint32_t)dac);
+
+	return 0;
+}
+
 uint32_t bcb_sw_get_on_off_duration(void)
 {
 	return sw_data.on_off_duration;

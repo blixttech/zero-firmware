@@ -31,6 +31,11 @@ config BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT
 	default 50
 	depends on BCB_TRIP_CURVE_DEFAULT
 
+config BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
+	int "Current monitoring interval for the default trip cruve for DC in milliseconds"
+	default 10
+	depends on BCB_TRIP_CURVE_DEFAULT
+
 menu "Initialisation priorities"
 
 config BCB_LIB_SIM_INIT_PRIORITY
