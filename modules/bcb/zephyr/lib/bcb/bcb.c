@@ -224,24 +224,9 @@ int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
 	return 0;
 }
 
-int bcb_set_trip_limit(uint8_t limit, bcb_curve_limit_type_t type)
+const struct bcb_trip_curve * bcb_get_trip_curve(void)
 {
-	if (!bcb_data.trip_curve) {
-		LOG_ERR("trip cruve not set");
-		return -EINVAL;
-	}
-
-	return bcb_data.trip_curve->set_limit(limit, type);
-}
-
-uint8_t bcb_get_trip_limit(bcb_curve_limit_type_t type)
-{
-	if (!bcb_data.trip_curve) {
-		LOG_ERR("trip cruve not set");
-		return 0;
-	}
-
-	return bcb_data.trip_curve->get_limit(type);
+	return bcb_data.trip_curve;
 }
 
 int bcb_add_trip_callback(struct bcb_trip_callback *callback)

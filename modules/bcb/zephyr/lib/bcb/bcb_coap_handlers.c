@@ -122,7 +122,7 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 	uint8_t total;
 
 	r = snprintk((char *)buf, buf_len, "%010" PRIu32 ",%1" PRIu8 ",%1" PRIu8 ",%1" PRIu8,
-		     k_uptime_get_32(), (uint8_t)bcb_sw_is_on(), (uint8_t)bcb_sw_get_cause(),
+		     k_uptime_get_32(), (uint8_t)bcb_sw_is_on(), (uint8_t)bcb_get_cause(),
 		     (uint8_t)bcb_get_state());
 	if (r < 0) {
 		return 0;
@@ -152,9 +152,9 @@ static uint8_t create_status_payload(uint8_t *buf, uint8_t buf_len)
 	return total;
 }
 
-static int send_notification_status(struct coap_resource *resource, struct sockaddr *addr,
-				    uint8_t type, uint16_t id, const uint8_t *token,
-				    uint8_t token_len, bool notify, uint32_t obs_seq)
+static int send_notification_status(struct sockaddr *addr, uint8_t type, uint16_t id,
+				    const uint8_t *token, uint8_t token_len, bool notify,
+				    uint32_t obs_seq)
 {
 	int r;
 	struct coap_packet response;
@@ -231,7 +231,7 @@ void bcb_coap_handlers_status_notify(struct coap_resource *resource, struct coap
 
 	notifier->seq++;
 
-	send_notification_status(resource, &observer->addr, type, coap_next_id(), observer->token,
+	send_notification_status(&observer->addr, type, coap_next_id(), observer->token,
 				 observer->tkl, true, notifier->seq);
 }
 
@@ -276,16 +276,16 @@ int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_pac
 			has_notifier = true;
 		}
 
-		return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl,
-						has_notifier, 0);
-	}
-
-	if (obs_opt == 1) {
+		return send_notification_status(addr, COAP_TYPE_ACK, id, token, tkl, has_notifier,
+						0);
+	} else if (obs_opt == 1) {
 		/* Observer deregister request. Refer RFC7641 section 3.6 */
 		bcb_coap_notifier_remove(addr, token, tkl);
+	} else {
+		/* Invalid observation request */
 	}
 
-	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
+	return send_notification_status(addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
 int bcb_coap_handlers_switch_get(struct coap_resource *resource, struct coap_packet *request,
@@ -298,7 +298,7 @@ int bcb_coap_handlers_switch_get(struct coap_resource *resource, struct coap_pac
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
 
-	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
+	return send_notification_status(addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
 int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_packet *request,
@@ -309,6 +309,7 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 	uint8_t token[8];
 	uint8_t tkl;
 	int r;
+	int i;
 
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
@@ -318,7 +319,6 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 		return -EINVAL;
 	}
 
-	int i;
 	for (i = 0; i < r; i++) {
 		if (options[i].len < 3) {
 			continue;
@@ -334,17 +334,21 @@ int bcb_coap_handlers_switch_post(struct coap_resource *resource, struct coap_pa
 		}
 	}
 
-	return send_notification_status(resource, addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
+	return send_notification_status(addr, COAP_TYPE_ACK, id, token, tkl, false, 0);
 }
 
-static int send_tc_default_config(struct sockaddr *addr, uint16_t id, const uint8_t *token,
-				  uint8_t token_len)
+static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t *token,
+			      uint8_t token_len, bool is_tc_def)
 {
 	int r;
 	struct coap_packet response;
 	uint8_t format = 0;
 	uint8_t payload[70];
-	const struct bcb_trip_curve *tc_default = bcb_trip_curve_get_default();
+	uint8_t total = 0;
+	uint8_t limit_sw;
+	uint8_t limit_sw_hist;
+	uint32_t limit_sw_duration;
+	const struct bcb_trip_curve *tc;
 
 	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
 			     COAP_TYPE_ACK, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT,
@@ -365,18 +369,34 @@ static int send_tc_default_config(struct sockaddr *addr, uint16_t id, const uint
 		return r;
 	}
 
+	if (is_tc_def) {
+		tc = bcb_trip_curve_get_default();
+	} else {
+		tc = bcb_get_trip_curve();
+	}
+
+	tc->get_limit_sw(&limit_sw, &limit_sw_hist, &limit_sw_duration);
+
 	r = snprintk((char *)payload, sizeof(payload),
-		     "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%06" PRIu32,
-		     (uint8_t)tc_default->get_state(), (uint8_t)tc_default->get_cause(),
-		     tc_default->get_limit(BCB_CURVE_LIMIT_TYPE_HW),
-		     tc_default->get_limit(BCB_CURVE_LIMIT_TYPE_SW),
-		     bcb_trip_curve_default_get_recovery());
+		     "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%06" PRIu32,
+		     (uint8_t)tc->get_state(), (uint8_t)tc->get_cause(), tc->get_limit_hw(),
+		     limit_sw, limit_sw_hist, limit_sw_duration);
 
 	if (r < 0) {
 		return r;
 	}
+	total += r;
 
-	r = coap_packet_append_payload(&response, payload, r);
+	if (is_tc_def) {
+		r = snprintk((char *)(payload + total), sizeof(payload) - total, ",%06" PRIu32,
+			     bcb_trip_curve_default_get_recovery());
+		if (r < 0) {
+			return r;
+		}
+		total += r;
+	}
+
+	r = coap_packet_append_payload(&response, payload, total);
 	if (r < 0) {
 		return r;
 	}
@@ -384,8 +404,8 @@ static int send_tc_default_config(struct sockaddr *addr, uint16_t id, const uint
 	return bcb_coap_send_response(&response, addr);
 }
 
-int bcb_coap_handlers_tc_default_get(struct coap_resource *resource, struct coap_packet *request,
-				     struct sockaddr *addr, socklen_t addr_len)
+int bcb_coap_handlers_tc_def_get(struct coap_resource *resource, struct coap_packet *request,
+				 struct sockaddr *addr, socklen_t addr_len)
 {
 	uint16_t id;
 	uint8_t token[8];
@@ -394,17 +414,18 @@ int bcb_coap_handlers_tc_default_get(struct coap_resource *resource, struct coap
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
 
-	return send_tc_default_config(addr, id, token, tkl);
+	return send_tc_def_config(addr, id, token, tkl, true);
 }
 
-int bcb_coap_handlers_tc_default_post(struct coap_resource *resource, struct coap_packet *request,
-				      struct sockaddr *addr, socklen_t addr_len)
+int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_packet *request,
+				  struct sockaddr *addr, socklen_t addr_len)
 {
 	struct coap_option options[4];
 	uint16_t id;
 	uint8_t token[8];
 	uint8_t tkl;
 	int r;
+	int i;
 	uint32_t recovery_duration;
 
 	id = coap_header_get_id(request);
@@ -415,7 +436,6 @@ int bcb_coap_handlers_tc_default_post(struct coap_resource *resource, struct coa
 		return -EINVAL;
 	}
 
-	int i;
 	for (i = 0; i < r; i++) {
 		if (options[i].len > 3 && strncmp(options[i].value, "rd=", 3) == 0) {
 			options[i].value[sizeof(options[i].value) - 1] = '\0';
@@ -424,7 +444,89 @@ int bcb_coap_handlers_tc_default_post(struct coap_resource *resource, struct coa
 		}
 	}
 
-	return send_tc_default_config(addr, id, token, tkl);
+	return send_tc_def_config(addr, id, token, tkl, true);
+}
+
+int bcb_coap_handlers_tc_get(struct coap_resource *resource, struct coap_packet *request,
+			     struct sockaddr *addr, socklen_t addr_len)
+{
+	uint16_t id;
+	uint8_t token[8];
+	uint8_t tkl;
+
+	id = coap_header_get_id(request);
+	tkl = coap_header_get_token(request, token);
+
+	return send_tc_def_config(addr, id, token, tkl, false);
+}
+
+int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet *request,
+			      struct sockaddr *addr, socklen_t addr_len)
+{
+	struct coap_option options[4];
+	uint16_t id;
+	uint8_t token[8];
+	uint8_t tkl;
+	int r;
+	int i;
+	const struct bcb_trip_curve *tc;
+
+	tc = bcb_get_trip_curve();
+
+	id = coap_header_get_id(request);
+	tkl = coap_header_get_token(request, token);
+
+	r = coap_find_options(request, COAP_OPTION_URI_QUERY, options, 4);
+	if (r < 0) {
+		return -EINVAL;
+	}
+
+	for (i = 0; i < r; i++) {
+		if (options[i].len == 5 && strncmp(options[i].value, "close", 5) == 0) {
+			bcb_close();
+		} else if (options[i].len == 4 && strncmp(options[i].value, "open", 4) == 0) {
+			bcb_open();
+		} else if (options[i].len == 6 && strncmp(options[i].value, "toggle", 6) == 0) {
+			bcb_toggle();
+		} else if (options[i].len > 4 && strncmp(options[i].value, "hwl=", 4) == 0) {
+			uint8_t limit;
+
+			options[i].value[sizeof(options[i].value) - 1] = '\0';
+			limit = strtoul((char *)&options[i].value[4], NULL, 0);
+			tc->set_limit_hw(limit);
+		} else if (options[i].len > 4 && strncmp(options[i].value, "swl=", 4) == 0) {
+			uint8_t limit;
+			uint8_t hist;
+			uint32_t duration;
+
+			tc->get_limit_sw(&limit, &hist, &duration);
+			options[i].value[sizeof(options[i].value) - 1] = '\0';
+			limit = strtoul((char *)&options[i].value[4], NULL, 0);
+			tc->set_limit_sw(limit, hist, duration);
+		} else if (options[i].len > 5 && strncmp(options[i].value, "swlh=", 5) == 0) {
+			uint8_t limit;
+			uint8_t hist;
+			uint32_t duration;
+
+			tc->get_limit_sw(&limit, &hist, &duration);
+			options[i].value[sizeof(options[i].value) - 1] = '\0';
+			hist = strtoul((char *)&options[i].value[4], NULL, 0);
+			tc->set_limit_sw(limit, hist, duration);
+		} else if (options[i].len > 5 && strncmp(options[i].value, "swld=", 5) == 0) {
+			uint8_t limit;
+			uint8_t hist;
+			uint32_t duration;
+
+			tc->get_limit_sw(&limit, &hist, &duration);
+			options[i].value[sizeof(options[i].value) - 1] = '\0';
+			duration = strtoul((char *)&options[i].value[5], NULL, 0);
+			tc->set_limit_sw(limit, hist, duration);
+		} else {
+			/* Other values we don't care for the moment  */
+		}
+	}
+
+	return send_tc_def_config(addr, id, token, tkl, false);
 }
 
 void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)
