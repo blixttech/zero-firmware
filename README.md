@@ -1,4 +1,4 @@
-# Firmware for the Blixt Circuit Breaker (BCB)
+# Firmware for the Blixt Zero
 
 ## Introduction
 Someone has to write this!
