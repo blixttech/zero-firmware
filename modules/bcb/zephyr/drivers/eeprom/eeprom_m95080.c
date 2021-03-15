@@ -128,7 +128,7 @@ static inline int eeprom_m95080_write_enable(const struct device *dev, bool enab
 static inline int eeprom_m95080_read_spi(const struct device *dev, off_t offset, void *buf,
 					 size_t len)
 {
-	const struct eeprom_m95080_config *config = dev->config_info;
+    const struct eeprom_m95080_config *config = dev->config_info;
 	struct eeprom_m95080_data *data = dev->driver_data;
 	size_t cmd_len = 1 + config->address_width / 8;
 	uint8_t cmd[4] = { EEPROM_M95080_READ, 0, 0, 0 };
@@ -291,6 +291,8 @@ static inline int eeprom_m95080_write_spi(const struct device *dev, off_t offset
 
 static int eeprom_m95080_read(struct device *dev, off_t offset, void *buf, size_t len)
 {
+    return -1;
+
 	const struct eeprom_m95080_config *config = dev->config_info;
 	struct eeprom_m95080_data *data = dev->driver_data;
 	uint8_t *read_buf = buf;
@@ -325,6 +327,7 @@ static int eeprom_m95080_read(struct device *dev, off_t offset, void *buf, size_
 
 static int eeprom_m95080_write(struct device *dev, off_t offset, const void *buf, size_t len)
 {
+    return -1;
 	const struct eeprom_m95080_config *config = dev->config_info;
 	struct eeprom_m95080_data *data = dev->driver_data;
 	const uint8_t *pbuf = buf;
