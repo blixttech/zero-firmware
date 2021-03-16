@@ -54,8 +54,8 @@ $(BINARY_DIR):
 	mkdir -p $@
 
 binaries: $(BINARY_DIR) $(MCUBOOT_BIN) $(ZERO_BIN)
-	cp $(MCUBOOT_BIN) $(BINARY_DIR)/mcuboot.bin && \
-	cp $(ZERO_BIN) $(BINARY_DIR)/zero.signed.bin
+	cp $(MCUBOOT_BIN) $(BINARY_DIR)/mcuboot-$(VERSION).bin && \
+	cp $(ZERO_BIN) $(BINARY_DIR)/zero-$(VERSION).signed.bin
 
 clean:
 	rm -rf $(BINARY_DIR) $(MCUBOOT_BUILD_DIR) $(ZERO_BUILD_DIR)

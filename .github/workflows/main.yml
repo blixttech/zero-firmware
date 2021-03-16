@@ -1,0 +1,73 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-20.04
+
+    env:
+        DEBIAN_FRONTEND: "noninteractive"
+        CONAN_USER_HOME: "${{ github.workspace }}/"
+        CONAN_NON_INTERACTIVE: 1
+        ZEPHYR_TOOLCHAIN_VARIANT: zephyr
+        ZEPHYR_SDK_INSTALL_DIR: ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # Note: we are using fetch-depth: 0 here to fetch the whole
+          # history and especially tags, since we use git describe
+          # afterwards to generate the installer filename.
+          fetch-depth: 0
+
+
+      - name: Update environment
+        shell: bash
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Update package lists
+          sudo apt update -qq
+          # Install build tools
+          sudo apt install -y \
+            ninja-build \
+            gperf \
+            ccache \
+            dfu-util \
+            device-tree-compiler
+
+          pip3 install \
+            cmake \
+            tk \
+            setuptools \
+            wheel \
+            pyyaml \
+            edt \
+            pyelftools \
+            pykwalify \
+            west
+
+      - name: Install toolchain
+        shell: bash
+        run: |
+          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.4/zephyr-toolchain-arm-0.11.4-setup.run
+          chmod +x zephyr-toolchain-arm-0.11.4-setup.run
+          mkdir -p ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+          ./zephyr-toolchain-arm-0.11.4-setup.run -- -d ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4 
+
+      - name: Init Project
+        shell: bash
+        run: make init
+    
+      - name: Build
+        shell: bash
+        run: make binaries
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/*.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
