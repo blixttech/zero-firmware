@@ -163,13 +163,22 @@ bool bcb_coap_has_pending(const struct sockaddr *addr)
 	return false;
 }
 
+void pending_remove(struct coap_pending *pending)
+{
+	/* pending->data has been replaced with the pointer to net_buf  */
+	struct net_buf *buf = (struct net_buf *)pending->data;
+	bcb_coap_buf_free(buf);
+	//coap_pending_clear(pending); /* Next step will do the same */
+	memset(pending, 0, sizeof(struct coap_pending));
+}
+
 void pending_remove_by_addr(const struct sockaddr *addr)
 {
 	int i;
 	for (i = 0; i < CONFIG_BCB_COAP_MAX_PENDING; i++) {
 		if (bcb_coap_data.pendings[i].timeout != 0 &&
 		    is_sockaddr_equal(addr, &bcb_coap_data.pendings[i].addr)) {
-			coap_pending_clear(&bcb_coap_data.pendings[i]);
+			pending_remove(&bcb_coap_data.pendings[i]);
 		}
 	}
 }
@@ -195,8 +204,7 @@ static void retransmit_work(struct k_work *work)
 	if (!coap_pending_cycle(pending)) {
 		/* This is the last retransmission */
 		notifier_remove_by_addr(&pending->addr);
-		bcb_coap_buf_free(buf);
-		coap_pending_clear(pending);
+		pending_remove(pending);
 		LOG_INF("removed stale observer");
 	}
 
@@ -324,6 +332,10 @@ static int create_pending_request(struct coap_packet *packet, const struct socka
 	pending = coap_pending_next_to_expire(bcb_coap_data.pendings, CONFIG_BCB_COAP_MAX_PENDING);
 	if (!pending) {
 		return -EINVAL;
+	}
+
+	if (k_delayed_work_remaining_ticks(&bcb_coap_data.retransmit_work)) {
+		return 0;
 	}
 
 	k_delayed_work_submit(&bcb_coap_data.retransmit_work, K_MSEC(pending->timeout));
@@ -495,9 +507,7 @@ static int process_coap_packet(uint8_t *data, uint8_t data_len, struct sockaddr 
 			LOG_WRN("recevied ACK, but no pending");
 			return -EINVAL;
 		}
-		/* pending->data has been replaced with the pointer to net_buf  */
-		bcb_coap_buf_free((struct net_buf *)pending->data);
-		coap_pending_clear(pending);
+		pending_remove(pending);
 		return 0;
 
 	} else if (type == COAP_TYPE_RESET) {
