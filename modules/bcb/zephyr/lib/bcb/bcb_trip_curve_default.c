@@ -10,8 +10,7 @@
 #define TRANSIENT_WORK_TIMEOUT CONFIG_BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT
 #define MONITOR_WORK_INTERVAL CONFIG_BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
 
-//#define LOG_LEVEL CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_tc_default);
 
@@ -123,11 +122,11 @@ static void on_switch_event(bool is_closed, bcb_sw_cause_t cause)
 	k_delayed_work_cancel(&curve_data.transient_work);
 
 	if (is_closed) {
-		LOG_DBG("closed");
+		LOG_INF("closed");
 		curve_data.state = CURVE_STATE_CLOSED;
-		curve_data.cause = BCB_TRIP_CAUSE_NONE;
+		curve_data.cause = BCB_TRIP_CAUSE_EXT;
 	} else {
-		LOG_DBG("opened");
+		LOG_INF("opened");
 		curve_data.state = CURVE_STATE_OPENED;
 		set_cause_from_sw_cause();
 
@@ -231,7 +230,7 @@ static int trip_curve_init(void)
 		curve_data.state = CURVE_STATE_OPENED;
 	}
 
-	curve_data.cause = BCB_TRIP_CAUSE_NONE;
+	curve_data.cause = BCB_TRIP_CAUSE_EXT;
 	bcb_zd_add_callback(BCB_ZD_TYPE_VOLTAGE, &curve_data.zd_callback);
 	bcb_sw_add_callback(&curve_data.sw_callback);
 	curve_data.initialized = true;
