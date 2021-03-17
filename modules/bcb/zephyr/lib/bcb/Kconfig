@@ -12,7 +12,7 @@ endif # BCB_COAP
 
 config BCB_LIB_SW_MAX_CLOSING_TEMPERATURE
 	int "Maximum temperature when the swtich can be closed"
-	default 50
+	default 75
 
 config BCB_LIB_SW_MAX_TEMPERATURE
 	int "Maximum temperature that the swtich stays closed"
