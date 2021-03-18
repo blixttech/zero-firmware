@@ -262,6 +262,10 @@ static int trip_curve_close(void)
 		return -ENOTSUP;
 	}
 
+	if (curve_data.state == CURVE_STATE_CLOSED) {
+		return 0;
+	}
+
 	LOG_DBG("close");
 
 	curve_data.events_waiting = 0;
@@ -277,6 +281,10 @@ static int trip_curve_open(void)
 {
 	if (!curve_data.initialized) {
 		return -ENOTSUP;
+	}
+
+	if (curve_data.state == CURVE_STATE_OPENED) {
+		return 0;
 	}
 
 	LOG_DBG("open");
