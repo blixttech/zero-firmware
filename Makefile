@@ -31,24 +31,40 @@ init:
 	west update
 	pip install -r scripts/requirements.txt
 
+# MCUboot rules
+ifeq ($(INCREMENTAL),1)
+mcuboot:
+else
+mcuboot: $(MCUBOOT_BIN)
 $(MCUBOOT_BIN):
+endif
 	cd $(MCUBOOT_APP_DIR) && west build -b bcb_v1 -- -DBOARD_ROOT=$(MCUBOOT_BOARD_ROOT) \
 	-DDTS_ROOT=$(MCUBOOT_DTS_ROOT) -DZEPHYR_EXTRA_MODULES=$(MCUBOOT_EXTRA_MODULES) \
 	-DOVERLAY_CONFIG=$(MCUBOOT_OVERLAY_CONFIG) -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 
+ifeq ($(INCREMENTAL),1)
+mcuboot-flash: mcuboot
+else
+mcuboot-flash: $(MCUBOOT_BIN)
+endif
+	cd $(MCUBOOT_APP_DIR) && west flash --bin-file $(MCUBOOT_BIN)
+
+# Zero app rules
+ifeq ($(INCREMENTAL),1)
+zero:
+else
+zero: $(ZERO_BIN)
 $(ZERO_BIN):
+endif
 	cd $(ZERO_APP_DIR) && west build -- -DCMAKE_EXPORT_COMPILE_COMMANDS=1 && \
 	west sign -t imgtool -- --key $(KEY_PAIR) --version $(VERSION)
 
-mcuboot: $(MCUBOOT_BIN)
-
-mcuboot-flash: $(MCUBOOT_BIN)
-	cd $(MCUBOOT_APP_DIR) && west flash --bin-file $<
-
-zero: $(ZERO_BIN)
-
+ifeq ($(INCREMENTAL),1)
+zero-flash: zero
+else
 zero-flash: $(ZERO_BIN)
-	cd $(ZERO_APP_DIR) && west flash --bin-file $<
+endif
+	cd $(ZERO_APP_DIR) && west flash --bin-file $(ZERO_BIN)
 
 $(BINARY_DIR):
 	mkdir -p $@
