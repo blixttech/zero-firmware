@@ -143,6 +143,7 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 	int32_t temp_out;
 
 	if (is_on) {
+		LOG_DBG("closed: ext");
 		sw_data.etime_on = etime_now;
 		call_callbacks();
 		return;
@@ -153,6 +154,7 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 
 	if (!is_on_cmd_active) {
 		/* The switch has been turned off via software */
+		LOG_DBG("opened: ext");
 		call_callbacks();
 		return;
 	}
@@ -162,8 +164,8 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
 
 		sw_data.ocp_test_duration = get_ocp_test_duration();
-		LOG_DBG("direction %d, duration %" PRIu32 " ns", sw_data.ocp_test_direction,
-			sw_data.ocp_test_duration);
+		LOG_DBG("opened: ocp test, direction %d, duration %" PRIu32 " ns",
+			sw_data.ocp_test_direction, sw_data.ocp_test_duration);
 		sw_data.cause = BCB_SW_CAUSE_OCP_TEST;
 		call_callbacks();
 		return;
@@ -180,7 +182,7 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		/* Under voltage shutdown circuit pulls the temperature line of
 		 * the power out board to ground.
 		 */
-		LOG_DBG("uvp activated");
+		LOG_DBG("opened: uvp");
 		sw_data.cause = BCB_SW_CAUSE_UVP;
 		call_callbacks();
 		return;
@@ -189,20 +191,22 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
 	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
 		/* overtemperature protection has been activated. */
-		LOG_DBG("oct activated: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
+		LOG_DBG("opened: otp, in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
 		call_callbacks();
 		return;
 	}
 
 	/* Overcurrent protection has been activated. */
-	LOG_DBG("otp activated");
+	LOG_DBG("opened: ocp, duration %" PRIu32, sw_data.on_off_duration);
 	sw_data.cause = BCB_SW_CAUSE_OCP;
 	call_callbacks();
 }
 
 int bcb_sw_init(void)
 {
+	LOG_DBG("init");
+
 	memset(&sw_data, 0, sizeof(sw_data));
 
 	BCB_GPIO_PIN_INIT(dctrl, on_off);
@@ -254,7 +258,7 @@ int bcb_sw_init(void)
 	return 0;
 }
 
-int bcb_sw_on(void)
+static int bcb_sw_close(void)
 {
 	int32_t temp_in;
 	int32_t temp_out;
@@ -277,10 +281,11 @@ int bcb_sw_on(void)
 		return -EACCES;
 	}
 
+	LOG_DBG("closing");
+	sw_data.cause = BCB_SW_CAUSE_EXT;
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_otp_reset, 0);
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_otp_reset, 1);
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_otp_reset, 0);
-	sw_data.cause = BCB_SW_CAUSE_EXT;
 	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 1);
 
 	k_delayed_work_submit(&sw_data.vitals_check_work,
@@ -289,9 +294,20 @@ int bcb_sw_on(void)
 	return 0;
 }
 
+int bcb_sw_on(void)
+{
+	return bcb_sw_close();
+}
+
 static int sw_open(void)
 {
+	if (!bcb_sw_is_on()) {
+		return 0;
+	}
+
+	LOG_DBG("opening");
 	k_delayed_work_cancel(&sw_data.vitals_check_work);
+	sw_data.cause = BCB_SW_CAUSE_EXT;
 	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_POSITIVE, false);
 	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
 	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 0);
@@ -300,7 +316,6 @@ static int sw_open(void)
 
 int bcb_sw_off(void)
 {
-	sw_data.cause = BCB_SW_CAUSE_EXT;
 	return sw_open();
 }
 
@@ -316,6 +331,8 @@ bcb_sw_cause_t bcb_sw_get_cause(void)
 
 int bcb_ocp_test_trigger(bcb_ocp_direction_t direction, bool enable)
 {
+	LOG_DBG("direction %d, en %d", (uint8_t)direction, (uint8_t)enable);
+
 	if (enable) {
 		if (!bcb_sw_is_on()) {
 			LOG_WRN("switch has to be turned on");
@@ -401,7 +418,7 @@ static void vitals_check_work(struct k_work *work)
 	temp_out = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT);
 
 	if (temp_out > 200) {
-		LOG_DBG("uvp activated");
+		LOG_DBG("uvp");
 		sw_data.cause = BCB_SW_CAUSE_UVP;
 		sw_open();
 		return;
@@ -409,7 +426,7 @@ static void vitals_check_work(struct k_work *work)
 
 	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
 	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
-		LOG_DBG("oct activated: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
+		LOG_DBG("ocp: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
 		sw_open();
 		return;

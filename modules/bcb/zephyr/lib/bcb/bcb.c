@@ -60,9 +60,11 @@ static void bcb_work(struct k_work *work)
 		curve_state = bcb_data.trip_curve->get_state();
 
 		if (item.action == BCB_ACTION_OPEN) {
+			LOG_DBG("open");
 			bcb_data.state.is_closed = false;
 			r = bcb_data.trip_curve->open();
 		} else if (item.action == BCB_ACTION_CLOSE) {
+			LOG_DBG("close");
 			bcb_data.state.is_closed = true;
 			r = bcb_data.trip_curve->close();
 		} else {
@@ -72,6 +74,7 @@ static void bcb_work(struct k_work *work)
 				continue;
 			}
 
+			LOG_DBG("toggle");
 			if (curve_state == BCB_CURVE_STATE_OPENED) {
 				bcb_data.state.is_closed = true;
 				r = bcb_data.trip_curve->close();

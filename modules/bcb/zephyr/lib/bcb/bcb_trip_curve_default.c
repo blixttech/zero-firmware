@@ -122,11 +122,11 @@ static void on_switch_event(bool is_closed, bcb_sw_cause_t cause)
 	k_delayed_work_cancel(&curve_data.transient_work);
 
 	if (is_closed) {
-		LOG_INF("closed");
+		LOG_INF("closed: %d", cause);
 		curve_data.state = CURVE_STATE_CLOSED;
 		curve_data.cause = BCB_TRIP_CAUSE_EXT;
 	} else {
-		LOG_INF("opened");
+		LOG_INF("opened: %d", cause);
 		curve_data.state = CURVE_STATE_OPENED;
 		set_cause_from_sw_cause();
 
@@ -266,7 +266,7 @@ static int trip_curve_close(void)
 		return 0;
 	}
 
-	LOG_DBG("close");
+	LOG_DBG("closing");
 
 	curve_data.events_waiting = 0;
 	curve_data.state = CURVE_STATE_CLOSING;
@@ -287,7 +287,7 @@ static int trip_curve_open(void)
 		return 0;
 	}
 
-	LOG_DBG("open");
+	LOG_DBG("opening");
 
 	curve_data.events_waiting = 0;
 	curve_data.state = CURVE_STATE_OPENING;
