@@ -162,14 +162,15 @@ static void monitor_work(struct k_work *work)
 	/* TODO: Implement current monitoring function */
 }
 
-static void restore_state_default(void)
+static void restore_state_default(persistent_state_t *state)
 {
-	curve_data.recovery_enabled = false;
-	curve_data.recovery_duration = 0;
-	curve_data.limit_hw = 50;
-	curve_data.limit_sw = 18;
-	curve_data.limit_sw_hist = 1;
-	curve_data.limit_sw_duration = 7200;
+	LOG_INF("restoring default state");
+	state->recovery_enabled = false;
+	state->recovery_duration = 0;
+	state->limit_hw = 50;
+	state->limit_sw = 18;
+	state->limit_sw_hist = 1;
+	state->limit_sw_duration = 7200;
 }
 
 static int restore_state(void)
@@ -181,8 +182,7 @@ static int restore_state(void)
 			    (uint8_t *)&state, sizeof(state));
 	if (r) {
 		LOG_ERR("state restroing error: %d", r);
-		restore_state_default();
-		return r;
+		restore_state_default(&state);
 	}
 
 	curve_data.recovery_enabled = state.recovery_enabled;
