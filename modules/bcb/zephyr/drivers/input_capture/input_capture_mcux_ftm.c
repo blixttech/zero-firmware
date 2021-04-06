@@ -107,6 +107,9 @@ static void ftm_irq_handler(void *arg)
 				if (data->enabled_interrupts[i]) {
 					FTM_DisableInterrupts(config->base,
 							      kFTM_Chnl0InterruptEnable << i);
+					/* Status flag for the first edge (channel) should not be
+					 * cleared if the next edge (channel) is pending.
+					 */
 				}
 			} else {
 				uint32_t mask = (kFTM_Chnl0Flag << i) | (kFTM_Chnl0Flag << (i + 1));
