@@ -368,9 +368,11 @@ bcb_ocp_direction_t bcb_ocp_test_get_direction(void)
 
 int bcb_ocp_set_limit(uint8_t current)
 {
-	int32_t dac = (int32_t)(((102 * (int64_t)current) - 3000) * 4096 / 3000);
+	/* DAC is referenced to DACREF_2 (VDDA - 3.3V) */
+	int32_t dac = ((102 * (int32_t)current) - 3000) * 4096 / 3300;
 	LOG_DBG("current %" PRIu8 ", dac %" PRId32, current, dac);
 	if (dac < 0 || dac > 4095) {
+		LOG_ERR("invalid limit: %" PRIu8 ", dac: %" PRId32, current, dac);
 		return -ENOTSUP;
 	}
 
