@@ -2,7 +2,6 @@
 #include "bcb_macros.h"
 #include <device.h>
 #include <devicetree.h>
-#include <drivers/input_capture.h>
 #include <drivers/gpio.h>
 
 #define LOG_LEVEL CONFIG_BCB_LEDS_LOG_LEVEL
@@ -17,7 +16,7 @@ struct bcb_user_if_data {
 	struct device *dev_gpio_led_green;
 	struct gpio_callback button_callback;
 	sys_slist_t button_callback_list;
-	volatile uint32_t last_button_event_time;
+	uint32_t last_button_event_time;
 };
 
 static struct bcb_user_if_data user_if_data;
@@ -26,9 +25,11 @@ static void button_event(struct device *dev, struct gpio_callback *cb, uint32_t 
 {
 	bool is_pressed;
 	uint32_t now = k_uptime_get_32();
-	uint32_t time_diff = user_if_data.last_button_event_time < now ?
+	uint32_t time_diff = user_if_data.last_button_event_time > now ?
 				     UINT32_MAX - user_if_data.last_button_event_time + now :
 				     now - user_if_data.last_button_event_time;
+	user_if_data.last_button_event_time = now;
+
 	if (time_diff < 100) {
 		return;
 	}
