@@ -257,12 +257,14 @@
                 gpios = <&gpiod 4  GPIO_ACTIVE_HIGH>, 
                         <&gpiod 5  GPIO_ACTIVE_HIGH>,
                         <&gpiod 0  GPIO_ACTIVE_HIGH>,
+                        <&gpiod 1  GPIO_ACTIVE_HIGH>,
                         <&gpiod 6  GPIO_ACTIVE_HIGH>,
                         <&gpiod 7  GPIO_ACTIVE_HIGH>,
                         <&gpioc 5  GPIO_ACTIVE_HIGH>;
                 gpio-names =    "ON_OFF", 
                                 "OCP_OTP_RESET",
                                 "ON_OFF_STATUS",
+                                "ON_OFF_STATUS_M",
                                 "OCP_TEST_TR_N",
                                 "OCP_TEST_TR_P",
                                 "ZD_V_MAINS";

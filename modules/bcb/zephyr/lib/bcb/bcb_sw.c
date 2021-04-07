@@ -23,6 +23,7 @@ LOG_MODULE_REGISTER(bcb_sw);
 struct bcb_sw_data {
 	struct device *dev_gpio_on_off;
 	struct device *dev_gpio_on_off_status;
+	struct device *dev_gpio_on_off_status_m;
 	struct device *dev_gpio_ocp_otp_reset;
 	struct device *dev_gpio_ocp_test_tr_n;
 	struct device *dev_gpio_ocp_test_tr_p;
@@ -41,7 +42,8 @@ struct bcb_sw_data {
 	volatile uint32_t ocp_test_duration;
 	uint32_t etime_frequency;
 	uint32_t ic_frequency;
-	struct gpio_callback on_off_status_callback;
+	struct gpio_callback on_callback;
+	struct gpio_callback off_callback;
 	sys_slist_t callback_list;
 	struct k_delayed_work vitals_check_work;
 };
@@ -124,38 +126,29 @@ static inline uint32_t get_ocp_test_duration()
 	return duration > UINT32_MAX ? UINT32_MAX : (uint32_t)duration;
 }
 
-static void call_callbacks(void)
+static void call_callbacks(bool is_on)
 {
 	bcb_sw_callback_t *callback;
 	SYS_SLIST_FOR_EACH_CONTAINER (&sw_data.callback_list, callback, node) {
 		if (callback && callback->handler) {
-			callback->handler(bcb_sw_is_on(), bcb_sw_get_cause());
+			callback->handler(is_on, bcb_sw_get_cause());
 		}
 	}
 }
 
-static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void on_event_off(struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	uint64_t etime_now = bcb_etime_get_now();
-	bool is_on = BCB_GPIO_PIN_GET_RAW(dctrl, on_off_status) == 1;
+	sw_data.etime_off = bcb_etime_get_now();
 	bool is_on_cmd_active = BCB_GPIO_PIN_GET_RAW(dctrl, on_off) == 1;
 	int32_t temp_in;
 	int32_t temp_out;
 
-	if (is_on) {
-		LOG_DBG("closed: ext");
-		sw_data.etime_on = etime_now;
-		call_callbacks();
-		return;
-	}
-
-	sw_data.etime_off = etime_now;
 	sw_data.on_off_duration = get_on_off_duration();
 
 	if (!is_on_cmd_active) {
 		/* The switch has been turned off via software */
 		LOG_DBG("opened: ext");
-		call_callbacks();
+		call_callbacks(false);
 		return;
 	}
 
@@ -167,7 +160,7 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		LOG_DBG("opened: ocp test, direction %d, duration %" PRIu32 " ns",
 			sw_data.ocp_test_direction, sw_data.ocp_test_duration);
 		sw_data.cause = BCB_SW_CAUSE_OCP_TEST;
-		call_callbacks();
+		call_callbacks(false);
 		return;
 	}
 
@@ -184,7 +177,7 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		 */
 		LOG_DBG("opened: uvp");
 		sw_data.cause = BCB_SW_CAUSE_UVP;
-		call_callbacks();
+		call_callbacks(false);
 		return;
 	}
 
@@ -193,14 +186,21 @@ static void on_off_status_changed(struct device *dev, struct gpio_callback *cb, 
 		/* overtemperature protection has been activated. */
 		LOG_DBG("opened: otp, in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
-		call_callbacks();
+		call_callbacks(false);
 		return;
 	}
 
 	/* Overcurrent protection has been activated. */
 	LOG_DBG("opened: ocp, duration %" PRIu32, sw_data.on_off_duration);
 	sw_data.cause = BCB_SW_CAUSE_OCP;
-	call_callbacks();
+	call_callbacks(false);
+}
+
+static void on_event_on(struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+	sw_data.etime_on = bcb_etime_get_now();
+	LOG_DBG("closed: ext");
+	call_callbacks(true);
 }
 
 int bcb_sw_init(void)
@@ -216,6 +216,9 @@ int bcb_sw_init(void)
 	BCB_GPIO_PIN_INIT(dctrl, on_off_status);
 	BCB_GPIO_PIN_CONFIG(dctrl, on_off_status, GPIO_INPUT);
 
+	BCB_GPIO_PIN_INIT(dctrl, on_off_status_m);
+	BCB_GPIO_PIN_CONFIG(dctrl, on_off_status_m, GPIO_INPUT);
+
 	BCB_GPIO_PIN_INIT(dctrl, ocp_otp_reset);
 	BCB_GPIO_PIN_CONFIG(dctrl, ocp_otp_reset, (GPIO_ACTIVE_HIGH | GPIO_OUTPUT_ACTIVE));
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_otp_reset, 0);
@@ -230,10 +233,17 @@ int bcb_sw_init(void)
 
 	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status),
 				     DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status, pin),
-				     GPIO_INT_EDGE_BOTH);
-	gpio_init_callback(&sw_data.on_off_status_callback, on_off_status_changed,
+				     GPIO_INT_EDGE_RISING);
+	gpio_init_callback(&sw_data.on_callback, on_event_on,
 			   BIT(DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status, pin)));
-	gpio_add_callback(BCB_GPIO_DEV(on_off_status), &sw_data.on_off_status_callback);
+	gpio_add_callback(BCB_GPIO_DEV(on_off_status), &sw_data.on_callback);
+
+	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status_m),
+				     DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status_m, pin),
+				     GPIO_INT_EDGE_FALLING);
+	gpio_init_callback(&sw_data.off_callback, on_event_off,
+			   BIT(DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status_m, pin)));
+	gpio_add_callback(BCB_GPIO_DEV(on_off_status_m), &sw_data.off_callback);
 
 	BCB_IC_INIT(itimestamp, on_off_status_r);
 	BCB_IC_CHANNEL_SET(itimestamp, on_off_status_r);
