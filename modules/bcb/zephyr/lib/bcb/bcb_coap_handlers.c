@@ -437,8 +437,12 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 	}
 
 	for (i = 0; i < r; i++) {
+		int opt_end = options[i].len < sizeof(options[i].value) ?
+				      options[i].len :
+				      (sizeof(options[i].value) - 1);
+		options[i].value[opt_end] = '\0';
+
 		if (options[i].len > 3 && strncmp(options[i].value, "rd=", 3) == 0) {
-			options[i].value[sizeof(options[i].value) - 1] = '\0';
 			recovery_duration = strtoul((char *)&options[i].value[3], NULL, 0);
 			bcb_trip_curve_default_set_recovery(recovery_duration);
 		}
@@ -482,6 +486,11 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 	}
 
 	for (i = 0; i < r; i++) {
+		int opt_end = options[i].len < sizeof(options[i].value) ?
+				      options[i].len :
+				      (sizeof(options[i].value) - 1);
+		options[i].value[opt_end] = '\0';
+
 		if (options[i].len == 5 && strncmp(options[i].value, "close", 5) == 0) {
 			bcb_close();
 		} else if (options[i].len == 4 && strncmp(options[i].value, "open", 4) == 0) {
@@ -491,7 +500,6 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 		} else if (options[i].len > 4 && strncmp(options[i].value, "hwl=", 4) == 0) {
 			uint8_t limit;
 
-			options[i].value[sizeof(options[i].value) - 1] = '\0';
 			limit = strtoul((char *)&options[i].value[4], NULL, 0);
 			tc->set_limit_hw(limit);
 		} else if (options[i].len > 4 && strncmp(options[i].value, "swl=", 4) == 0) {
@@ -500,7 +508,6 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 			uint32_t duration;
 
 			tc->get_limit_sw(&limit, &hist, &duration);
-			options[i].value[sizeof(options[i].value) - 1] = '\0';
 			limit = strtoul((char *)&options[i].value[4], NULL, 0);
 			tc->set_limit_sw(limit, hist, duration);
 		} else if (options[i].len > 5 && strncmp(options[i].value, "swlh=", 5) == 0) {
@@ -509,7 +516,6 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 			uint32_t duration;
 
 			tc->get_limit_sw(&limit, &hist, &duration);
-			options[i].value[sizeof(options[i].value) - 1] = '\0';
 			hist = strtoul((char *)&options[i].value[4], NULL, 0);
 			tc->set_limit_sw(limit, hist, duration);
 		} else if (options[i].len > 5 && strncmp(options[i].value, "swld=", 5) == 0) {
@@ -518,7 +524,6 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 			uint32_t duration;
 
 			tc->get_limit_sw(&limit, &hist, &duration);
-			options[i].value[sizeof(options[i].value) - 1] = '\0';
 			duration = strtoul((char *)&options[i].value[5], NULL, 0);
 			tc->set_limit_sw(limit, hist, duration);
 		} else {
