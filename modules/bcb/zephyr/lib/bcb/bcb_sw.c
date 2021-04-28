@@ -263,6 +263,9 @@ int bcb_sw_init(void)
 	BCB_DAC_INIT(actrl, ocp_limit_adj);
 	BCB_DAC_SET(actrl, ocp_limit_adj, 4095);
 
+	sw_data.etime_frequency = bcb_etime_get_frequency();
+	sw_data.ic_frequency = input_capture_get_frequency(BCB_IC_DEV(on_off_status_r));
+
 	k_delayed_work_init(&sw_data.vitals_check_work, vitals_check_work);
 
 	return 0;
