@@ -361,16 +361,17 @@ int bcb_ocp_test_trigger(bcb_ocp_direction_t direction, bool enable)
 		}
 
 		if (direction == BCB_OCP_DIRECTION_POSITIVE) {
+			sw_data.ocp_test_active = true;
+			sw_data.ocp_test_direction = direction;
 			BCB_GPIO_PIN_SET_RAW(dctrl, ocp_test_tr_p, 1);
 		} else if (direction == BCB_OCP_DIRECTION_NEGATIVE) {
+			sw_data.ocp_test_active = true;
+			sw_data.ocp_test_direction = direction;
 			BCB_GPIO_PIN_SET_RAW(dctrl, ocp_test_tr_n, 1);
 		} else {
 			LOG_WRN("invalid direction");
 			return -EINVAL;
 		}
-
-		sw_data.ocp_test_active = true;
-		sw_data.ocp_test_direction = direction;
 
 	} else {
 		/* OCP test can be done only one direction at a time. So disable both anyway. */
