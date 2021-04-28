@@ -129,9 +129,11 @@ static inline uint32_t get_ocp_test_duration()
 static void call_callbacks(bool is_on)
 {
 	bcb_sw_callback_t *callback;
+	bcb_sw_cause_t cause = sw_data.cause;
+
 	SYS_SLIST_FOR_EACH_CONTAINER (&sw_data.callback_list, callback, node) {
 		if (callback && callback->handler) {
-			callback->handler(is_on, bcb_sw_get_cause());
+			callback->handler(is_on, cause);
 		}
 	}
 }
@@ -146,8 +148,10 @@ static void on_event_off(struct device *dev, struct gpio_callback *cb, uint32_t 
 	sw_data.on_off_duration = get_on_off_duration();
 
 	if (!is_on_cmd_active) {
-		/* The switch has been turned off via software */
-		LOG_DBG("opened: ext");
+		LOG_DBG("opened: ext/vitals_check");
+		/* The cause is not set here since the switch might be turned off externally
+		 * or by the vitals check work.
+		 */
 		call_callbacks(false);
 		return;
 	}
@@ -232,17 +236,17 @@ int bcb_sw_init(void)
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_test_tr_p, 0);
 
 	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status),
-				     DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status, pin),
+				     BCB_GPIO_PIN(dctrl, on_off_status),
 				     GPIO_INT_EDGE_RISING);
 	gpio_init_callback(&sw_data.on_callback, on_event_on,
-			   BIT(DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status, pin)));
+			   BIT(BCB_GPIO_PIN(dctrl, on_off_status)));
 	gpio_add_callback(BCB_GPIO_DEV(on_off_status), &sw_data.on_callback);
 
 	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status_m),
-				     DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status_m, pin),
+				     BCB_GPIO_PIN(dctrl, on_off_status_m),
 				     GPIO_INT_EDGE_FALLING);
 	gpio_init_callback(&sw_data.off_callback, on_event_off,
-			   BIT(DT_PHA_BY_NAME(DT_NODELABEL(dctrl), gpios, on_off_status_m, pin)));
+			   BIT(BCB_GPIO_PIN(dctrl, on_off_status_m)));
 	gpio_add_callback(BCB_GPIO_DEV(on_off_status_m), &sw_data.off_callback);
 
 	BCB_IC_INIT(itimestamp, on_off_status_r);
@@ -318,12 +322,16 @@ static int sw_open(void)
 		return 0;
 	}
 
+	if (sw_data.ocp_test_active) {
+		bcb_ocp_test_trigger(BCB_OCP_DIRECTION_POSITIVE, false);
+		bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
+	}
+
 	LOG_DBG("opening");
 	k_delayed_work_cancel(&sw_data.vitals_check_work);
 	sw_data.cause = BCB_SW_CAUSE_EXT;
-	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_POSITIVE, false);
-	bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
 	BCB_GPIO_PIN_SET_RAW(dctrl, on_off, 0);
+
 	return 0;
 }
 
@@ -433,7 +441,7 @@ static void vitals_check_work(struct k_work *work)
 	temp_out = bcb_msmnt_get_temp(BCB_TEMP_SENSOR_PWR_OUT);
 
 	if (temp_out > 200) {
-		LOG_DBG("uvp");
+		LOG_DBG("vitals_check: uvp");
 		sw_data.cause = BCB_SW_CAUSE_UVP;
 		sw_open();
 		return;
@@ -441,7 +449,7 @@ static void vitals_check_work(struct k_work *work)
 
 	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
 	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
-		LOG_DBG("ocp: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
+		LOG_DBG("vitals_check: otp: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
 		sw_open();
 		return;
