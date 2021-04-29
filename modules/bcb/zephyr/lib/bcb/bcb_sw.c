@@ -161,8 +161,8 @@ static void on_event_off(struct device *dev, struct gpio_callback *cb, uint32_t 
 		bcb_ocp_test_trigger(BCB_OCP_DIRECTION_NEGATIVE, false);
 
 		sw_data.ocp_test_duration = get_ocp_test_duration();
-		LOG_DBG("opened: ocp test, direction %d, duration %" PRIu32 " ns",
-			sw_data.ocp_test_direction, sw_data.ocp_test_duration);
+		LOG_DBG("opened: ocp test, direction %" PRIu8 ", duration %" PRIu32 " ns",
+			(uint8_t)sw_data.ocp_test_direction, sw_data.ocp_test_duration);
 		sw_data.cause = BCB_SW_CAUSE_OCP_TEST;
 		call_callbacks(false);
 		return;
@@ -236,15 +236,13 @@ int bcb_sw_init(void)
 	BCB_GPIO_PIN_SET_RAW(dctrl, ocp_test_tr_p, 0);
 
 	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status),
-				     BCB_GPIO_PIN(dctrl, on_off_status),
-				     GPIO_INT_EDGE_RISING);
+				     BCB_GPIO_PIN(dctrl, on_off_status), GPIO_INT_EDGE_RISING);
 	gpio_init_callback(&sw_data.on_callback, on_event_on,
 			   BIT(BCB_GPIO_PIN(dctrl, on_off_status)));
 	gpio_add_callback(BCB_GPIO_DEV(on_off_status), &sw_data.on_callback);
 
 	gpio_pin_interrupt_configure(BCB_GPIO_DEV(on_off_status_m),
-				     BCB_GPIO_PIN(dctrl, on_off_status_m),
-				     GPIO_INT_EDGE_FALLING);
+				     BCB_GPIO_PIN(dctrl, on_off_status_m), GPIO_INT_EDGE_FALLING);
 	gpio_init_callback(&sw_data.off_callback, on_event_off,
 			   BIT(BCB_GPIO_PIN(dctrl, on_off_status_m)));
 	gpio_add_callback(BCB_GPIO_DEV(on_off_status_m), &sw_data.off_callback);
@@ -352,7 +350,7 @@ bcb_sw_cause_t bcb_sw_get_cause(void)
 
 int bcb_ocp_test_trigger(bcb_ocp_direction_t direction, bool enable)
 {
-	LOG_DBG("direction %d, en %d", (uint8_t)direction, (uint8_t)enable);
+	LOG_DBG("direction %" PRIu8 ", en %" PRIu8, (uint8_t)direction, (uint8_t)enable);
 
 	if (enable) {
 		if (!bcb_sw_is_on()) {
@@ -450,7 +448,8 @@ static void vitals_check_work(struct k_work *work)
 
 	if (temp_in > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE ||
 	    temp_out > CONFIG_BCB_LIB_SW_MAX_TEMPERATURE) {
-		LOG_DBG("vitals_check: otp: in %" PRId32 " C, out %" PRId32 " C", temp_in, temp_out);
+		LOG_DBG("vitals_check: otp: in %" PRId32 " C, out %" PRId32 " C", temp_in,
+			temp_out);
 		sw_data.cause = BCB_SW_CAUSE_OTP;
 		sw_open();
 		return;
