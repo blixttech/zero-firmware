@@ -197,6 +197,8 @@ static int restore_state(void)
 		LOG_ERR("cannot set hw current limit: %d", r);
 		return r;
 	}
+	/* It takes ~200 ms for the new OCP limit to take effect. */
+	k_sleep(K_MSEC(200));
 
 	return 0;
 }
@@ -222,8 +224,6 @@ static void state_store_work(struct k_work *work)
 
 static int trip_curve_init(void)
 {
-	LOG_DBG("init");
-
 	if (bcb_sw_is_on()) {
 		curve_data.state = CURVE_STATE_CLOSED;
 	} else {
@@ -240,18 +240,20 @@ static int trip_curve_init(void)
 	k_delayed_work_submit(&curve_data.transient_work, K_MSEC(TRANSIENT_WORK_TIMEOUT));
 	k_delayed_work_submit(&curve_data.monitor_work, K_MSEC(MONITOR_WORK_INTERVAL));
 
+	LOG_INF("initialised");
+
 	return 0;
 }
 
 static int trip_curve_shutdown(void)
 {
-	LOG_DBG("shutdown");
-
 	curve_data.initialized = false;
 	bcb_zd_remove_callback(BCB_ZD_TYPE_VOLTAGE, &curve_data.zd_callback);
 	bcb_sw_remove_callback(&curve_data.sw_callback);
 	curve_data.state = CURVE_STATE_UNDEFINED;
 	curve_data.cause = BCB_TRIP_CAUSE_NONE;
+
+	LOG_INF("shutdown");
 
 	return 0;
 }
@@ -420,8 +422,6 @@ static int trip_curve_system_init()
 	curve_data.trip_curve = &trip_curve_default;
 	curve_data.zd_callback.handler = on_voltage_zero_detect;
 	curve_data.sw_callback.handler = on_switch_event;
-
-	bcb_set_trip_curve(&trip_curve_default);
 	return 0;
 }
 
