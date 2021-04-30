@@ -32,7 +32,6 @@ typedef struct __attribute__((packed)) persistent_state {
 } persistent_state_t;
 
 struct curve_data {
-	const struct bcb_trip_curve *trip_curve;
 	bcb_trip_curve_callback_t callback;
 	struct bcb_zd_callback zd_callback;
 	struct bcb_sw_callback sw_callback;
@@ -419,7 +418,6 @@ static int trip_curve_system_init()
 	k_delayed_work_init(&curve_data.transient_work, transient_work);
 	k_delayed_work_init(&curve_data.monitor_work, monitor_work);
 	k_work_init(&curve_data.store_work, state_store_work);
-	curve_data.trip_curve = &trip_curve_default;
 	curve_data.zd_callback.handler = on_voltage_zero_detect;
 	curve_data.sw_callback.handler = on_switch_event;
 	return 0;
