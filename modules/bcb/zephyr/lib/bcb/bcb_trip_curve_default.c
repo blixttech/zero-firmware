@@ -196,8 +196,6 @@ static int restore_state(void)
 		LOG_ERR("cannot set hw current limit: %d", r);
 		return r;
 	}
-	/* It takes ~200 ms for the new OCP limit to take effect. */
-	k_sleep(K_MSEC(200));
 
 	return 0;
 }

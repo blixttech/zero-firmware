@@ -397,6 +397,8 @@ int bcb_ocp_set_limit(uint8_t current)
 	}
 
 	BCB_DAC_SET(actrl, ocp_limit_adj, (uint32_t)dac);
+	/* It takes ~200 ms for the new OCP limit to take effect. */
+	k_sleep(K_MSEC(200));
 
 	return 0;
 }
