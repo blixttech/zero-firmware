@@ -1,10 +1,10 @@
-#include "bcb_coap_handlers.h"
-#include "bcb_coap.h"
-#include "bcb_coap_buffer.h"
-#include "bcb_msmnt.h"
-#include "bcb_sw.h"
-#include "bcb.h"
-#include "bcb_trip_curve_default.h"
+#include <lib/bcb_coap_handlers.h>
+#include <lib/bcb_coap.h>
+#include <lib/bcb_coap_buffer.h>
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_sw.h>
+#include <lib/bcb.h>
+#include <lib/bcb_trip_curve_default.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>

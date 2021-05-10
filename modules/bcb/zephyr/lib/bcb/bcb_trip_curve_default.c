@@ -1,10 +1,10 @@
-#include "bcb_trip_curve_default.h"
-#include "bcb_trip_curve.h"
-#include "bcb_common.h"
-#include "bcb_config.h"
-#include "bcb.h"
-#include "bcb_sw.h"
-#include "bcb_zd.h"
+#include <lib/bcb_trip_curve_default.h>
+#include <lib/bcb_trip_curve.h>
+#include <lib/bcb_common.h>
+#include <lib/bcb_config.h>
+#include <lib/bcb.h>
+#include <lib/bcb_sw.h>
+#include <lib/bcb_zd.h>
 #include <init.h>
 
 #define TRANSIENT_WORK_TIMEOUT CONFIG_BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT

@@ -1,12 +1,12 @@
 #include "services.h"
-#include "bcb_user_if.h"
-#include "bcb.h"
+#include <lib/bcb_user_if.h>
+#include <lib/bcb.h>
 #include <stdint.h>
 #include <mgmt/smp_udp.h>
 #include <os_mgmt/os_mgmt.h>
 #include <img_mgmt/img_mgmt.h>
 #include <img_mgmt/image.h>
-#include <bcb_coap.h>
+#include <lib/bcb_coap.h>
 
 #define LOG_LEVEL CONFIG_ZERO_SERVICES_LOG_LEVEL
 #include <logging/log.h>

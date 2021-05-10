@@ -1,5 +1,5 @@
-#include "bcb_msmnt.h"
-#include "bcb_config.h"
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_config.h>
 #include <drivers/adc_dma.h>
 #include <device.h>
 #include <devicetree.h>

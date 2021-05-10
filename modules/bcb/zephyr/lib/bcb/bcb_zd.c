@@ -1,5 +1,5 @@
-#include "bcb_zd.h"
-#include "bcb_macros.h"
+#include <lib/bcb_zd.h>
+#include <lib/bcb_macros.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/input_capture.h>

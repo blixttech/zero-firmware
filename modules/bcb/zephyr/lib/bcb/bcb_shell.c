@@ -1,9 +1,9 @@
-#include "bcb.h"
-#include "bcb_msmnt.h"
-#include "bcb_msmnt_calib.h"
-#include "bcb_sw.h"
-#include "bcb_zd.h"
-#include "bcb_trip_curve_default.h"
+#include <lib/bcb.h>
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_msmnt_calib.h>
+#include <lib/bcb_sw.h>
+#include <lib/bcb_zd.h>
+#include <lib/bcb_trip_curve_default.h>
 #include <stdlib.h>
 #include <zephyr.h>
 #include <device.h>

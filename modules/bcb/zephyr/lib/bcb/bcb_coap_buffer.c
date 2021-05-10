@@ -1,4 +1,4 @@
-#include "bcb_coap_buffer.h"
+#include <lib/bcb_coap_buffer.h>
 
 NET_BUF_POOL_DEFINE(bcb_coap_buffer_pool, CONFIG_BCB_COAP_MAX_BUF_COUNT,
 		    CONFIG_BCB_COAP_MAX_MSG_LEN, CONFIG_BCB_COAP_MAX_USER_DATA_SIZE, NULL);

@@ -1,6 +1,6 @@
-#include "bcb_coap.h"
-#include "bcb_coap_handlers.h"
-#include "bcb_coap_buffer.h"
+#include <lib/bcb_coap.h>
+#include <lib/bcb_coap_handlers.h>
+#include <lib/bcb_coap_buffer.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
