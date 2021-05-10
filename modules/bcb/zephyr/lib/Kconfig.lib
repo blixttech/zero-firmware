@@ -1,0 +1,35 @@
+config BCB_SHELL
+	bool "Shell"
+	default n
+
+config BCB_LIB_SW_MAX_TEMPERATURE
+	int "OTP threshold (closed)"
+	default 90
+
+config BCB_LIB_SW_MAX_CLOSING_TEMPERATURE
+	int "OTP threshold (before closed)"
+	default 75
+
+config BCB_LIB_SW_VITALS_CHECK_INTERVAL
+	int "Vitals monitoring interval (ms)"
+	default 100
+
+menu "Timing"
+	config BCB_LIB_ETIME_SECOND
+		int "Number of ticks for one second of the elapsed time timer"
+		default 30000000
+
+	config BCB_LIB_IC_ONOFF_SECOND
+		int "Number of ticks for one second of the on/off input capture timer"
+		default 30000000
+endmenu
+
+menu "Measurements"
+	config BCB_LIB_MSMNT_RMS_SAMPLES
+		int "RMS samples (power of two)"
+		default 7
+
+	config BCB_LIB_MSMNT_RMS_INTERVAL
+		int "RMS sampling interval (ms)"
+		default 1
+endmenu
