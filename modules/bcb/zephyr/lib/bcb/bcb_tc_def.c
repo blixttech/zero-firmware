@@ -1,7 +1,7 @@
-#include "bcb_tc_def.h"
-#include "bcb_config.h"
-#include "bcb_sw.h"
-#include "bcb_zd.h"
+#include <lib/bcb_tc_def.h>
+#include <lib/bcb_config.h>
+#include <lib/bcb_sw.h>
+#include <lib/bcb_zd.h>
 #include <init.h>
 
 #define LOG_LEVEL CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
