@@ -1,8 +1,8 @@
 #include "networking.h"
 #include "services.h"
 #include <kernel.h>
-#include <bcb.h>
-#include <bcb_trip_curve_default.h>
+#include <lib/bcb.h>
+#include <lib/bcb_trip_curve_default.h>
 
 #define LOG_LEVEL CONFIG_ZERO_APP_LOG_LEVEL
 #include <logging/log.h>

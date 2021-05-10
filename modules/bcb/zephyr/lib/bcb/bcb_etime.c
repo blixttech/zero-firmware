@@ -1,4 +1,4 @@
-#include <bcb_etime.h>
+#include <lib/bcb_etime.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/counter_ctd.h>

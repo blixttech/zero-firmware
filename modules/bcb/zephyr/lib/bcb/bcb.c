@@ -1,7 +1,7 @@
-#include "bcb.h"
-#include "bcb_config.h"
-#include "bcb_msmnt.h"
-#include "bcb_trip_curve.h"
+#include <lib/bcb.h>
+#include <lib/bcb_config.h>
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_trip_curve.h>
 #include <errno.h>
 #include <kernel.h>
 

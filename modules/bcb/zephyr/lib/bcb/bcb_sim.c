@@ -1,13 +1,13 @@
-#include "bcb_user_if.h"
-#include "bcb_etime.h"
-#include "bcb_config.h"
-#include "bcb_msmnt.h"
-#include "bcb_zd.h"
-#include "bcb_sw.h"
-#include "bcb_coap.h"
-#include "bcb_coap_handlers.h"
-#include "bcb_shell.h"
-#include "bcb.h"
+#include <lib/bcb_user_if.h>
+#include <lib/bcb_etime.h>
+#include <lib/bcb_config.h>
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_zd.h>
+#include <lib/bcb_sw.h>
+#include <lib/bcb_coap.h>
+#include <lib/bcb_coap_handlers.h>
+#include <lib/bcb_shell.h>
+#include <lib/bcb.h>
 #include <init.h>
 
 static int bcb_sim_init()

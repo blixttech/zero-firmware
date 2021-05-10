@@ -1,8 +1,8 @@
-#include "bcb_sw.h"
-#include "bcb_macros.h"
-#include "bcb_config.h"
-#include "bcb_msmnt.h"
-#include "bcb_etime.h"
+#include <lib/bcb_sw.h>
+#include <lib/bcb_macros.h>
+#include <lib/bcb_config.h>
+#include <lib/bcb_msmnt.h>
+#include <lib/bcb_etime.h>
 #include <device.h>
 #include <kernel.h>
 #include <devicetree.h>

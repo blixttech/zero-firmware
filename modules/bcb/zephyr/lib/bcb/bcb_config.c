@@ -1,4 +1,4 @@
-#include "bcb_config.h"
+#include <lib/bcb_config.h>
 #include <init.h>
 #include <drivers/eeprom.h>
 #include <sys/crc.h>

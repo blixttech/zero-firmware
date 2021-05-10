@@ -1,5 +1,5 @@
-#include "bcb_user_if.h"
-#include "bcb_macros.h"
+#include <lib/bcb_user_if.h>
+#include <lib/bcb_macros.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>

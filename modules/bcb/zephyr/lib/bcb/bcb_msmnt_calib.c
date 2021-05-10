@@ -1,5 +1,5 @@
-#include "bcb_msmnt_calib.h"
-#include "bcb_msmnt.h"
+#include <lib/bcb_msmnt_calib.h>
+#include <lib/bcb_msmnt.h>
 #include <drivers/adc_dma.h>
 #include <adc_mcux_edma.h>
 #include <kernel.h>
