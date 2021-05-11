@@ -3,6 +3,10 @@ menuconfig BCB_LIB
 	default n
 	depends on BCB_EXTENSIONS
 
-if BCB_LIB && BCB_DRIVERS
-rsource "bcb/Kconfig"
+if BCB_LIB
+	rsource "Kconfig.lib"
+	rsource "Kconfig.init"
+	rsource "Kconfig.config"
+	rsource "Kconfig.tc_def"
+	rsource "Kconfig.coap"
 endif # BCB_LIB

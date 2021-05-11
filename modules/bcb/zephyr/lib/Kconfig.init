@@ -1,0 +1,20 @@
+menu "Initialisation priorities"
+	config BCB_LIB_SIM_INIT_PRIORITY
+		int "SIM"
+		default 50
+
+	config BCB_LIB_TRIP_CURVE_DEFAULT_INIT_PRIORITY
+		int "Default trip curve"
+		default 51
+		depends on BCB_TRIP_CURVE_DEFAULT
+
+	config BCB_LIB_COAP_INIT_PRIORITY
+		int "CoAP server"
+		default 56
+		depends on BCB_COAP
+
+	config BCB_LIB_COAP_RESOURCE_INIT_PRIORITY
+		int "CoAP resources"
+		default 57
+		depends on BCB_COAP
+endmenu

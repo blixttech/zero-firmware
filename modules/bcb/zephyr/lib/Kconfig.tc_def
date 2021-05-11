@@ -1,0 +1,13 @@
+menuconfig BCB_TRIP_CURVE_DEFAULT
+	bool "Default trip curve"
+	default y
+
+if BCB_TRIP_CURVE_DEFAULT
+    config BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT
+        int "Transient delay for the default trip cruve for DC in milliseconds"
+        default 50
+
+    config BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
+        int "Current monitoring interval for the default trip cruve for DC in milliseconds"
+        default 10
+endif # BCB_TRIP_CURVE_DEFAULT
