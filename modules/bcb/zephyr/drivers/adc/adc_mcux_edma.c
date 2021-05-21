@@ -473,6 +473,19 @@ static int adc_mcux_read_impl(struct device *dev, const adc_dma_sequence_config_
 	 * Could it be due to it is always enabled? 
 	 */
 
+	/* Disable major/minor DMA interrupts again since calling EDMA_SubmitTransfer() causes to
+	 * enable DMA major interrupts again.
+	 */
+	EDMA_DisableChannelInterrupts(config->dma_base, config->dma_ch_result,
+				      (kEDMA_MajorInterruptEnable | kEDMA_HalfInterruptEnable));
+	EDMA_DisableChannelInterrupts(config->dma_base, config->dma_ch_ch,
+				      (kEDMA_MajorInterruptEnable | kEDMA_HalfInterruptEnable));
+
+	EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_result,
+					kEDMA_ErrorInterruptEnable);
+	EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_ch,
+					kEDMA_ErrorInterruptEnable);
+
 	if (data->callback) {
 		EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_result,
 					     kEDMA_MajorInterruptEnable);
