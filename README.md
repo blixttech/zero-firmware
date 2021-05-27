@@ -27,29 +27,29 @@ go get github.com/apache/mynewt-mcumgr-cli/mcumgr
 ```
 
 * Download the latest firmware
-Go to the [release page](https://github.com/blixttech/zero-firmware/releases) and download the desired firmware.
-The files that are needed for the update are `zero-X.X.X.signed.bin`.
+    Go to the [release page](https://github.com/blixttech/zero-firmware/releases) and download the desired firmware.
+    The files that are needed for the update are `zero-X.X.X.signed.bin`.
 
 * Identify the IP of the Zero to upload the firmware to.
-This can be done in the Zero Controller UI.
+    This can be done in the Zero Controller UI.
 
 * Upload the firmware
-Replace 
-- `<PATH TO MCUMGR>` with the path to the mcumgr binary
-- `ZERO-IP` with the IP of the Zero
-- `<PATH TO FW>` with the path to the zero firmware
-```
-<PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image upload <PATH TO FW>/zero-0.5.2.signed.bin
-```
+    Replace 
+    - `<PATH TO MCUMGR>` with the path to the mcumgr binary
+    - `ZERO-IP` with the IP of the Zero
+    - `<PATH TO FW>` with the path to the zero firmware
+    ```
+    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image upload <PATH TO FW>/zero-0.5.2.signed.bin
+    ```
 
 * List the available firmware versions on the device and get the hash of the firmware in slot 1
-```
-<PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image list 
-```
-The output of the above command should be similar to the following:
+    ```
+    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image list 
+    ```
+    The output of the above command should be similar to the following:
 
-```
-        Images:
+    ```
+        images:
         image=0 slot=0
            version: 0.5.0
            bootable: true
@@ -60,18 +60,18 @@ The output of the above command should be similar to the following:
            bootable: true
            flags:  
            hash: fb5134a109903a63860f1e776c2acb6f468554804858189289842e8042c14147
-        Split status: N/A (0)
-```
+        split status: n/a (0)
+    ```
 
 * Confirm the firmware to be used by specifying the hash from slot 1
-```
-<PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image confirm <HASH OF SLOT 1> 
-```
+    ```
+    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image confirm <HASH OF SLOT 1> 
+    ```
 
 * Reboot the device
-```
-<PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 reset 
-```
+    ```
+    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 reset 
+    ```
 
 
 # Developer Guide
