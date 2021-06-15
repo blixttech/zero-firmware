@@ -266,14 +266,50 @@ static void adc_mcux_edma_dma_irq_handler(void *arg)
 #endif
 }
 
+static uint32_t inline edma_get_start_major_count(DMA_Type *base, uint32_t channel)
+{
+	uint32_t count;
+
+	if ((base->TCD[channel].BITER_ELINKNO & DMA_BITER_ELINKNO_ELINK_MASK) != 0) {
+		count = (((uint32_t)base->TCD[channel].BITER_ELINKYES &
+			  DMA_BITER_ELINKYES_BITER_MASK) >>
+			 DMA_BITER_ELINKYES_BITER_SHIFT);
+	} else {
+		count = (((uint32_t)base->TCD[channel].BITER_ELINKNO &
+			  DMA_BITER_ELINKNO_BITER_MASK) >>
+			 DMA_BITER_ELINKNO_BITER_SHIFT);
+	}
+
+	return count;
+}
+
 static void adc_mcux_edma_callback(edma_handle_t *handle, void *param, bool transfer_done,
 				   uint32_t tcds)
 {
-	if (transfer_done) {
-		struct device *dev = param;
-		struct adc_mcux_data *data = dev->driver_data;
-		if (data->callback) {
-			data->callback(dev);
+	struct device *dev = param;
+	const struct adc_mcux_config *config = dev->config_info;
+	struct adc_mcux_data *data = dev->driver_data;
+	if (data->callback) {
+		uint32_t remaining =
+			EDMA_GetRemainingMajorLoopCount(config->dma_base, config->dma_ch_result);
+		uint32_t original =
+			edma_get_start_major_count(config->dma_base, config->dma_ch_result);
+		volatile uint16_t *buffer = data->buffer;
+
+		/* Execution of this callback may be delayed due to the house keeping work
+		 * done by Zephyr and the execution of other interrupt handlers (if any).
+		 * Therefore, we cannot rely on "transfer_done" flag since it can be cleared by
+		 * EDMA engine when the channel is activated (Refer the DMA_TCDn_CSR field descriptions
+		 * field descriptions in the reference manual).
+		 * Therefore, we rely on the value of the remaining major loop count.
+		 */
+
+		if (remaining == 0 || remaining > (original >> 1)) {
+			/* Major loop completion  */
+			data->callback(dev, &buffer[(original >> 1)], (original - (original >> 1)));
+		} else {
+			/* Half of the major loop completion */
+			data->callback(dev, buffer, (original >> 1));
 		}
 	}
 }
@@ -398,6 +434,12 @@ static int adc_mcux_read_impl(struct device *dev, const adc_dma_sequence_config_
 		return -EINVAL;
 	}
 
+	if (seq_cfg->samples > DMA_BITER_ELINKYES_BITER_MASK) {
+		LOG_ERR("Total number of samples should be <= %" PRId32,
+			DMA_BITER_ELINKYES_BITER_MASK);
+		return -EINVAL;
+	}
+
 	if (seq_cfg->samples % seq_cfg->len) {
 		LOG_ERR("Invalid number of samples: %" PRIu32, seq_cfg->samples);
 		return -EINVAL;
@@ -489,6 +531,10 @@ static int adc_mcux_read_impl(struct device *dev, const adc_dma_sequence_config_
 	if (data->callback) {
 		EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_result,
 					     kEDMA_MajorInterruptEnable);
+		if (edma_get_start_major_count(config->dma_base, config->dma_ch_result) > 50) {
+			EDMA_EnableChannelInterrupts(config->dma_base, config->dma_ch_result,
+						     kEDMA_HalfInterruptEnable);
+		}
 	}
 
 	ADC16_EnableDMA(config->adc_base, true);
@@ -641,6 +687,13 @@ static uint32_t adc_mcux_get_sampling_time(struct device *dev)
 	return adc_perf_lvls[level].sampling_time;
 }
 
+static const char* adc_mcux_get_trig_dev(struct device *dev)
+{
+	const struct adc_mcux_config *config = dev->config_info;
+
+	return config->trigger;
+}
+
 static int adc_mcux_init(struct device *dev)
 {
 	const struct adc_mcux_config *config = dev->config_info;
@@ -682,6 +735,7 @@ static const struct adc_dma_driver_api adc_mcux_driver_api = {
 	.get_calibration_values = adc_mcux_get_cal_params_impl,
 	.get_calibration_values_length = adc_mcux_get_calibration_values_length,
 	.get_sampling_time = adc_mcux_get_sampling_time,
+	.get_trig_dev = adc_mcux_get_trig_dev,
 };
 
 #define _DT_IRQ_BY_IDX_(node_id, idx, cell) DT_IRQ_BY_IDX(node_id, idx, cell)

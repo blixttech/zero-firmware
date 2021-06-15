@@ -27,7 +27,13 @@ typedef enum adc_dma_perf_level {
 	ADC_DMA_PERF_LEVEL_5, /**< Level 5 - highest performance level, lowest DC accuracy. */
 } adc_dma_performance_level_t;
 
-typedef void (*adc_dma_sequence_callback_t)(struct device *dev);
+/**
+ * @brief Fuction to be called when the samples were written to the buffer.
+ * @param dev A pointer to the ADC device
+ * @param buffer A pointer to start of the buffer where the samples were written.
+ * @param samples Number of samples written to the buffer.
+ */
+typedef void (*adc_dma_sequence_callback_t)(struct device *dev, volatile void *buffer, uint32_t samples);
 
 typedef struct adc_dma_sequence_config {
 	volatile void *buffer; /* Pointer to the buffer where the samples are written */
@@ -65,6 +71,8 @@ typedef size_t (*adc_dma_api_get_calibration_values_length)(struct device *dev);
 
 typedef uint32_t (*adc_dma_api_get_sampling_time)(struct device *dev);
 
+typedef const char* (*adc_dma_api_get_trig_dev)(struct device *dev);
+
 __subsystem struct adc_dma_driver_api {
 	adc_dma_api_read read;
 	adc_dma_api_stop stop;
@@ -77,6 +85,7 @@ __subsystem struct adc_dma_driver_api {
 	adc_dma_api_get_calibration_values get_calibration_values;
 	adc_dma_api_get_calibration_values_length get_calibration_values_length;
 	adc_dma_api_get_sampling_time get_sampling_time;
+	adc_dma_api_get_trig_dev get_trig_dev;
 };
 
 __syscall int adc_dma_read(struct device *dev, const adc_dma_sequence_config_t *seq_cfg);
@@ -164,12 +173,20 @@ static inline size_t z_impl_adc_dma_get_calibration_values_length(struct device 
 	return api->get_calibration_values_length(dev);
 }
 
-__syscall size_t adc_dma_get_sampling_time(struct device *dev);
-static inline size_t z_impl_adc_dma_get_sampling_time(struct device *dev)
+__syscall uint32_t adc_dma_get_sampling_time(struct device *dev);
+static inline uint32_t z_impl_adc_dma_get_sampling_time(struct device *dev)
 {
 	struct adc_dma_driver_api *api;
 	api = (struct adc_dma_driver_api *)dev->driver_api;
 	return api->get_sampling_time(dev);
+}
+
+__syscall const char* adc_dma_get_trig_dev(struct device *dev);
+static inline const char* z_impl_adc_dma_get_trig_dev(struct device *dev)
+{
+	struct adc_dma_driver_api *api;
+	api = (struct adc_dma_driver_api *)dev->driver_api;
+	return api->get_trig_dev(dev);
 }
 
 /**
