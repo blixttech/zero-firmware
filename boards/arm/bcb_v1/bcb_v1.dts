@@ -403,7 +403,7 @@
     max-channels = <3>;
     dmas =  <&edma0 0 40 0>, <&edma0 0 60 1>;
     dma-names = "RESULT", "CH";
-    sample-interval = <200>;
+    sample-interval = <18>;
     #io-channel-cells = <2>;
     status = "okay";
 };
