@@ -71,11 +71,12 @@ typedef struct adc_perf_data {
 	uint32_t sample_time_adc_0;
 	uint32_t sample_interval_adc_0;
 
-	uint32_t sample_seq;
+	uint32_t sample_block_seq;
 	struct k_work tx_work;
 	struct k_fifo tx_fifo;
 	int server_socket;
 	struct pollfd pollfds[MAX_CLIENTS + 1];
+	uint32_t last_ping_time[MAX_CLIENTS + 1];
 	uint8_t recv_buf[128];
 	uint8_t cbor_buf[2048];
 } adc_perf_data_t;
@@ -90,11 +91,11 @@ static void on_seq_done(struct device *dev, volatile void *buffer, uint32_t samp
 {
 	struct net_buf *buf;
 
-	adc_perf_data.sample_seq++;
+	adc_perf_data.sample_block_seq++;
 
 	buf = net_buf_alloc(&tx_buf_pool, K_NO_WAIT);
 	if (!buf) {
-		/* If there is no space in the pool, we remove the oldest samples */
+		/* If there is no space in the pool, we remove the oldest sample. */
 		buf = net_buf_get(&adc_perf_data.tx_fifo, K_NO_WAIT);
 		if (!buf) {
 			return;
@@ -103,7 +104,8 @@ static void on_seq_done(struct device *dev, volatile void *buffer, uint32_t samp
 
 	net_buf_reset(buf);
 	net_buf_add_mem(buf, (void *)buffer, samples * sizeof(uint16_t));
-	memcpy(net_buf_user_data(buf), &adc_perf_data.sample_seq, sizeof(uint32_t));
+	/* user data buffer is aligned to void * */
+	*((uint32_t *)net_buf_user_data(buf)) = adc_perf_data.sample_block_seq;
 
 	net_buf_put(&adc_perf_data.tx_fifo, buf);
 	k_work_submit(&adc_perf_data.tx_work);
@@ -114,6 +116,7 @@ static void pollfds_reset()
 	int i;
 	for (i = 0; i < MAX_POLLFDS; i++) {
 		adc_perf_data.pollfds[i].fd = -1;
+		adc_perf_data.last_ping_time[i] = 0;
 	}
 }
 
@@ -124,6 +127,7 @@ static int pollfds_add(int fd)
 		if (adc_perf_data.pollfds[i].fd == -1) {
 			adc_perf_data.pollfds[i].fd = fd;
 			adc_perf_data.pollfds[i].events = POLLIN;
+			adc_perf_data.last_ping_time[i] = k_uptime_get_32();
 			return 0;
 		}
 	}
@@ -137,6 +141,7 @@ static int pollfds_del(int fd)
 	for (i = 0; i < MAX_POLLFDS; i++) {
 		if (adc_perf_data.pollfds[i].fd == fd) {
 			adc_perf_data.pollfds[i].fd = -1;
+			adc_perf_data.last_ping_time[i] = 0;
 			return 0;
 		}
 	}
@@ -194,7 +199,8 @@ static inline uint32_t create_cbor_frame(struct net_buf *buf)
 	cbor_encoder_init(&encoder, &writer, 0);
 	cbor_encoder_create_array(&encoder, &array_encoder, CborIndefiniteLength);
 
-	memcpy(&seq, net_buf_user_data(buf), sizeof(uint32_t));
+	/* user data buffer is aligned to void * */
+	seq = *((uint32_t *)net_buf_user_data(buf));
 	cbor_encode_uint(&array_encoder, seq);
 	cbor_encode_uint(&array_encoder, adc_perf_data.sample_interval_adc_0);
 	cbor_encode_uint(&array_encoder, adc_perf_data.sample_time_adc_0);
@@ -219,10 +225,9 @@ static inline int send_to_clients(struct net_buf *buf)
 			continue;
 		}
 
-		r = send(adc_perf_data.pollfds[i].fd, adc_perf_data.cbor_buf, bytes_written,
-			 0);
+		r = send(adc_perf_data.pollfds[i].fd, adc_perf_data.cbor_buf, bytes_written, 0);
 		if (r < 0) {
-			LOG_ERR("send error %d", errno);
+			//LOG_ERR("send error %d", errno);
 		}
 	}
 
@@ -348,24 +353,34 @@ int adc_perf_server_loop(void)
 		struct sockaddr_storage client_addr;
 		socklen_t client_addr_len = sizeof(client_addr);
 
-		r = poll(adc_perf_data.pollfds, MAX_POLLFDS, -1);
+		r = poll(adc_perf_data.pollfds, MAX_POLLFDS, 1000);
 		if (r < 0) {
 			LOG_ERR("poll error: %d", errno);
 			continue;
 		}
 
 		for (i = 0; i < MAX_POLLFDS; i++) {
+			uint32_t ping_since;
+
 			if (adc_perf_data.pollfds[i].fd == -1) {
 				continue;
 			}
 
-			if (!(adc_perf_data.pollfds[i].revents & POLLIN)) {
+			if ((adc_perf_data.pollfds[i].revents & POLLERR) ||
+			    (adc_perf_data.pollfds[i].revents & POLLHUP)) {
+				close(adc_perf_data.pollfds[i].fd);
+				pollfds_del(adc_perf_data.pollfds[i].fd);
 				continue;
 			}
 
 			if (adc_perf_data.pollfds[i].fd == adc_perf_data.server_socket) {
 				void *addr;
 				char ip_addr_str[32];
+
+				if (!(adc_perf_data.pollfds[i].revents & POLLIN)) {
+					continue;
+				}
+
 				client = accept(adc_perf_data.server_socket,
 						(struct sockaddr *)&client_addr, &client_addr_len);
 				if (client < 0) {
@@ -388,6 +403,20 @@ int adc_perf_server_loop(void)
 				continue;
 			}
 
+			ping_since = k_uptime_get_32() > adc_perf_data.last_ping_time[i] ?
+					     k_uptime_get_32() - adc_perf_data.last_ping_time[i] :
+					     adc_perf_data.last_ping_time[i] - k_uptime_get_32();
+			if (ping_since > 1500) {
+				LOG_ERR("client timeout fd: %d", adc_perf_data.pollfds[i].fd);
+				close(adc_perf_data.pollfds[i].fd);
+				pollfds_del(adc_perf_data.pollfds[i].fd);
+				continue;
+			}
+
+			if (!(adc_perf_data.pollfds[i].revents & POLLIN)) {
+				continue;
+			}
+
 			r = recv(adc_perf_data.pollfds[i].fd, adc_perf_data.recv_buf,
 				 sizeof(adc_perf_data.recv_buf), 0);
 			if (r <= 0) {
@@ -400,6 +429,8 @@ int adc_perf_server_loop(void)
 				}
 				close(adc_perf_data.pollfds[i].fd);
 				pollfds_del(adc_perf_data.pollfds[i].fd);
+			} else {
+				adc_perf_data.last_ping_time[i] = k_uptime_get_32();
 			}
 
 			/* Process received frames */
@@ -444,3 +475,17 @@ SHELL_STATIC_SUBCMD_SET_CREATE(adc_sub, SHELL_CMD(start, NULL, "Start ADC", cmd_
 			       SHELL_SUBCMD_SET_END /* Array terminated. */);
 
 SHELL_CMD_REGISTER(adc, &adc_sub, "ADC commands", NULL);
+
+/**
+ * Use two system work queues:
+ * 1. SendWork - Sending data to clients
+ * 2. ManagementWork - Handle new clients, remove timeedout clients, etc.
+ *
+ * Accept new clients in the adc_perf_server_loop or in a diffent thread.
+ * Use message queue for this purpose.
+ * Then submit a work item for the ManagementWork.
+ *
+ * In the SendWork,
+ * poll() all the sockets and send data only to the ones which can accept new data.   
+ * 
+ */

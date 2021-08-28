@@ -80,23 +80,20 @@ if __name__ == "__main__":
 
     while sample_len < config['samples']:
         sample_block = get_next_sample_block(cbor_decoder)
-
+        socket.send(bytearray([0x00]))
         if (last_block_idx != 0 and (sample_block['index'] - last_block_idx) != 1):
             block_missed = True
-            logger.warn("sample block missed")
+            logger.warning("sample block missed")
 
         last_block_idx = sample_block['index']
 
         adc_data_len = len(sample_block['adc_data'][0])
-        if (sample_len + adc_data_len) > config['samples']:
-            break
-
         sample_blocks.append(sample_block)
         sample_len += adc_data_len
 
-        sys.stdout.write("\rsamples %d" % sample_len)
+        sys.stdout.write("\rsamples %s" %  ("%d" % sample_len).ljust(10))
 
-    sys.stdout.write("\r\n")
+    sys.stdout.write("\rsamples %s\n" %  ("%d" % sample_len).ljust(10))
     socket.close()
 
     csv_file = open(config['output'], 'w')
