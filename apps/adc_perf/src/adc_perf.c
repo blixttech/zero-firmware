@@ -63,6 +63,8 @@ LOG_MODULE_REGISTER(adc_perf);
 #define MAX_CLIENTS 2
 #define MAX_POLLFDS (MAX_CLIENTS + 1)
 #define MAX_SEQ_SAMPLES 512
+#define STACK_SIZE 1024
+#define THREAD_PRIORITY K_PRIO_COOP(8)
 
 typedef struct adc_perf_data {
 	struct device *dev_adc_0;
@@ -72,7 +74,7 @@ typedef struct adc_perf_data {
 	uint32_t sample_interval_adc_0;
 
 	uint32_t sample_block_seq;
-	struct k_work tx_work;
+	struct k_work client_io_work;
 	struct k_fifo tx_fifo;
 	int server_socket;
 	struct pollfd pollfds[MAX_CLIENTS + 1];
@@ -86,6 +88,11 @@ static adc_perf_data_t adc_perf_data;
 static uint16_t buf_adc_0[MAX_SEQ_SAMPLES] __attribute__((aligned(2)));
 
 NET_BUF_POOL_DEFINE(tx_buf_pool, 4, MAX_SEQ_SAMPLES * sizeof(uint16_t), sizeof(uint64_t), NULL);
+K_MSGQ_DEFINE(client_notify_msgq, sizeof(int), 4, 4);
+
+static void process_tcp(void);
+
+K_THREAD_DEFINE(tcp_thread, STACK_SIZE, process_tcp, NULL, NULL, NULL, THREAD_PRIORITY, 0, -1);
 
 static void on_seq_done(struct device *dev, volatile void *buffer, uint32_t samples)
 {
@@ -108,7 +115,7 @@ static void on_seq_done(struct device *dev, volatile void *buffer, uint32_t samp
 	*((uint32_t *)net_buf_user_data(buf)) = adc_perf_data.sample_block_seq;
 
 	net_buf_put(&adc_perf_data.tx_fifo, buf);
-	k_work_submit(&adc_perf_data.tx_work);
+	k_work_submit(&adc_perf_data.client_io_work);
 }
 
 static void pollfds_reset()
@@ -126,7 +133,7 @@ static int pollfds_add(int fd)
 	for (i = 0; i < MAX_POLLFDS; i++) {
 		if (adc_perf_data.pollfds[i].fd == -1) {
 			adc_perf_data.pollfds[i].fd = fd;
-			adc_perf_data.pollfds[i].events = POLLIN;
+			adc_perf_data.pollfds[i].events = POLLIN | POLLOUT;
 			adc_perf_data.last_ping_time[i] = k_uptime_get_32();
 			return 0;
 		}
@@ -213,33 +220,107 @@ static inline uint32_t create_cbor_frame(struct net_buf *buf)
 	return writer.bytes_written;
 }
 
-static inline int send_to_clients(struct net_buf *buf)
+static int client_io(struct net_buf *buf)
 {
-	int i;
-	uint32_t bytes_written = create_cbor_frame(buf);
+	int i, r;
+	uint32_t bytes_written;
+
+	if (buf) {
+		bytes_written = create_cbor_frame(buf);
+	} else {
+		bytes_written = 0;
+	}
+
+	r = poll(adc_perf_data.pollfds, MAX_POLLFDS, 0);
+	if (r < 0) {
+		LOG_ERR("poll error: %d", errno);
+		return r;
+	}
 
 	for (i = 0; i < MAX_POLLFDS; i++) {
-		int r;
-		if (adc_perf_data.pollfds[i].fd == -1 ||
-		    adc_perf_data.pollfds[i].fd == adc_perf_data.server_socket) {
+		if (adc_perf_data.pollfds[i].fd == -1) {
 			continue;
 		}
 
-		r = send(adc_perf_data.pollfds[i].fd, adc_perf_data.cbor_buf, bytes_written, 0);
-		if (r < 0) {
-			//LOG_ERR("send error %d", errno);
+		if ((adc_perf_data.pollfds[i].revents & POLLERR) ||
+		    (adc_perf_data.pollfds[i].revents & POLLHUP)) {
+			close(adc_perf_data.pollfds[i].fd);
+			pollfds_del(adc_perf_data.pollfds[i].fd);
+			continue;
+		}
+
+		if ((adc_perf_data.pollfds[i].revents & POLLOUT) && buf) {
+			r = send(adc_perf_data.pollfds[i].fd, adc_perf_data.cbor_buf, bytes_written,
+				 0);
+			if (r < 0) {
+				LOG_ERR("send error %d", errno);
+				close(adc_perf_data.pollfds[i].fd);
+				pollfds_del(adc_perf_data.pollfds[i].fd);
+				continue;
+			}
+		}
+
+		if (adc_perf_data.pollfds[i].revents & POLLIN) {
+			r = recv(adc_perf_data.pollfds[i].fd, adc_perf_data.recv_buf,
+				 sizeof(adc_perf_data.recv_buf), 0);
+
+			if (r < 0) {
+				LOG_ERR("recive error: %d [%d]", errno,
+					adc_perf_data.pollfds[i].fd);
+				continue;
+			}
+
+			if (r == 0) {
+				LOG_INF("connection closed [%d]", adc_perf_data.pollfds[i].fd);
+				close(adc_perf_data.pollfds[i].fd);
+				pollfds_del(adc_perf_data.pollfds[i].fd);
+				continue;
+			}
+
+			adc_perf_data.last_ping_time[i] = k_uptime_get_32();
 		}
 	}
 
 	return 0;
 }
 
-static void tx_work(struct k_work *work)
+static void client_io_work(struct k_work *work)
 {
 	struct net_buf *buf;
+	int client;
+	uint32_t blocks_sent = 0;
+
+	while (!k_msgq_get(&client_notify_msgq, &client, K_NO_WAIT)) {
+		/* New client */
+		int r;
+
+		r = set_blocking(client, false);
+		if (r < 0) {
+			LOG_ERR("cannot set blocking error %d", r);
+			close(client);
+			continue;
+		}
+
+		r = pollfds_add(client);
+		if (r < 0) {
+			LOG_ERR("too many connections : %d", r);
+			close(client);
+			continue;
+		}
+	}
+
 	while ((buf = net_buf_get(&adc_perf_data.tx_fifo, K_NO_WAIT)) != NULL) {
-		send_to_clients(buf);
+		client_io(buf);
 		net_buf_unref(buf);
+		blocks_sent++;
+	}
+
+	if (!blocks_sent) {
+		/* 
+		 * Nothing is sent to clients. 
+		 *  Run IO function to check incoming data from clients 
+		 */
+		client_io(NULL);
 	}
 }
 
@@ -302,17 +383,15 @@ static int start_adc(void)
 	return 0;
 }
 
-int adc_perf_server_loop(void)
+static void process_tcp(void)
 {
 	int r;
 	struct sockaddr_in addr;
 
-	pollfds_reset();
-
 	adc_perf_data.server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (adc_perf_data.server_socket < 0) {
 		LOG_ERR("failed to create socket: %d", errno);
-		return -errno;
+		return;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -322,24 +401,63 @@ int adc_perf_server_loop(void)
 	r = bind(adc_perf_data.server_socket, (struct sockaddr *)&addr, sizeof(addr));
 	if (r < 0) {
 		LOG_ERR("failed to bind: %d", errno);
-		return -errno;
+		return;
 	}
 
 	r = listen(adc_perf_data.server_socket, CLIENT_QUEUE);
 	if (r < 0) {
 		LOG_ERR("failed to listen: %d", errno);
-		return -errno;
+		return;
 	}
-
-	r = set_blocking(adc_perf_data.server_socket, false);
-	if (r < 0) {
-		LOG_ERR("set_blocking error %d", r);
-		return r;
-	}
-
-	pollfds_add(adc_perf_data.server_socket);
 
 	LOG_INF("server started");
+
+	do {
+		int client;
+		struct sockaddr_storage client_addr;
+		socklen_t client_addr_len = sizeof(client_addr);
+		void *addr;
+		char ip_addr_str[32];
+
+		client = accept(adc_perf_data.server_socket,
+				(struct sockaddr *)&client_addr, &client_addr_len);
+		if (client < 0) {
+			LOG_ERR("accept error: %d", errno);
+			continue;
+		}
+	
+		addr = &((struct sockaddr_in *)&client_addr)->sin_addr;
+		inet_ntop(client_addr.ss_family, addr, ip_addr_str,
+				sizeof(ip_addr_str));
+
+		LOG_INF("connected from %s [%d]", log_strdup(ip_addr_str), client);
+		/* send to client to management work */
+		r = k_msgq_put(&client_notify_msgq, &client, K_NO_WAIT);
+		if (r < 0) {
+			LOG_ERR("client msgq error: %d", errno);
+			continue;
+		}
+		k_work_submit(&adc_perf_data.client_io_work);
+
+
+	} while (1);
+}
+
+int adc_pef_init(void)
+{
+	int r;
+
+	memset(&adc_perf_data, 0, sizeof(adc_perf_data_t));
+	k_fifo_init(&adc_perf_data.tx_fifo);
+	k_work_init(&adc_perf_data.client_io_work, client_io_work);
+
+	BCB_ADC_INIT(0);
+
+	adc_dma_stop(adc_perf_data.dev_adc_0);
+	adc_dma_set_reference(adc_perf_data.dev_adc_0, ADC_DMA_REF_EXTERNAL0);
+	adc_dma_set_performance_level(adc_perf_data.dev_adc_0, ADC_DMA_PERF_LEVEL_4);
+
+	pollfds_reset();
 
 	r = start_adc();
 	if (r < 0) {
@@ -347,111 +465,7 @@ int adc_perf_server_loop(void)
 		return r;
 	}
 
-	do {
-		int i;
-		int client;
-		struct sockaddr_storage client_addr;
-		socklen_t client_addr_len = sizeof(client_addr);
-
-		r = poll(adc_perf_data.pollfds, MAX_POLLFDS, 1000);
-		if (r < 0) {
-			LOG_ERR("poll error: %d", errno);
-			continue;
-		}
-
-		for (i = 0; i < MAX_POLLFDS; i++) {
-			uint32_t ping_since;
-
-			if (adc_perf_data.pollfds[i].fd == -1) {
-				continue;
-			}
-
-			if ((adc_perf_data.pollfds[i].revents & POLLERR) ||
-			    (adc_perf_data.pollfds[i].revents & POLLHUP)) {
-				close(adc_perf_data.pollfds[i].fd);
-				pollfds_del(adc_perf_data.pollfds[i].fd);
-				continue;
-			}
-
-			if (adc_perf_data.pollfds[i].fd == adc_perf_data.server_socket) {
-				void *addr;
-				char ip_addr_str[32];
-
-				if (!(adc_perf_data.pollfds[i].revents & POLLIN)) {
-					continue;
-				}
-
-				client = accept(adc_perf_data.server_socket,
-						(struct sockaddr *)&client_addr, &client_addr_len);
-				if (client < 0) {
-					LOG_ERR("accept error: %d", errno);
-					continue;
-				}
-
-				addr = &((struct sockaddr_in *)&client_addr)->sin_addr;
-				inet_ntop(client_addr.ss_family, addr, ip_addr_str,
-					  sizeof(ip_addr_str));
-
-				LOG_INF("connected from %s [%d]", log_strdup(ip_addr_str), client);
-
-				set_blocking(client, false);
-				if (pollfds_add(client) < 0) {
-					LOG_ERR("too many connections");
-					close(client);
-					continue;
-				}
-				continue;
-			}
-
-			ping_since = k_uptime_get_32() > adc_perf_data.last_ping_time[i] ?
-					     k_uptime_get_32() - adc_perf_data.last_ping_time[i] :
-					     adc_perf_data.last_ping_time[i] - k_uptime_get_32();
-			if (ping_since > 1500) {
-				LOG_ERR("client timeout fd: %d", adc_perf_data.pollfds[i].fd);
-				close(adc_perf_data.pollfds[i].fd);
-				pollfds_del(adc_perf_data.pollfds[i].fd);
-				continue;
-			}
-
-			if (!(adc_perf_data.pollfds[i].revents & POLLIN)) {
-				continue;
-			}
-
-			r = recv(adc_perf_data.pollfds[i].fd, adc_perf_data.recv_buf,
-				 sizeof(adc_perf_data.recv_buf), 0);
-			if (r <= 0) {
-				if (r < 0) {
-					LOG_ERR("recive error: %d [%d]", errno,
-						adc_perf_data.pollfds[i].fd);
-				} else {
-					LOG_INF("connection closed [%d]",
-						adc_perf_data.pollfds[i].fd);
-				}
-				close(adc_perf_data.pollfds[i].fd);
-				pollfds_del(adc_perf_data.pollfds[i].fd);
-			} else {
-				adc_perf_data.last_ping_time[i] = k_uptime_get_32();
-			}
-
-			/* Process received frames */
-		}
-
-	} while (1);
-
-	return 0;
-}
-
-int adc_pef_init(void)
-{
-	memset(&adc_perf_data, 0, sizeof(adc_perf_data_t));
-	k_work_init(&adc_perf_data.tx_work, tx_work);
-	k_fifo_init(&adc_perf_data.tx_fifo);
-
-	BCB_ADC_INIT(0);
-
-	adc_dma_stop(adc_perf_data.dev_adc_0);
-	adc_dma_set_reference(adc_perf_data.dev_adc_0, ADC_DMA_REF_EXTERNAL0);
-	adc_dma_set_performance_level(adc_perf_data.dev_adc_0, ADC_DMA_PERF_LEVEL_4);
+	k_thread_start(tcp_thread);
 
 	return 0;
 }
