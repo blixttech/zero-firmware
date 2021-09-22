@@ -16,7 +16,7 @@ void main()
 	networking_init();
 	services_init();
 	adc_pef_init();
-	adc_perf_server_loop();
+	//adc_perf_server_loop();
 
 	while (1) {
 		k_sleep(K_MSEC(1000));
