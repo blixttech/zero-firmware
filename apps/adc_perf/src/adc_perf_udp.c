@@ -12,6 +12,7 @@
 #include <shell/shell.h>
 #include <shell/shell_uart.h>
 #include <tinycbor/cbor.h>
+#include <arm_math.h>
 
 #define LOG_LEVEL LOG_LEVEL_DBG
 #include <logging/log.h>
@@ -68,6 +69,7 @@ LOG_MODULE_REGISTER(adc_perf);
 #define MAX_SEQ_SAMPLES		512
 #define THREAD_STACK_SIZE	1024
 #define THREAD_PRIORITY		K_PRIO_COOP(8)
+#define MAX_CHANNELS		3
 // clang-format on
 
 struct client_info {
@@ -93,6 +95,8 @@ typedef struct adc_perf_data {
 	struct client_info clients[MAX_CLIENTS];
 	uint8_t recv_buf[RX_BUF_SIZE];
 	uint8_t cbor_buf[CBOR_BUF_SIZE];
+	uint64_t sqr_sum[MAX_CHANNELS];
+	uint32_t sqr_sum_samples;
 } adc_perf_data_t;
 
 static adc_perf_data_t adc_perf_data;
@@ -190,11 +194,42 @@ static inline void send_to_clients(struct net_buf *buf)
 	}
 }
 
+static inline void calculate_sqr_sum(struct net_buf *buf)
+{
+	int i;
+	int c;
+	int total_samples;
+	int samples_per_channel;
+
+	if (!adc_perf_data.seq_idx_adc_0 || adc_perf_data.seq_idx_adc_0 > MAX_CHANNELS) {
+		/* Sanity check. Incorrect number of ADC channels */
+		return;
+	}
+
+	if (buf->len % (sizeof(uint16_t) * adc_perf_data.seq_idx_adc_0)) {
+		/* Sanity check. Invalid buffer */
+		return;
+	}
+
+	total_samples = buf->len / sizeof(uint16_t);
+	samples_per_channel /= adc_perf_data.seq_idx_adc_0;
+
+	for (i = 0; i < total_samples; i += adc_perf_data.seq_idx_adc_0) {
+		for (c = 0; c < adc_perf_data.seq_idx_adc_0; c++) {
+			uint16_t *data = ((uint16_t *)buf->data) + i + c;
+			adc_perf_data.sqr_sum[c] += ((uint32_t)(*data) * (uint32_t)(*data));
+		}
+	}
+
+	adc_perf_data.sqr_sum_samples = samples_per_channel;
+}
+
 static void udp_tx_work(struct k_work *work)
 {
 	struct net_buf *buf;
 
 	while ((buf = net_buf_get(&adc_perf_data.udp_tx_fifo, K_NO_WAIT)) != NULL) {
+		//calculate_sqr_sum(buf);
 		send_to_clients(buf);
 		net_buf_unref(buf);
 	}
@@ -264,6 +299,7 @@ static inline struct client_info *add_client(struct sockaddr *addr)
 static void client_recycle_work(struct k_work *work)
 {
 	int i;
+	int c;
 	uint32_t now = k_uptime_get_32();
 
 	for (i = 0; i < MAX_CLIENTS; i++) {
@@ -282,6 +318,16 @@ static void client_recycle_work(struct k_work *work)
 			LOG_INF("removed unresponstive client");
 		}
 	}
+
+#if 0
+	if ((sizeof(adc_perf_data.sqr_sum) / sizeof(uint64_t)) >= adc_perf_data.seq_idx_adc_0) {
+		for (c = 0; c < adc_perf_data.seq_idx_adc_0; c++) {
+			uint32_t adc_rms = adc_perf_data.sqr_sum[c] / adc_perf_data.sqr_sum_samples;
+			adc_rms = sqrtl(adc_rms);
+			LOG_INF("adc rms[%d]: %" PRIu32, c, adc_rms);
+		}
+	}
+#endif
 
 	k_delayed_work_submit(&adc_perf_data.client_recycle_work, K_MSEC(1000));
 }
