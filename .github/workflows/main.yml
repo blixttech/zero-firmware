@@ -45,7 +45,8 @@ jobs:
             edt \
             pyelftools \
             pykwalify \
-            west
+            west \
+            cbor
 
       - name: Install toolchain
         shell: bash
