@@ -145,7 +145,7 @@ We use ``conda`` environment/package management system to create a separate Pyth
 Clone this repository and update other modules using ``west``.
 
 ```console
-(zephyr) $ git clone git@gitlab.com:blixt/circuit-breaker/bcb-firmware-zephyr.git
+(zephyr) $ git clone git@github.com:blixttech/zero-firmware.git
 (zephyr) $ cd bcb-firmware-zephyr
 (zephyr) $ west update
 (zephyr) $ pip install -r scripts/requirements.txt
