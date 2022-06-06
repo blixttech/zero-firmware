@@ -149,8 +149,8 @@ Clone this repository and update other modules using ``west``.
 ```console
 (zephyr) $ git clone git@github.com:blixttech/zero-firmware.git
 (zephyr) $ cd zero-firmware
-(zephyr) $ west update
 (zephyr) $ pip install -r python-requirements.txt
+(zephyr) $ west update
 ```
 
 ## Compiling and Flashing Zero Firmware
