@@ -102,45 +102,45 @@ We use ``conda`` environment/package management system to create a separate Pyth
     pip install pip --upgrade
     ```
 
-* Installing ARM Toolchain
+* Setting up ARM Toolchain
     * Download the latest SDK installer for ARM.
-    ```console
-    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.4/zephyr-toolchain-arm-0.11.4-setup.run
-    ```
+        ```console
+        wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.4/zephyr-toolchain-arm-0.11.4-setup.run
+        ```
     * Install the toolchain into ``~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4``
-    ```console
-    chmod +x zephyr-toolchain-arm-0.11.4-setup.run
-    mkdir -p ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    ./zephyr-toolchain-arm-0.11.4-setup.run -- -d ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    ```
+        ```console
+        chmod +x zephyr-toolchain-arm-0.11.4-setup.run
+        mkdir -p ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ./zephyr-toolchain-arm-0.11.4-setup.run -- -d ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ```
 
     * Setting up environment variables for the conda environment. 
     
         Assuming conda is installed into ``~/software/conda`` directory.
-    ```console
-    mkdir -p ~/software/conda/envs/zephyr/etc/conda/activate.d
-    cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
-    export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-    export ZEPHYR_SDK_INSTALL_DIR=~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    EOF
+        ```console
+        mkdir -p ~/software/conda/envs/zephyr/etc/conda/activate.d
+        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
+        export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+        export ZEPHYR_SDK_INSTALL_DIR=~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        EOF
 
-    mkdir -p ~/software/conda/envs/zephyr/etc/conda/deactivate.d
-    cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
-    unset ZEPHYR_TOOLCHAIN_VARIANT
-    unset ZEPHYR_SDK_INSTALL_DIR
-    EOL
-    ```
+        mkdir -p ~/software/conda/envs/zephyr/etc/conda/deactivate.d
+        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
+        unset ZEPHYR_TOOLCHAIN_VARIANT
+        unset ZEPHYR_SDK_INSTALL_DIR
+        EOL
+        ```
 
-    Deactivate and reactivate conda environment for changes to take effect and verify toolchain environment variables are set properly.
+    * Deactivate and reactivate conda environment for changes to take effect and verify toolchain environment variables are set properly.
 
-    ```console
-    source deactivate
-    source activate zephyr
-    echo $ZEPHYR_TOOLCHAIN_VARIANT
-    # THe output should be zehpyr
-    echo $ZEPHYR_SDK_INSTALL_DIR
-    # The output should be like /home/xxxx/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    ```
+        ```console
+        source deactivate
+        source activate zephyr
+        echo $ZEPHYR_TOOLCHAIN_VARIANT
+        # THe output should be zehpyr
+        echo $ZEPHYR_SDK_INSTALL_DIR
+        # The output should be like /home/xxxx/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ```
 
 ## Setting up source repository.
 Clone this repository and update other modules using ``west``.
