@@ -29,7 +29,6 @@ all: zero
 
 init: 
 	west update
-	pip install -r scripts/requirements.txt
 
 # MCUboot rules
 ifeq ($(INCREMENTAL),1)
