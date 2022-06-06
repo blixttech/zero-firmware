@@ -28,7 +28,7 @@ Over-the-air (OTA) updates to the Zero firmware is done via an external tool, [m
     export PATH=$PATH:$HOME/go/bin
     ```
 
-* Download the desired firmware from the [release page](https://github.com/blixttech/zero-firmware/releases).
+* Download the desired firmware from the [release page](https://github.com/blixttech/zero-firmware/releases) or compile the firmware as described in the [Developer Guide](#developer-guide).
     The file that is needed for the update is in `zero-X.X.X.signed.bin` format such that `X.X.X` indicates the version number.
 
 * Identify the IP address of the Zero device that needs the firmware update.
@@ -181,7 +181,7 @@ Use the following command to gather the firmware images into `<repository root>/
 make binaries
 ```
 
-Refer to the [OTA Update](#ota-update) user guide.
+Refer to the [OTA Update](#ota-update) guide.
 
 ## Notes on Renode
 
