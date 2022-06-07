@@ -25,7 +25,8 @@ Over-the-air (OTA) updates to the Zero firmware is done via an external tool, [m
 * Install mcumgr.
     ```console
     go install github.com/apache/mynewt-mcumgr-cli/mcumgr@latest
-    export PATH=$PATH:$HOME/go/bin
+    # You may append the following line to your .bashrc file to set the path permanently.
+    export PATH=$HOME/go/bin:$PATH
     ```
 
 * Download the desired firmware from the [release page](https://github.com/blixttech/zero-firmware/releases) or compile the firmware as described in the [Developer Guide](#developer-guide).
@@ -82,7 +83,7 @@ Over-the-air (OTA) updates to the Zero firmware is done via an external tool, [m
 
 The instructions provided through this section are based on Zephyr's [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html) and empirical usage. 
 
-We use ``conda`` environment/package management system to create a separate Python environment rather than fiddling around with operating system's native Python environment.
+We use [``conda``](https://docs.conda.io/en/latest/index.html) environment/package management system to create a separate Python environment rather than fiddling around with operating system's native Python environment.
 
 
 * Install required packages using operating system's package manager (the following command and package names are only for Debian/Ubuntu based Linux systems).
@@ -92,15 +93,18 @@ We use ``conda`` environment/package management system to create a separate Pyth
         gcc gcc-multilib g++-multilib libsdl2-dev golang-go
     ```
 * Installing conda and create a Python environment
-    * Follow the instruction in [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to install ``conda``.
+    * Follow the instruction in [here](https://docs.conda.io/en/latest/miniconda.html) to install ``miniconda``, a minimal version of ``conda``. After the installation, you may use the following command to disable auto activation of the base environment if needed.
+        ```console
+        conda config --set auto_activate_base false
+        ```
     * Create a Python environment named ``zephyr``.
+        ```console
+        conda create -n zephyr python=3
+        conda activate zephyr
+        # Now we are in zephyr conda environment. (zephyr) should be in the prompt
+        pip install pip --upgrade
+        ```
     * We will install required python packages in the [Setting up source repository](#setting-up-source-repository) section.
-    ```console
-    conda create -n zephyr python=3
-    source activate zephyr
-    # Now we are in zephyr conda environment. (zephyr) should be in the prompt
-    pip install pip --upgrade
-    ```
 
 * Setting up ARM Toolchain
     * Download the latest SDK installer for ARM.
@@ -122,10 +126,10 @@ We use ``conda`` environment/package management system to create a separate Pyth
         cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
         export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
         export ZEPHYR_SDK_INSTALL_DIR=~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-        EOF
+        EOL
 
         mkdir -p ~/software/conda/envs/zephyr/etc/conda/deactivate.d
-        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
+        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/deactivate.d/env_vars.sh
         unset ZEPHYR_TOOLCHAIN_VARIANT
         unset ZEPHYR_SDK_INSTALL_DIR
         EOL
@@ -134,8 +138,8 @@ We use ``conda`` environment/package management system to create a separate Pyth
     * Deactivate and reactivate conda environment for changes to take effect and verify toolchain environment variables are set properly.
 
         ```console
-        source deactivate
-        source activate zephyr
+        conda deactivate
+        conda activate zephyr
         echo $ZEPHYR_TOOLCHAIN_VARIANT
         # THe output should be zehpyr
         echo $ZEPHYR_SDK_INSTALL_DIR
@@ -147,7 +151,7 @@ Clone this repository and update other modules using ``west``.
 *Note that the following commands should be used in the activated conda environment.*
 
 ```console
-git clone git@github.com:blixttech/zero-firmware.git
+git clone https://github.com/blixttech/zero-firmware.git
 cd zero-firmware
 pip install -r python-requirements.txt
 west update
@@ -157,6 +161,8 @@ west update
 Zero firmware uses [MCUboot](https://www.mcuboot.com/) which is a secure bootloader supported by Zephyr RTOS in the device firmware upgrading process.
 Therefore, MCUboot has to be flashed first prior to flashing the Zero firmware.
 *Note that the following commands should be used in the activated conda environment.*
+
+**NOTE: Zero firmware is based on Zephyr v2.3 code base. Therefore, you may ignore the CMake warnings related to CMP0079 and CMP0116 and deprecation warnings related to python distutils.** 
 
 ### Flashing MCUboot
 In the root directory for the repository with activated conda environment
