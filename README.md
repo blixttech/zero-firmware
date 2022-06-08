@@ -18,33 +18,59 @@ The firmware provides the following features currently:
 
 # User Guide
 
+***
+
+## **ADC Perf firmware**
+
+This branch contains experimental work for streaming raw ADC samples in high speed.
+If you are looking at this branch for the first time, have a look at [Developer Guide](#developer-guide) to get started.
+
+**Note: This is an experimental work and the firmware might have a limited functionality (except for the hardware-driven short circuit protection). Therefore, use this work with caution.**  
+
+### Compiling and Flashing ADC Perf Firmware
+In the root directory for the repository with activated conda environment.
+
+```console
+make adc-perf
+make adc-perf-flash
+```
+### Updating ADC Perf Firmware via OTA
+Use the following command to gather the firmware images into `<repository root>/build` directory.
+
+```console
+make binaries-adc-perf
+```
+Use the image `<repository root>/build/zero-adc-perf-0.0.0.signed.bin` for the [OTA Update](#ota-update).
+
+***
+
 ## OTA Update
-* Install mcumgr
-mcumgr is a Go application that can be used to manage remote devices.
-To install, run
-```
-go get github.com/apache/mynewt-mcumgr-cli/mcumgr
-```
 
-* Download the latest firmware
-    Go to the [release page](https://github.com/blixttech/zero-firmware/releases) and download the desired firmware.
-    The files that are needed for the update are `zero-X.X.X.signed.bin`.
+Over-the-air (OTA) updates to the Zero firmware is done via an external tool, [mcumgr](https://github.com/apache/mynewt-mcumgr).
 
-* Identify the IP of the Zero to upload the firmware to.
+* Install mcumgr.
+    ```console
+    go install github.com/apache/mynewt-mcumgr-cli/mcumgr@latest
+    # You may append the following line to your .bashrc file to set the path permanently.
+    export PATH=$HOME/go/bin:$PATH
+    ```
+
+* Download the desired firmware from the [release page](https://github.com/blixttech/zero-firmware/releases) or compile the firmware as described in the [Developer Guide](#developer-guide).
+    The file that is needed for the update is in `zero-X.X.X.signed.bin` format such that `X.X.X` indicates the version number.
+
+* Identify the IP address of the Zero device that needs the firmware update.
     This can be done in the Zero Controller UI.
 
-* Upload the firmware
-    Replace 
-    - `<PATH TO MCUMGR>` with the path to the mcumgr binary
-    - `ZERO-IP` with the IP of the Zero
-    - `<PATH TO FW>` with the path to the zero firmware
-    ```
-    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image upload <PATH TO FW>/zero-0.5.2.signed.bin
+* Uploading the firmware. Replace the following fields as needed.
+    - `<ZERO-IP>` with the IP of the Zero device.
+    - `<PATH TO FW>` with the path to the downloaded firmware file.
+    ```console
+    mcumgr --conntype udp --connstring=[<ZERO-IP>]:1337 image upload <PATH TO FW>
     ```
 
-* List the available firmware versions on the device and get the hash of the firmware in slot 1
-    ```
-    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image list 
+* List the available firmware versions on the device to get the hash of the newly uploaded firmware.
+    ```console
+    mcumgr --conntype udp --connstring=[<ZERO-IP>]:1337 image list 
     ```
     The output of the above command should be similar to the following:
 
@@ -63,14 +89,17 @@ go get github.com/apache/mynewt-mcumgr-cli/mcumgr
         split status: n/a (0)
     ```
 
-* Confirm the firmware to be used by specifying the hash from slot 1
-    ```
-    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 image confirm <HASH OF SLOT 1> 
+    The current firmware image has `active confirmed` in its flags. Therefore, copy the hash of the other firmware image.
+
+* Confirm the firmware image to be used by specifying the hash.
+  Replace the `<IMAGE HASH>` with the hash copied from the previous step.
+    ```console
+    mcumgr --conntype udp --connstring=[<ZERO-IP>]:1337 image confirm <IMAGE HASH> 
     ```
 
 * Reboot the device
-    ```
-    <PATH TO MCUMGR>/mcumgr --conntype udp --connstring=[ZERO-IP]:1337 reset 
+    ```console
+    mcumgr --conntype udp --connstring=[<ZERO-IP>]:1337 reset 
     ```
 
 
@@ -80,146 +109,111 @@ go get github.com/apache/mynewt-mcumgr-cli/mcumgr
 
 The instructions provided through this section are based on Zephyr's [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html) and empirical usage. 
 
-We use ``conda`` environment/package management system to create a separate Python environment rather than fiddling around with operating system's native Python environment.
+We use [``conda``](https://docs.conda.io/en/latest/index.html) environment/package management system to create a separate Python environment rather than fiddling around with operating system's native Python environment.
 
 
 * Install required packages using operating system's package manager (the following command and package names are only for Debian/Ubuntu based Linux systems).
     ```console
-    $ sudo apt install --no-install-recommends git ninja-build gperf \
+    sudo apt install --no-install-recommends git ninja-build gperf \
         ccache dfu-util device-tree-compiler wget xz-utils file make \
-        gcc gcc-multilib g++-multilib libsdl2-dev
+        gcc gcc-multilib g++-multilib libsdl2-dev golang-go
     ```
 * Installing conda and create a Python environment
-    * Follow the instruction in [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to install ``conda``.
+    * Follow the instruction in [here](https://docs.conda.io/en/latest/miniconda.html) to install ``miniconda``, a minimal version of ``conda``. After the installation, you may use the following command to disable auto activation of the base environment if needed.
+        ```console
+        conda config --set auto_activate_base false
+        ```
     * Create a Python environment named ``zephyr``.
-    ```console
-    $ conda create -n zephyr python=3
-    $ source activate zephyr
-    # Now we are in zephyr conda environment
-    (zephyr) $ pip install pip --upgrade
-    (zephyr) $ pip install cmake tk setuptools wheel pyyaml edt elftools pyelftools pykwalify west
-    ```
+        ```console
+        conda create -n zephyr python=3
+        conda activate zephyr
+        # Now we are in zephyr conda environment. (zephyr) should be in the prompt
+        pip install pip --upgrade
+        ```
+    * We will install required python packages in the [Setting up source repository](#setting-up-source-repository) section.
 
-* Installing ARM Toolchain
+* Setting up ARM Toolchain
     * Download the latest SDK installer for ARM.
-    ```console
-    (zephyr) $ wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.4/zephyr-toolchain-arm-0.11.4-setup.run
-    ```
+        ```console
+        wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.11.4/zephyr-toolchain-arm-0.11.4-setup.run
+        ```
     * Install the toolchain into ``~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4``
-    ```console
-    (zephyr) $ chmod +x zephyr-toolchain-arm-0.11.4-setup.run
-    (zephyr) $ mkdir -p ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    (zephyr) $ ./zephyr-toolchain-arm-0.11.4-setup.run -- -d ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    ```
+        ```console
+        chmod +x zephyr-toolchain-arm-0.11.4-setup.run
+        mkdir -p ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ./zephyr-toolchain-arm-0.11.4-setup.run -- -d ~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ```
 
     * Setting up environment variables for the conda environment. 
     
         Assuming conda is installed into ``~/software/conda`` directory.
-    ```console
-    (zephyr) $ mkdir -p ~/software/conda/envs/zephyr/etc/conda/activate.d
-    (zephyr) $ cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
-    export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-    export ZEPHYR_SDK_INSTALL_DIR=~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    EOF
+        ```console
+        mkdir -p ~/software/conda/envs/zephyr/etc/conda/activate.d
+        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
+        export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+        export ZEPHYR_SDK_INSTALL_DIR=~/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        EOL
 
-    (zephyr) $ mkdir -p ~/software/conda/envs/zephyr/etc/conda/deactivate.d
-    (zephyr) $ cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/activate.d/env_vars.sh
-    unset ZEPHYR_TOOLCHAIN_VARIANT
-    unset ZEPHYR_SDK_INSTALL_DIR
-    EOL
-    ```
+        mkdir -p ~/software/conda/envs/zephyr/etc/conda/deactivate.d
+        cat << EOL >> ~/software/conda/envs/zephyr/etc/conda/deactivate.d/env_vars.sh
+        unset ZEPHYR_TOOLCHAIN_VARIANT
+        unset ZEPHYR_SDK_INSTALL_DIR
+        EOL
+        ```
 
-    Deactivate and reactivate conda environment for changes to take effect and verify toolchain environment variables are set properly.
+    * Deactivate and reactivate conda environment for changes to take effect and verify toolchain environment variables are set properly.
 
-    ```console
-    (zephyr) $ source deactivate
-    $ source activate zephyr
-    $ echo $ZEPHYR_TOOLCHAIN_VARIANT
-    zehpyr
-    $ echo $ZEPHYR_SDK_INSTALL_DIR
-    /home/xxxx/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
-    ```
+        ```console
+        conda deactivate
+        conda activate zephyr
+        echo $ZEPHYR_TOOLCHAIN_VARIANT
+        # THe output should be zehpyr
+        echo $ZEPHYR_SDK_INSTALL_DIR
+        # The output should be like /home/xxxx/software/zephyr-sdk/arm/zephyr-sdk-0.11.4
+        ```
 
 ## Setting up source repository.
-   
 Clone this repository and update other modules using ``west``.
+*Note that the following commands should be used in the activated conda environment.*
 
 ```console
-(zephyr) $ git clone git@gitlab.com:blixt/circuit-breaker/bcb-firmware-zephyr.git
-(zephyr) $ cd bcb-firmware-zephyr
-(zephyr) $ west update
-(zephyr) $ pip install -r scripts/requirements.txt
+git clone https://github.com/blixttech/zero-firmware.git
+cd zero-firmware
+pip install -r python-requirements.txt
+west update
 ```
 
-## The Zero Firmware
-Zero uses a bootloader (mcuboot) that enables it to receive firmware updates over Ethernet.
-The bootloader also verifies the cryptographic signature of the firmware.
+## Compiling and Flashing Zero Firmware
+Zero firmware uses [MCUboot](https://www.mcuboot.com/) which is a secure bootloader supported by Zephyr RTOS in the device firmware upgrading process.
+Therefore, MCUboot has to be flashed first prior to flashing the Zero firmware.
+*Note that the following commands should be used in the activated conda environment.*
 
-### First Time Setup
-* First build mcuboot and flash - the boot loader
-  
-    ```console
-    (zephyr) $ cd zephyr-os/bootloader/mcuboot/boot/zephyr
-    (zephyr) $ west build
-    # To upload, use the following west command
-    (zephyr) $ west flash
-    # to go back to the previous directory
-    (zephyr) $ cd -
-    ```
-* Then build the firmware, sign it, and flash it.
-  Please note, this example uses the standard key. For production deployment this key **must** be replaced.
+**NOTE: Zero firmware is based on Zephyr v2.3 code base. Therefore, you may ignore the CMake warnings related to CMP0079 and CMP0116 and deprecation warnings related to python distutils.** 
 
-    ```console
-    (zephyr) $ cd apps/zero
-    (zephyr) $ west build
-    # sign the firmware, here we use the standard mcuboot key
-    # replace this key with the production key 
-    (zephyr) $ west sign -t imgtool -- --key ../../zephyr-os/bootloader/mcuboot/root-rsa-2048.pem
-    # To upload, use the following west command
-    (zephyr) $ west flash
-    ```
+### Flashing MCUboot
+In the root directory for the repository with activated conda environment
 
-* Install mcumgr
-  mcumgr is the program used to upload new firmwares to the Zero. It is written in golang. 
-  Follow the instructions at https://docs.zephyrproject.org/latest/guides/device_mgmt/index.html
+```console
+make mcuboot
+make mcuboot-flash
+```
 
-### Building and Uploading a new version
-* This process is almost the same as building the initial firmware version. But instead of flashing it, 
-we use mcumgr to upload it. In order to do the upload the firmware to a connected Zero, you need to know the IP.
-This assumes mcumgr is in your path.
+### Flashing Zero Firmware
+In the root directory for the repository with activated conda environment.
 
+```console
+make zero
+make zero-flash
+```
 
-    ```console
-    (zephyr) $ cd apps/zero
-    (zephyr) $ west build
-    # sign the firmware, here we use the standard mcuboot key
-    (zephyr) $ west sign -t imgtool -- --key ../../zephyr-os/bootloader/mcuboot/root-rsa-2048.pem
-    # replace this key with the production key 
-    # To upload, use the following west command
-    (zephyr) $ mcumgr --conntype udp --connstring=[<zeros-ip>]:1337 image upload build/zephyr/zephyr.signed.bin 
-    ```
+### Updating Zero Firmware via OTA
+Use the following command to gather the firmware images into `<repository root>/build` directory.
 
-## Creating a new basic firmware
-***** This is only for the case you would like to replace the Zero firmware alltogether **
-* As the first application, we build a blink application that will blink red and green LEDs of the breaker alternatively.
+```console
+make binaries
+```
 
-    ```console
-    (zephyr) $ cd apps/blinky
-    (zephyr) $ west build
-    # To upload, use the following west command
-    (zephyr) $ west flash
-    ```
-
-* Special note on ``cmake`` when writing applications
-
-    As this repository is an out-of-tree Zephyr repository, you need to include ``zephy.cmake`` in your project's ``CMakeLists.txt`` file.
-    Use the following ``cmake`` command to include ``zephy.cmake`` file.
-
-    ```cmake
-    cmake_minimum_required(VERSION 3.13.1)
-    # Use the following line before using other cmake commands.
-    include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/zephyr.cmake")
-    ```   
+Refer to the [OTA Update](#ota-update) guide.
 
 ## Notes on Renode
 

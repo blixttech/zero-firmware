@@ -33,31 +33,57 @@ all: zero
 
 init: 
 	west update
-	pip install -r scripts/requirements.txt
 
 # MCUboot rules
+ifeq ($(INCREMENTAL),1)
 mcuboot:
+else
+mcuboot: $(MCUBOOT_BIN)
+$(MCUBOOT_BIN):
+endif
 	cd $(MCUBOOT_APP_DIR) && west build -b bcb_v1 -- -DBOARD_ROOT=$(MCUBOOT_BOARD_ROOT) \
 	-DDTS_ROOT=$(MCUBOOT_DTS_ROOT) -DZEPHYR_EXTRA_MODULES=$(MCUBOOT_EXTRA_MODULES) \
 	-DOVERLAY_CONFIG=$(MCUBOOT_OVERLAY_CONFIG) -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 
+ifeq ($(INCREMENTAL),1)
 mcuboot-flash: mcuboot
+else
+mcuboot-flash: $(MCUBOOT_BIN)
+endif
 	cd $(MCUBOOT_APP_DIR) && west flash --bin-file $(MCUBOOT_BIN)
 
 # Zero app rules
+ifeq ($(INCREMENTAL),1)
 zero:
+else
+zero: $(ZERO_BIN)
+$(ZERO_BIN):
+endif
 	cd $(ZERO_APP_DIR) && west build -- -DCMAKE_EXPORT_COMPILE_COMMANDS=1 && \
 	west sign -t imgtool -- --key $(KEY_PAIR) --version $(VERSION)
 
+ifeq ($(INCREMENTAL),1)
 zero-flash: zero
+else
+zero-flash: $(ZERO_BIN)
+endif
 	cd $(ZERO_APP_DIR) && west flash --bin-file $(ZERO_BIN)
 
-# Zero app rules
+# ADC perf rules
+ifeq ($(INCREMENTAL),1)
 adc_perf:
+else
+adc_perf: $(ADC_PERF_BIN)
+$(ADC_PERF_BIN):
+endif
 	cd $(ADC_PERF_APP_DIR) && west build -- -DCMAKE_EXPORT_COMPILE_COMMANDS=1 && \
 	west sign -t imgtool -- --key $(KEY_PAIR) --version $(VERSION)
 
+ifeq ($(INCREMENTAL),1)
 adc_perf-flash: adc_perf
+else
+adc_perf-flash: $(ADC_PERF_BIN)
+endif
 	cd $(ADC_PERF_APP_DIR) && west flash --bin-file $(ADC_PERF_BIN)
 
 $(BINARY_DIR):
@@ -66,6 +92,9 @@ $(BINARY_DIR):
 binaries: $(BINARY_DIR) $(MCUBOOT_BIN) $(ZERO_BIN)
 	cp $(MCUBOOT_BIN) $(BINARY_DIR)/mcuboot-$(VERSION).bin && \
 	cp $(ZERO_BIN) $(BINARY_DIR)/zero-$(VERSION).signed.bin
+
+binaries-adc-perf: $(BINARY_DIR) $(ADC_PERF_BIN)
+	cp $(ADC_PERF_BIN) $(BINARY_DIR)/zero-adc-perf-$(VERSION).signed.bin
 
 clean:
 	rm -rf $(BINARY_DIR) $(MCUBOOT_BUILD_DIR) $(ZERO_BUILD_DIR) $(ADC_PERF_BUILD_DIR)

@@ -36,16 +36,7 @@ jobs:
             dfu-util \
             device-tree-compiler
 
-          pip3 install \
-            cmake \
-            tk \
-            setuptools \
-            wheel \
-            pyyaml \
-            edt \
-            pyelftools \
-            pykwalify \
-            west
+          pip3 install -r python-requirements.txt
 
       - name: Install toolchain
         shell: bash
