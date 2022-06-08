@@ -31,6 +31,9 @@ If you are looking at this branch for the first time, have a look at [Developer 
 In the root directory for the repository with activated conda environment.
 
 ```console
+# Switch to the adc-perf branch
+git checkout adc-perf
+
 make adc-perf
 make adc-perf-flash
 ```
