@@ -8,6 +8,7 @@ import csv
 import io
 import asyncio
 import cbor2
+import re
 
 logger = logging.getLogger(__name__)
 
