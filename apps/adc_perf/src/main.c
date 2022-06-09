@@ -3,6 +3,7 @@
 #include "adc_perf.h"
 #include <kernel.h>
 #include <lib/bcb.h>
+#include <lib/bcb_trip_curve_default.h>
 
 #define LOG_LEVEL CONFIG_ZERO_APP_LOG_LEVEL
 #include <logging/log.h>
@@ -15,8 +16,8 @@ void main()
 
 	networking_init();
 	services_init();
+	bcb_set_trip_curve(bcb_trip_curve_get_default());
 	adc_pef_init();
-	//adc_perf_server_loop();
 
 	while (1) {
 		k_sleep(K_MSEC(1000));
