@@ -52,7 +52,7 @@ jobs:
     
       - name: Build
         shell: bash
-        run: make binaries
+        run: make binaries-adc-perf
 
       - name: Release
         uses: softprops/action-gh-release@v1
