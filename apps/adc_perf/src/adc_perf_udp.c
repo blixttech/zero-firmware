@@ -299,7 +299,6 @@ static inline struct client_info *add_client(struct sockaddr *addr)
 static void client_recycle_work(struct k_work *work)
 {
 	int i;
-	int c;
 	uint32_t now = k_uptime_get_32();
 
 	for (i = 0; i < MAX_CLIENTS; i++) {
@@ -310,24 +309,14 @@ static void client_recycle_work(struct k_work *work)
 		}
 
 		diff = now > adc_perf_data.clients[i].last_seen ?
-			       now - adc_perf_data.clients[i].last_seen :
-			       (UINT32_MAX - adc_perf_data.clients[i].last_seen) + now;
+				     now - adc_perf_data.clients[i].last_seen :
+				     (UINT32_MAX - adc_perf_data.clients[i].last_seen) + now;
 
 		if (diff > 3000) {
 			adc_perf_data.clients[i].used = false;
 			LOG_INF("removed unresponstive client");
 		}
 	}
-
-#if 0
-	if ((sizeof(adc_perf_data.sqr_sum) / sizeof(uint64_t)) >= adc_perf_data.seq_idx_adc_0) {
-		for (c = 0; c < adc_perf_data.seq_idx_adc_0; c++) {
-			uint32_t adc_rms = adc_perf_data.sqr_sum[c] / adc_perf_data.sqr_sum_samples;
-			adc_rms = sqrtl(adc_rms);
-			LOG_INF("adc rms[%d]: %" PRIu32, c, adc_rms);
-		}
-	}
-#endif
 
 	k_delayed_work_submit(&adc_perf_data.client_recycle_work, K_MSEC(1000));
 }
@@ -497,23 +486,3 @@ int adc_pef_init(void)
 
 	return 0;
 }
-
-static int cmd_start_adc_handler(const struct shell *shell, size_t argc, char **argv)
-{
-	start_adc();
-
-	return 0;
-}
-
-static int cmd_stop_adc_handler(const struct shell *shell, size_t argc, char **argv)
-{
-	adc_dma_stop(adc_perf_data.dev_adc_0);
-
-	return 0;
-}
-
-SHELL_STATIC_SUBCMD_SET_CREATE(adc_sub, SHELL_CMD(start, NULL, "Start ADC", cmd_start_adc_handler),
-			       SHELL_CMD(stop, NULL, "Stop ADC", cmd_stop_adc_handler),
-			       SHELL_SUBCMD_SET_END /* Array terminated. */);
-
-SHELL_CMD_REGISTER(adc, &adc_sub, "ADC commands", NULL);
