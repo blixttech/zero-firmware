@@ -39,11 +39,46 @@ make adc-perf-flash
 ```
 ### Updating ADC Perf Firmware via OTA
 Use the following command to gather the firmware images into `<repository root>/build` directory.
+In the root directory for the repository with activated conda environment.
 
 ```console
 make binaries-adc-perf
 ```
 Use the image `<repository root>/build/zero-adc-perf-0.0.0.signed.bin` for the [OTA Update](#ota-update).
+
+### Saving ADC data stream to a CSV file
+Use the following command to save the ADC data stream to the file.
+In the root directory for the repository with activated conda environment.
+
+```console
+python apps/adc-perf/adc_perf_client.py [<ZERO-IP>]:5555 adc-data.csv
+```
+The command synopsis is shown below.
+```
+usage: adc_perf_client.py [-h] [-l LOG_LEVEL] ADDRESS OUTPUT
+
+ADC sample collection client for Blixt Zero
+
+positional arguments:
+  ADDRESS               IP (or broadcast) address in IP:Port format
+  OUTPUT                Output CSV file
+
+options:
+  -h, --help            show this help message and exit
+  -l LOG_LEVEL, --log-level LOG_LEVEL
+                        Set log level: info, warn, debug
+```
+
+It is possible to use broadcast address of the network instead of `<ZERO-IP>` to gather ADC streams from multiple devices.
+
+Each row of the CSV file has following fields.
+* IP address
+* Sample block index
+* Sample interval in nano seconds
+* Sample time in nano seconds
+* Sample resolution
+* Number of ADC channels
+* ADC values
 
 ***
 
