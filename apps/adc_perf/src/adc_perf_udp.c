@@ -1,9 +1,11 @@
 #include "adc_perf.h"
 #include <lib/bcb_macros.h>
+#include <lib/bcb_msmnt.h>
 #include <drivers/adc_dma.h>
 #include <drivers/adc_trigger.h>
 #include <device.h>
 #include <devicetree.h>
+#include <sys/_stdint.h>
 #include <sys/util.h>
 #include <fcntl.h>
 #include <net/socket.h>
@@ -21,6 +23,8 @@ LOG_MODULE_REGISTER(adc_perf);
 // clang-format off
 #define BCB_ADC_DEV(inst)	(adc_perf_data.dev_adc_##inst)
 #define BCB_ADC_SEQ_IDX(inst)	(adc_perf_data.seq_idx_adc_##inst)
+#define BCB_ADC_SEQ_A		(adc_perf_data.a_b_data[adc_perf_data.seq_idx_adc_0].a)
+#define BCB_ADC_SEQ_B		(adc_perf_data.a_b_data[adc_perf_data.seq_idx_adc_0].b)
 // clang-format on
 
 #define BCB_ADC_DEV_LABEL(node_label, ch_name)                                                     \
@@ -61,6 +65,15 @@ LOG_MODULE_REGISTER(adc_perf);
 		}                                                                                  \
 	} while (0)
 
+#define BCB_ADC_SEQ_ADD_A_B(type)                                                                  \
+	do {                                                                                       \
+		uint16_t val;                                                                      \
+		bcb_msmnt_get_calib_param_a(type, &val);                                           \
+		BCB_ADC_SEQ_A = val;                                                               \
+		bcb_msmnt_get_calib_param_b(type, &val);                                           \
+		BCB_ADC_SEQ_B = val;                                                               \
+	} while (0)
+
 // clang-format off
 #define SERVER_PORT		5555
 #define MAX_CLIENTS		4
@@ -76,6 +89,11 @@ struct client_info {
 	bool used;
 	struct sockaddr addr;
 	uint32_t last_seen;
+};
+
+struct seq_a_b_data {
+	uint16_t a;
+	uint16_t b;
 };
 
 typedef struct adc_perf_data {
@@ -97,6 +115,7 @@ typedef struct adc_perf_data {
 	uint8_t cbor_buf[CBOR_BUF_SIZE];
 	uint64_t sqr_sum[MAX_CHANNELS];
 	uint32_t sqr_sum_samples;
+	struct seq_a_b_data a_b_data[MAX_CHANNELS];
 } adc_perf_data_t;
 
 static adc_perf_data_t adc_perf_data;
@@ -167,6 +186,8 @@ static inline uint32_t create_cbor_frame(struct net_buf *buf)
 	cbor_encode_uint(&array_encoder, adc_perf_data.sample_time_adc_0);
 	cbor_encode_uint(&array_encoder, adc_perf_data.seq_idx_adc_0);
 	cbor_encode_uint(&array_encoder, sizeof(uint16_t) * 8);
+	cbor_encode_byte_string(&array_encoder, (uint8_t *)adc_perf_data.a_b_data,
+				adc_perf_data.seq_idx_adc_0 * sizeof(struct seq_a_b_data));
 	cbor_encode_byte_string(&array_encoder, (uint8_t *)buf->data, buf->len);
 
 	cbor_encoder_close_container(&encoder, &array_encoder);
@@ -366,8 +387,14 @@ static int start_adc(void)
 	struct device *trigger_dev;
 
 	adc_perf_data.seq_idx_adc_0 = 0;
+
+	BCB_ADC_SEQ_ADD_A_B(BCB_MSMNT_TYPE_I_LOW_GAIN);
 	BCB_ADC_SEQ_ADD(0, aread, i_low_gain);
+
+	BCB_ADC_SEQ_ADD_A_B(BCB_MSMNT_TYPE_I_HIGH_GAIN);
 	BCB_ADC_SEQ_ADD(0, aread, i_high_gain);
+
+	BCB_ADC_SEQ_ADD_A_B(BCB_MSMNT_TYPE_V_MAINS);
 	BCB_ADC_SEQ_ADD(0, aread, v_mains);
 
 	adc_perf_data.sample_size_adc_0 =

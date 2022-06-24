@@ -50,6 +50,7 @@ class DataProtocol:
             self.sample_time = 0
             self.channels = 0
             self.resolution = 0
+            self.a_b_data = {}
             self.adc_data = {}
 
     class StatsItem:
@@ -119,7 +120,18 @@ class DataProtocol:
         sample_block.channels = cbor_data[3]
         sample_block.resolution = cbor_data[4]
         bytes_per_sample = math.ceil(sample_block.resolution / 8)
-        sample_bytes = cbor_data[5]
+        a_b_data_bytes = cbor_data[5]
+
+        if len(a_b_data_bytes) % 4:
+            logger.error("Invalid a and b values %d", len(a_b_data_bytes))
+            return None
+
+        for i in range(0, sample_block.channels):
+            a_val = int(a_b_data_bytes[i*4]) + int(a_b_data_bytes[(i*4)+1] << 8)
+            b_val = int(a_b_data_bytes[(i*4)+2]) + int(a_b_data_bytes[(i*4)+3] << 8)
+            sample_block.a_b_data[i] = (a_val, b_val)
+
+        sample_bytes = cbor_data[6]
 
         adc_data = {i: [] for i in range(0, sample_block.channels)}
         if len(sample_bytes) % bytes_per_sample:
@@ -146,6 +158,10 @@ class DataProtocol:
         row_base.append(sample_block.sample_time)
         row_base.append(sample_block.resolution)
         row_base.append(sample_block.channels)
+
+        for i in range(0, sample_block.channels):
+            row_base.append(sample_block.a_b_data[i][0])
+            row_base.append(sample_block.a_b_data[i][1])
 
         for z in zip(*sample_block.adc_data.values()):
             row = []
