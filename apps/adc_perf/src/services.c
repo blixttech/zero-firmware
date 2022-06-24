@@ -18,14 +18,12 @@ struct services_data {
 
 static struct services_data services_data;
 
-#if 0
 static void button_callback_handler(bool is_pressed)
 {
 	if (is_pressed) {
 		bcb_toggle();
 	}
 }
-#endif
 
 int services_init()
 {
@@ -69,10 +67,8 @@ int services_init()
 	}
 #endif
 
-#if 0
 	services_data.button_callback.handler = button_callback_handler;
 	bcb_user_button_add_callback(&services_data.button_callback);
-#endif
 
 	return 0;
 }
