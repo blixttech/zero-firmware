@@ -79,7 +79,7 @@ LOG_MODULE_REGISTER(adc_perf);
 #define MAX_CLIENTS		4
 #define RX_BUF_SIZE		128
 #define CBOR_BUF_SIZE		2048
-#define MAX_SEQ_SAMPLES		512
+#define MAX_SEQ_SAMPLES		510
 #define THREAD_STACK_SIZE	1024
 #define THREAD_PRIORITY		K_PRIO_COOP(8)
 #define MAX_CHANNELS		3
@@ -421,9 +421,10 @@ static int start_adc(void)
 
 	adc_perf_data.sample_interval_adc_0 = adc_trigger_get_interval(trigger_dev);
 
+	LOG_INF("channels          : %" PRIu8, adc_perf_data.seq_idx_adc_0);
 	LOG_INF("sample time       : %" PRIu32 " ns", adc_perf_data.sample_time_adc_0);
-	LOG_INF("trigger interval  : %" PRIu32 " ns", adc_perf_data.sample_interval_adc_0);
-	LOG_INF("samples size (ADC): %" PRIu32, adc_perf_data.sample_size_adc_0);
+	LOG_INF("sample interval   : %" PRIu32 " ns", adc_perf_data.sample_interval_adc_0);
+	LOG_INF("Total samples     : %" PRIu32, adc_perf_data.sample_size_adc_0);
 
 	return 0;
 }
@@ -501,7 +502,7 @@ int adc_pef_init(void)
 
 	adc_dma_stop(adc_perf_data.dev_adc_0);
 	adc_dma_set_reference(adc_perf_data.dev_adc_0, ADC_DMA_REF_EXTERNAL0);
-	adc_dma_set_performance_level(adc_perf_data.dev_adc_0, ADC_DMA_PERF_LEVEL_4);
+	adc_dma_set_performance_level(adc_perf_data.dev_adc_0, ADC_DMA_PERF_LEVEL_3);
 
 	r = start_adc();
 	if (r < 0) {
