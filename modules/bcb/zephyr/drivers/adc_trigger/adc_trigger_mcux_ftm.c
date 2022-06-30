@@ -44,7 +44,7 @@ static int adc_ftm_trigger_set_interval(struct device *dev, uint32_t us)
 {
 	struct adc_ftm_trigger_data *data = dev->driver_data;
 
-	uint32_t period = (((uint64_t)us * (uint64_t)data->ticks_per_sec) / (uint64_t)1e6);
+	uint32_t period = (((uint64_t)us * (uint64_t)data->ticks_per_sec) / (uint64_t)1e6) - 1U;
 	if (period < 2) {
 		LOG_ERR("FTM period too small: %" PRIu32 "", period);
 		return -EINVAL;
@@ -57,7 +57,7 @@ static int adc_ftm_trigger_set_interval(struct device *dev, uint32_t us)
 static uint32_t adc_ftm_trigger_get_interval(struct device *dev)
 {
 	struct adc_ftm_trigger_data *data = dev->driver_data;
-	return ((uint64_t)1e9 * (uint64_t)data->period) / (uint64_t)data->ticks_per_sec;
+	return ((uint64_t)1e9 * (uint64_t)(data->period + 1U)) / (uint64_t)data->ticks_per_sec;
 }
 
 static int adc_ftm_trigger_init(struct device *dev)
