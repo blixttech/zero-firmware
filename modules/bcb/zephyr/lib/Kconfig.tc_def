@@ -4,10 +4,15 @@ menuconfig BCB_TRIP_CURVE_DEFAULT
 
 if BCB_TRIP_CURVE_DEFAULT
     config BCB_TRIP_CURVE_DEFAULT_TRANSIENT_WORK_TIMEOUT
-        int "Transient delay for the default trip cruve for DC in milliseconds"
+        int "Transient delay for the default trip curve for DC in milliseconds"
         default 50
 
     config BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
-        int "Current monitoring interval for the default trip cruve for DC in milliseconds"
-        default 10
+        int "Current monitoring interval for the default trip curve for DC in milliseconds"
+        default 100
+
+    config BCB_TRIP_CURVE_DEFAULT_MAX_POINTS
+        int "Maximum number of configurable points for the default trip curve"
+        default 16
+
 endif # BCB_TRIP_CURVE_DEFAULT

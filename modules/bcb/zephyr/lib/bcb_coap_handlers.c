@@ -345,9 +345,6 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 	uint8_t format = 0;
 	uint8_t payload[70];
 	uint8_t total = 0;
-	uint8_t limit_sw;
-	uint8_t limit_sw_hist;
-	uint32_t limit_sw_duration;
 	const struct bcb_trip_curve *tc;
 
 	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
@@ -375,12 +372,8 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 		tc = bcb_get_trip_curve();
 	}
 
-	tc->get_limit_sw(&limit_sw, &limit_sw_hist, &limit_sw_duration);
-
-	r = snprintk((char *)payload, sizeof(payload),
-		     "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%03" PRIu8 ",%06" PRIu32,
-		     (uint8_t)tc->get_state(), (uint8_t)tc->get_cause(), tc->get_limit_hw(),
-		     limit_sw, limit_sw_hist, limit_sw_duration);
+	r = snprintk((char *)payload, sizeof(payload), "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8,
+		     (uint8_t)tc->get_state(), (uint8_t)tc->get_cause(), tc->get_limit_hw());
 
 	if (r < 0) {
 		return r;
@@ -388,7 +381,7 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 	total += r;
 
 	if (is_tc_def) {
-		r = snprintk((char *)(payload + total), sizeof(payload) - total, ",%06" PRIu32,
+		r = snprintk((char *)(payload + total), sizeof(payload) - total, ",%05" PRIu16,
 			     bcb_trip_curve_default_get_recovery());
 		if (r < 0) {
 			return r;
@@ -426,7 +419,7 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 	uint8_t tkl;
 	int r;
 	int i;
-	uint32_t recovery_duration;
+	uint16_t recovery_attempts;
 
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
@@ -438,13 +431,12 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 
 	for (i = 0; i < r; i++) {
 		int opt_end = options[i].len < sizeof(options[i].value) ?
-				      options[i].len :
-				      (sizeof(options[i].value) - 1);
+					    options[i].len :
+					    (sizeof(options[i].value) - 1);
 		options[i].value[opt_end] = '\0';
-
-		if (options[i].len > 3 && strncmp(options[i].value, "rd=", 3) == 0) {
-			recovery_duration = strtoul((char *)&options[i].value[3], NULL, 0);
-			bcb_trip_curve_default_set_recovery(recovery_duration);
+		if (options[i].len > 2 && strncmp(options[i].value, "r=", 2) == 0) {
+			recovery_attempts = strtoul((char *)&options[i].value[2], NULL, 0);
+			bcb_trip_curve_default_set_recovery(recovery_attempts);
 		}
 	}
 
@@ -487,8 +479,8 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 
 	for (i = 0; i < r; i++) {
 		int opt_end = options[i].len < sizeof(options[i].value) ?
-				      options[i].len :
-				      (sizeof(options[i].value) - 1);
+					    options[i].len :
+					    (sizeof(options[i].value) - 1);
 		options[i].value[opt_end] = '\0';
 
 		if (options[i].len == 5 && strncmp(options[i].value, "close", 5) == 0) {
@@ -502,30 +494,6 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 
 			limit = strtoul((char *)&options[i].value[4], NULL, 0);
 			tc->set_limit_hw(limit);
-		} else if (options[i].len > 4 && strncmp(options[i].value, "swl=", 4) == 0) {
-			uint8_t limit;
-			uint8_t hist;
-			uint32_t duration;
-
-			tc->get_limit_sw(&limit, &hist, &duration);
-			limit = strtoul((char *)&options[i].value[4], NULL, 0);
-			tc->set_limit_sw(limit, hist, duration);
-		} else if (options[i].len > 5 && strncmp(options[i].value, "swlh=", 5) == 0) {
-			uint8_t limit;
-			uint8_t hist;
-			uint32_t duration;
-
-			tc->get_limit_sw(&limit, &hist, &duration);
-			hist = strtoul((char *)&options[i].value[4], NULL, 0);
-			tc->set_limit_sw(limit, hist, duration);
-		} else if (options[i].len > 5 && strncmp(options[i].value, "swld=", 5) == 0) {
-			uint8_t limit;
-			uint8_t hist;
-			uint32_t duration;
-
-			tc->get_limit_sw(&limit, &hist, &duration);
-			duration = strtoul((char *)&options[i].value[5], NULL, 0);
-			tc->set_limit_sw(limit, hist, duration);
 		} else {
 			/* Other values we don't care for the moment  */
 		}

@@ -229,15 +229,15 @@ static void on_swtich_event(bool is_closed, bcb_sw_cause_t cause)
 
 static int cmd_recovery_enable_handler(const struct shell *shell, size_t argc, char **argv)
 {
-	uint32_t duration;
+	uint16_t attempts;
 
 	if (argc != 2) {
-		shell_print(shell, "%s <duration>", argv[0]);
+		shell_print(shell, "%s <attempts>", argv[0]);
 		return -EINVAL;
 	}
 
-	duration =  (uint32_t)atoi(argv[1]);
-	bcb_trip_curve_default_set_recovery(duration);
+	attempts =  (uint16_t)atoi(argv[1]);
+	bcb_trip_curve_default_set_recovery(attempts);
 
 	return 0;
 }
@@ -251,7 +251,7 @@ static int cmd_recovery_disable_handler(const struct shell *shell, size_t argc, 
 
 static int cmd_recovery_show_handler(const struct shell *shell, size_t argc, char **argv)
 {
-	shell_print(shell, "duration %" PRIu32 " ms", bcb_trip_curve_default_get_recovery());
+	shell_print(shell, "attempts %" PRIu16, bcb_trip_curve_default_get_recovery());
 
 	return 0;
 }

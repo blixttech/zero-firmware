@@ -8,8 +8,8 @@
 extern "C" {
 #endif
 
-int bcb_trip_curve_default_set_recovery(uint32_t duration);
-uint32_t bcb_trip_curve_default_get_recovery(void);
+int bcb_trip_curve_default_set_recovery(uint16_t attempts);
+uint16_t bcb_trip_curve_default_get_recovery(void);
 const struct bcb_trip_curve* bcb_trip_curve_get_default(void);
 
 #ifdef __cplusplus
