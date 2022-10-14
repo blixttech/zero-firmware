@@ -102,3 +102,11 @@ void bcb_zd_remove_callback(bcb_zd_type_t type, struct bcb_zd_callback *callback
 		sys_slist_find_and_remove(&zd_data.zd_v_callback_list, &callback->node);
 	}
 }
+
+void bcb_zd_set_enable(bcb_zd_type_t type, bool enable)
+{
+	if (type == BCB_ZD_TYPE_VOLTAGE) {
+		input_capture_enable_interrupts(zd_data.dev_ic_zd_v_mains,
+						BCB_IC_CHANNEL(itimestamp, zd_v_mains), enable);
+	}
+}

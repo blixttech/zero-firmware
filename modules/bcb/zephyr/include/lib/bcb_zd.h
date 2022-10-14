@@ -22,6 +22,7 @@ uint32_t bcb_zd_get_frequency(void);
 int bcb_zd_voltage_add_callback(struct bcb_zd_callback *callback);
 int bcb_zd_add_callback(bcb_zd_type_t type, struct bcb_zd_callback *callback);
 void bcb_zd_remove_callback(bcb_zd_type_t type, struct bcb_zd_callback *callback);
+void bcb_zd_set_enable(bcb_zd_type_t type, bool enable);
 
 #ifdef __cplusplus
 }

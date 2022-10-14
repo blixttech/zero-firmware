@@ -142,6 +142,7 @@ static void transient_work(struct k_work *work)
 	/* This work got executed since no voltage zero crossing detected.
 	   Most likely, the mains voltage is DC. 
 	 */
+	bcb_zd_set_enable(BCB_ZD_TYPE_VOLTAGE, false);
 	do_transient_work();
 }
 
