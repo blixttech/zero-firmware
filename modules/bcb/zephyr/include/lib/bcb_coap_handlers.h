@@ -8,16 +8,18 @@
 extern "C" {
 #endif
 
+// clang-format off
 #define BCB_COAP_RESOURCE_VERSION_PATH			((const char *const[]){ "version", NULL })
-#define BCB_COAP_RESOURCE_VERSION_ATTRIBUTES	((const char *const[]){ NULL })
+#define BCB_COAP_RESOURCE_VERSION_ATTRIBUTES		((const char *const[]){ NULL })
 #define BCB_COAP_RESOURCE_STATUS_PATH			((const char *const[]){ "status", NULL })
 #define BCB_COAP_RESOURCE_STATUS_ATTRIBUTES		((const char *const[]){ "obs", NULL })
 #define BCB_COAP_RESOURCE_SWITCH_PATH			((const char *const[]){ "switch", NULL })
 #define BCB_COAP_RESOURCE_SWITCH_ATTRIBUTES		((const char *const[]){ NULL })
 #define BCB_COAP_RESOURCE_TC_DEF_PATH			((const char *const[]){ "tc_def", NULL })
 #define BCB_COAP_RESOURCE_TC_DEF_ATTRIBUTES		((const char *const[]){ NULL })
-#define BCB_COAP_RESOURCE_TC_PATH				((const char *const[]){ "tc", NULL })
+#define BCB_COAP_RESOURCE_TC_PATH			((const char *const[]){ "tc", NULL })
 #define BCB_COAP_RESOURCE_TC_ATTRIBUTES			((const char *const[]){ NULL })
+// clang-format on
 
 int bcb_coap_handlers_wellknowncore_get(struct coap_resource *resource, struct coap_packet *request,
 					struct sockaddr *addr, socklen_t addr_len);

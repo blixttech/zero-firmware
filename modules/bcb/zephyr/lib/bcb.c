@@ -1,7 +1,7 @@
 #include <lib/bcb.h>
 #include <lib/bcb_config.h>
 #include <lib/bcb_msmnt.h>
-#include <lib/bcb_trip_curve.h>
+#include <lib/bcb_tc.h>
 #include <errno.h>
 #include <kernel.h>
 
@@ -14,7 +14,7 @@ typedef struct __attribute__((packed)) bcb_state {
 } bcb_state_t;
 
 struct bcb_data {
-	const struct bcb_trip_curve *trip_curve;
+	const struct bcb_tc *trip_curve;
 	sys_slist_t callback_list;
 	bcb_state_t state;
 	struct k_work bcb_work;
@@ -39,11 +39,11 @@ static inline void load_default_state(void)
 	bcb_data.state.is_closed = false;
 }
 
-static void trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)
+static void trip_curve_callback(const bcb_tc_t *curve, bcb_tc_cause_t type)
 {
 	sys_snode_t *node;
 	SYS_SLIST_FOR_EACH_NODE (&bcb_data.callback_list, node) {
-		struct bcb_trip_callback *callback = (struct bcb_trip_callback *)node;
+		bcb_tc_callback_t *callback = (bcb_tc_callback_t *)node;
 		if (callback && callback->handler) {
 			callback->handler(curve, type);
 		}
@@ -56,7 +56,7 @@ static void bcb_work(struct k_work *work)
 	struct bcb_action_item item;
 
 	while (!k_msgq_get(&async_action_msgq, &item, K_NO_WAIT)) {
-		bcb_curve_state_t curve_state;
+		bcb_tc_state_t curve_state;
 		curve_state = bcb_data.trip_curve->get_state();
 
 		if (item.action == BCB_ACTION_OPEN) {
@@ -68,14 +68,14 @@ static void bcb_work(struct k_work *work)
 			bcb_data.state.is_closed = true;
 			r = bcb_data.trip_curve->close();
 		} else {
-			if (curve_state != BCB_CURVE_STATE_OPENED &&
-			curve_state != BCB_CURVE_STATE_CLOSED) {
+			if (curve_state != BCB_TC_STATE_OPENED &&
+			curve_state != BCB_TC_STATE_CLOSED) {
 				LOG_WRN("not in opened/closed state");
 				continue;
 			}
 
 			LOG_DBG("toggle");
-			if (curve_state == BCB_CURVE_STATE_OPENED) {
+			if (curve_state == BCB_TC_STATE_OPENED) {
 				bcb_data.state.is_closed = true;
 				r = bcb_data.trip_curve->close();
 			} else {
@@ -176,27 +176,27 @@ int bcb_toggle(void)
 	return 0;
 }
 
-bcb_curve_state_t bcb_get_state(void)
+bcb_tc_state_t bcb_get_state(void)
 {
 	if (!bcb_data.trip_curve) {
 		LOG_ERR("trip cruve not set");
-		return BCB_CURVE_STATE_UNDEFINED;
+		return BCB_TC_STATE_UNDEFINED;
 	}
 
 	return bcb_data.trip_curve->get_state();
 }
 
-bcb_trip_cause_t bcb_get_cause(void)
+bcb_tc_cause_t bcb_get_cause(void)
 {
 	if (!bcb_data.trip_curve) {
 		LOG_ERR("trip cruve not set");
-		return BCB_TRIP_CAUSE_NONE;
+		return BCB_TC_CAUSE_NONE;
 	}
 
 	return bcb_data.trip_curve->get_cause();
 }
 
-int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
+int bcb_set_tc(const bcb_tc_t *curve)
 {
 	int r;
 	if (!curve) {
@@ -227,12 +227,12 @@ int bcb_set_trip_curve(const struct bcb_trip_curve *curve)
 	return 0;
 }
 
-const struct bcb_trip_curve * bcb_get_trip_curve(void)
+const struct bcb_tc * bcb_get_tc(void)
 {
 	return bcb_data.trip_curve;
 }
 
-int bcb_add_trip_callback(struct bcb_trip_callback *callback)
+int bcb_add_tc_callback(bcb_tc_callback_t *callback)
 {
 	if (!callback || !callback->handler) {
 		return -ENOTSUP;

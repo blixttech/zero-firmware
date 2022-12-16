@@ -4,17 +4,19 @@
 #include <lib/bcb_msmnt.h>
 #include <lib/bcb_sw.h>
 #include <lib/bcb.h>
-#include <lib/bcb_trip_curve_default.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <inttypes.h>
+#include <lib/bcb_tc_def.h>
+#include <lib/bcb_tc_def_msm.h>
+#include <lib/bcb_tc_def_csom_mod.h>
 #include <zephyr.h>
 #include <kernel.h>
 #include <net/socket.h>
 #include <net/net_if.h>
 #include <net/coap.h>
 #include <net/coap_link_format.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #define LOG_LEVEL CONFIG_BCB_COAP_LOG_LEVEL
 #include <logging/log.h>
@@ -22,7 +24,7 @@ LOG_MODULE_REGISTER(bcb_coap_handlers);
 
 struct coap_handler_data {
 	struct coap_resource *res_status;
-	struct bcb_trip_callback trip_callback;
+	struct bcb_tc_callback trip_callback;
 };
 
 static struct coap_handler_data handler_data;
@@ -345,7 +347,7 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 	uint8_t format = 0;
 	uint8_t payload[70];
 	uint8_t total = 0;
-	const struct bcb_trip_curve *tc;
+	const struct bcb_tc *tc;
 
 	r = coap_packet_init(&response, bcb_coap_response_buffer(), CONFIG_BCB_COAP_MAX_MSG_LEN, 1,
 			     COAP_TYPE_ACK, token_len, (uint8_t *)token, COAP_RESPONSE_CODE_CONTENT,
@@ -367,9 +369,9 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 	}
 
 	if (is_tc_def) {
-		tc = bcb_trip_curve_get_default();
+		tc = bcb_tc_get_default();
 	} else {
-		tc = bcb_get_trip_curve();
+		tc = bcb_get_tc();
 	}
 
 	r = snprintk((char *)payload, sizeof(payload), "%1" PRIu8 ",%1" PRIu8 ",%03" PRIu8,
@@ -381,8 +383,18 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 	total += r;
 
 	if (is_tc_def) {
-		r = snprintk((char *)(payload + total), sizeof(payload) - total, ",%05" PRIu16,
-			     bcb_trip_curve_default_get_recovery());
+		bcb_tc_def_msm_config_t msm_config;
+		bcb_tc_def_csom_mod_config_t mod_config;
+
+		bcb_tc_def_msm_config_get(&msm_config);
+		bcb_tc_def_csom_mod_config_get(&mod_config);
+
+		r = snprintk((char *)(payload + total), sizeof(payload) - total,
+			     ",%" PRIu8 ",%05" PRIu16 ",%" PRIu8 ",%03" PRIu8 ",%03" PRIu8,
+			     msm_config.rec_enabled, msm_config.rec_attempts,
+			     (uint8_t)msm_config.csom, mod_config.zdc_closed,
+			     mod_config.zdc_period);
+
 		if (r < 0) {
 			return r;
 		}
@@ -419,7 +431,10 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 	uint8_t tkl;
 	int r;
 	int i;
-	uint16_t recovery_attempts;
+	bcb_tc_def_msm_config_t msm_config;
+	bcb_tc_def_csom_mod_config_t mod_config;
+	bool csom_set;
+	bool msm_set;
 
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
@@ -429,15 +444,56 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 		return -EINVAL;
 	}
 
+	msm_set = false;
+	csom_set = false;
+
+	bcb_tc_def_msm_config_get(&msm_config);
+	bcb_tc_def_csom_mod_config_get(&mod_config);
+
 	for (i = 0; i < r; i++) {
 		int opt_end = options[i].len < sizeof(options[i].value) ?
 					    options[i].len :
 					    (sizeof(options[i].value) - 1);
 		options[i].value[opt_end] = '\0';
-		if (options[i].len > 2 && strncmp(options[i].value, "r=", 2) == 0) {
-			recovery_attempts = strtoul((char *)&options[i].value[2], NULL, 0);
-			bcb_trip_curve_default_set_recovery(recovery_attempts);
+		if (options[i].len > 4 && strncmp(options[i].value, "rec=", 4) == 0) {
+			msm_config.rec_attempts = strtoul((char *)&options[i].value[4], NULL, 0);
+			msm_set = true;
+			continue;
 		}
+
+		if (options[i].len > 6 && strncmp(options[i].value, "recen=", 6) == 0) {
+			msm_config.rec_enabled = strtoul((char *)&options[i].value[6], NULL, 0);
+			msm_set = true;
+			continue;
+		}
+
+		if (options[i].len > 5 && strncmp(options[i].value, "csom=", 5) == 0) {
+			msm_config.csom = strtoul((char *)&options[i].value[5], NULL, 0);
+			msm_set = true;
+			continue;
+		}
+
+		if (options[i].len > 7 && strncmp(options[i].value, "csomcl=", 7) == 0) {
+			mod_config.zdc_closed =
+				(uint8_t)strtoul((char *)&options[i].value[7], NULL, 0);
+			csom_set = true;
+			continue;
+		}
+
+		if (options[i].len > 8 && strncmp(options[i].value, "csomper=", 8) == 0) {
+			mod_config.zdc_period =
+				(uint8_t)strtoul((char *)&options[i].value[8], NULL, 0);
+			csom_set = true;
+			continue;
+		}
+	}
+
+	if (msm_set) {
+		bcb_tc_def_msm_config_set(&msm_config);
+	}
+
+	if (csom_set) {
+		bcb_tc_def_csom_mod_config_set(&mod_config);
 	}
 
 	return send_tc_def_config(addr, id, token, tkl, true);
@@ -465,9 +521,9 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 	uint8_t tkl;
 	int r;
 	int i;
-	const struct bcb_trip_curve *tc;
+	const struct bcb_tc *tc;
 
-	tc = bcb_get_trip_curve();
+	tc = bcb_get_tc();
 
 	id = coap_header_get_id(request);
 	tkl = coap_header_get_token(request, token);
@@ -483,26 +539,34 @@ int bcb_coap_handlers_tc_post(struct coap_resource *resource, struct coap_packet
 					    (sizeof(options[i].value) - 1);
 		options[i].value[opt_end] = '\0';
 
-		if (options[i].len == 5 && strncmp(options[i].value, "close", 5) == 0) {
+		if (options[i].len == 7 && strncmp(options[i].value, "a=close", 7) == 0) {
 			bcb_close();
-		} else if (options[i].len == 4 && strncmp(options[i].value, "open", 4) == 0) {
+			continue;
+		}
+
+		if (options[i].len == 6 && strncmp(options[i].value, "a=open", 6) == 0) {
 			bcb_open();
-		} else if (options[i].len == 6 && strncmp(options[i].value, "toggle", 6) == 0) {
+			continue;
+		}
+
+		if (options[i].len == 8 && strncmp(options[i].value, "a=toggle", 8) == 0) {
 			bcb_toggle();
-		} else if (options[i].len > 4 && strncmp(options[i].value, "hwl=", 4) == 0) {
+			continue;
+		}
+
+		if (options[i].len > 4 && strncmp(options[i].value, "hwl=", 4) == 0) {
 			uint8_t limit;
 
 			limit = strtoul((char *)&options[i].value[4], NULL, 0);
 			tc->set_limit_hw(limit);
-		} else {
-			/* Other values we don't care for the moment  */
+			continue;
 		}
 	}
 
 	return send_tc_def_config(addr, id, token, tkl, false);
 }
 
-void bcb_trip_curve_callback(const struct bcb_trip_curve *curve, bcb_trip_cause_t type)
+void bcb_trip_curve_callback(const struct bcb_tc *curve, bcb_tc_cause_t type)
 {
 	if (!handler_data.res_status) {
 		return;
@@ -522,7 +586,7 @@ int bcb_coap_handlers_init(void)
 	}
 
 	handler_data.trip_callback.handler = bcb_trip_curve_callback;
-	bcb_add_trip_callback(&handler_data.trip_callback);
+	bcb_add_tc_callback(&handler_data.trip_callback);
 
 	return 0;
 }

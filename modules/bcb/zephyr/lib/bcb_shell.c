@@ -3,7 +3,7 @@
 #include <lib/bcb_msmnt_calib.h>
 #include <lib/bcb_sw.h>
 #include <lib/bcb_zd.h>
-#include <lib/bcb_trip_curve_default.h>
+#include <lib/bcb_tc_def.h>
 #include <stdlib.h>
 #include <zephyr.h>
 #include <device.h>
@@ -227,35 +227,6 @@ static void on_swtich_event(bool is_closed, bcb_sw_cause_t cause)
 	}
 }
 
-static int cmd_recovery_enable_handler(const struct shell *shell, size_t argc, char **argv)
-{
-	uint16_t attempts;
-
-	if (argc != 2) {
-		shell_print(shell, "%s <attempts>", argv[0]);
-		return -EINVAL;
-	}
-
-	attempts =  (uint16_t)atoi(argv[1]);
-	bcb_trip_curve_default_set_recovery(attempts);
-
-	return 0;
-}
-
-static int cmd_recovery_disable_handler(const struct shell *shell, size_t argc, char **argv)
-{
-	bcb_trip_curve_default_set_recovery(0);
-
-	return 0;
-}
-
-static int cmd_recovery_show_handler(const struct shell *shell, size_t argc, char **argv)
-{
-	shell_print(shell, "attempts %" PRIu16, bcb_trip_curve_default_get_recovery());
-
-	return 0;
-}
-
 int bcb_shell_init(void)
 {
 	memset(&shell_data, 0, sizeof(shell_data));
@@ -272,13 +243,6 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	SHELL_CMD(param_b, NULL, "Calibrate parameter b", cmd_calib_param_b_handler),
 	SHELL_SUBCMD_SET_END /* Array terminated. */);
 
-SHELL_STATIC_SUBCMD_SET_CREATE(
-	recovery_sub,
-	SHELL_CMD(enable, NULL, "Enable recovery", cmd_recovery_enable_handler),
-	SHELL_CMD(disable, NULL, "Disable recovery", cmd_recovery_disable_handler),
-	SHELL_CMD(show, NULL, "Show recovery", cmd_recovery_show_handler),
-	SHELL_SUBCMD_SET_END /* Array terminated. */);
-
 SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
 			       SHELL_CMD(close, NULL, "Close switch.", cmd_close_handler),
 			       SHELL_CMD(open, NULL, "Open switch.", cmd_open_handler),
@@ -289,7 +253,6 @@ SHELL_STATIC_SUBCMD_SET_CREATE(breaker_sub,
 			       SHELL_CMD(frequency, NULL, "Get frequency.", cmd_frequency_handler),
 			       SHELL_CMD(calibrate, &calibrate_sub, "Calibrate measurement system.",
 					 NULL),
-			       SHELL_CMD(recovery, &recovery_sub, "Default trip curve recovery.", NULL),
 			       SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(breaker, &breaker_sub, "Breaker commands", NULL);
