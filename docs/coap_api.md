@@ -13,6 +13,25 @@ CoAP API consists of following resources.
 
 Responses to all requests are in Comma-separated values (CSV) format.
 
+Following describes how to test the API using `coap-client` command-line interface (CLI) client.
+
+* Install `coap-client`. For *Ubuntu*-based systems use the following command to install.
+  ```bash
+  sudo apt install libcoap2-bin
+  ```
+* The CLI client can be used as follows.
+  ```bash
+  coap-client -m <method> "coap://<device IP>/<resource>?<query parameters>"
+
+  ```
+  * *&lt;method&gt;* &ndash; CoAP method. Valid values: `get` or `post`.
+  * *&lt;device IP&gt;* &ndash; IP address of the device.
+  * *&lt;resource&gt;* &ndash; Refer to the above table.
+  * *&lt;query parameters&gt;* &ndash; This is a tuple of name-value pairs (separated by `&`) in the format *&lt;name1&gt;=&lt;value1&gt;&&lt;name2&gt;=&lt;value2&gt;...*.
+    * *&lt;name1&gt;, &lt;name2&gt;, ...* &ndash; Refer to the parameters of the individual resource.
+    * *&lt;value1&gt;, &lt;value2&gt;, ...* &ndash; Refer to the supported values of the related parameters.
+    * If only one name-value pair is specified, use the format *&lt;name&gt;=&lt;value&gt;*.
+
 ## `version`
 Get hardware IDs.
 
