@@ -1,6 +1,0 @@
-[manifest]
-path = .
-[zephyr]
-base = zephyr-os/zephyr
-[build]
-board_warn = false

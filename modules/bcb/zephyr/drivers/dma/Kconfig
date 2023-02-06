@@ -1,6 +1,0 @@
-menuconfig DMA
-	bool "DMA driver"
-
-if DMA
-rsource "Kconfig.mcux_edma"
-endif

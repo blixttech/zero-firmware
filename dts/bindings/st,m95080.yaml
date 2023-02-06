@@ -1,5 +1,0 @@
-description: ST M95080 family EEPROMs
-
-compatible: "st,m95080"
-
-include: [eeprom-spi-i2c.yaml, spi-device.yaml]

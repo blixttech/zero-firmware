@@ -1,7 +1,0 @@
-if SOC_MK64F12
-config HAS_MCUX_EDMA
-	default y
-
-config HAS_MCUX_PIT
-	default y
-endif # SOC_MK64F12

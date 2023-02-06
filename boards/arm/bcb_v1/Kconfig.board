@@ -1,6 +1,0 @@
-# SPDX-License-Identifier: Apache-2.0
-
-config BOARD_BCB_V1
-    bool "Blixt Circuit Breaker (V1)"
-    depends on SOC_SERIES_KINETIS_K6X
-    select SOC_PART_NUMBER_MK64FN1M0VLL12

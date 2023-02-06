@@ -1,4 +1,0 @@
-config DMA_MCUX_EDMA
-	bool "MCUX EDMA driver"
-	default n
-	depends on HAS_MCUX_EDMA

@@ -1,4 +1,0 @@
-config INPUT_CAPTURE_MCUX_FTM
-	bool "MCUX FTM Input Capture driver"
-	default y
-	depends on HAS_MCUX_FTM
