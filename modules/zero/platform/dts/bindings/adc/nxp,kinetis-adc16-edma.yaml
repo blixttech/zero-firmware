@@ -1,0 +1,39 @@
+description: Kinetis ADC16 EDMA
+
+compatible: "nxp,kinetis-adc16-edma"
+
+include: ["adc-controller.yaml", "pinctrl-device.yaml"]
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  #triggers:
+  #  required: true
+  #  type: phandle-array
+  #  description: The trigger used
+
+  clk-source:
+    type: int
+    required: false
+    description: Use alternate clock reference source
+
+  max-channels:
+    required: true
+    type: int
+    description: Maximum number of ADC channels to be used by the driver
+
+  sample-interval:
+    required: true
+    type: int
+    description: Sample interval (us)
+
+  "#io-channel-cells":
+    const: 2
+
+io-channel-cells:
+  - input
+  - muxsel

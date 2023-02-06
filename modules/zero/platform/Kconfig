@@ -1,0 +1,5 @@
+config ZERO_MODULE
+	bool "Module for Blixt Zero devices"
+
+rsource "drivers/Kconfig"
+

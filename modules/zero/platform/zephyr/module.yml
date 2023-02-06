@@ -1,0 +1,6 @@
+name: zero
+build:
+  cmake: .
+  kconfig: Kconfig
+
+

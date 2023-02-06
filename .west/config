@@ -1,0 +1,9 @@
+[manifest]
+path = manifest
+
+[build]
+board_warn = false
+
+[zephyr]
+base = zephyr
+

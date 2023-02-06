@@ -1,0 +1,15 @@
+imgtool
+cmake
+tk
+setuptools
+wheel
+pyyaml
+edt
+pyelftools
+pykwalify
+west
+ninja
+pyocd
+cbor
+puncover
+anytree

@@ -1,0 +1,10 @@
+identifier: zero
+name: Bl!xt Zero
+type: mcu
+arch: arm
+ram: 256
+flash: 1024
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools

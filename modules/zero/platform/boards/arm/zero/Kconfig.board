@@ -1,0 +1,4 @@
+config BOARD_ZERO
+	bool "Blixt Zero"
+	depends on SOC_SERIES_KINETIS_K6X
+	select SOC_PART_NUMBER_MK64FN1M0VLL12

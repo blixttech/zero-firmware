@@ -1,0 +1,45 @@
+#include <nxp/kinetis/MK64FN1M0VLL12-pinctrl.h>
+
+&pinctrl {
+	uart4_default: uart4_default {
+		group0 {
+			pinmux = <UART4_TX_PTE24>,	/* UART_TX */
+				<UART4_RX_PTE25>;	/* UART_RX */
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+
+	enet_default: enet_default {
+		group0 {
+			pinmux = <RMII0_MDIO_PTB0>;
+			drive-strength = "low";
+			drive-open-drain;
+			bias-pull-up;
+			slew-rate = "fast";
+		};
+		group1 {
+			pinmux = <RMII0_RXER_PTA5>,
+				<RMII0_RXD1_PTA12>,
+				<RMII0_RXD0_PTA13>,
+				<RMII0_CRS_DV_PTA14>,
+				<RMII0_TXEN_PTA15>,
+				<RMII0_TXD0_PTA16>,
+				<RMII0_TXD1_PTA17>,
+				<RMII0_MDC_PTB1>;
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+
+	/* PTC16 and PTC17 conflict with uart3 pins */
+	ptp_default: ptp_default {
+		group0 {
+			pinmux = <ENET0_1588_TMR0_PTC16>,
+				<ENET0_1588_TMR1_PTC17>,
+				<ENET0_1588_TMR2_PTC18>;
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+};

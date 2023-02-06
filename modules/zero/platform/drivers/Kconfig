@@ -1,0 +1,3 @@
+if ADC
+rsource "adc/Kconfig"
+endif # ADC

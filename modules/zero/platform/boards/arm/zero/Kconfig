@@ -1,0 +1,3 @@
+if BOARD_ZERO
+
+endif # BOARD_ZERO

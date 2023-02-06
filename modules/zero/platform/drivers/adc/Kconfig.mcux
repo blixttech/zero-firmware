@@ -1,0 +1,15 @@
+config ADC_DMA_MCUX
+	bool "MCUX ADC16 driver (DMA)"
+	default y
+	depends on DT_HAS_NXP_KINETIS_ADC16_EDMA_ENABLED
+	help
+	  Enable the MCUX ADC16 driver (DMA).
+
+if ADC_DMA_MCUX
+
+config ADC_MCUX_ADC16
+	default y
+	help
+	  This is to override Zephyr's built-in configuration.
+
+endif # ADC_DMA_MCUX

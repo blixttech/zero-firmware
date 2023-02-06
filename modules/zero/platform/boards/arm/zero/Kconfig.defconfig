@@ -1,0 +1,25 @@
+if BOARD_ZERO
+
+config BOARD
+	default "zero"
+
+config OSC_XTAL0_FREQ
+	default 50000000
+
+config MCG_PRDIV0
+	default 0x13
+
+config MCG_VDIV0
+	default 0x18
+
+config MCG_FCRDIV
+	default 1
+
+if NETWORKING
+
+config NET_L2_ETHERNET
+	default y
+
+endif # NETWORKING
+
+endif # BOARD_ZERO

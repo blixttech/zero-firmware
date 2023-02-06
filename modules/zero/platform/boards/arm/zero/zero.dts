@@ -1,0 +1,135 @@
+/dts-v1/;
+
+#include <nxp/nxp_k6x.dtsi>
+#include "zero-pinctrl.dtsi"
+
+/ {
+	model = "Blixt Zero";
+	compatible = "nxp,mk64f12", "nxp,k64f", "nxp,k6x";
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,console = &uart4;
+		zephyr,shell-uart = &uart4;
+		zephyr,uart-pipe = &uart4;
+	};
+};
+
+&sim {
+	pllfll-select = <KINETIS_SIM_PLLFLLSEL_MCGPLLCLK>;
+	er32k-select = <KINETIS_SIM_ER32KSEL_RTC>;
+};
+
+&cpu0 {
+	clock-frequency = <120000000>;
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	status = "okay";
+};
+
+&gpioc {
+	status = "okay";
+};
+
+&gpiod {
+	status = "okay";
+};
+
+&gpioe {
+	status = "okay";
+};
+
+&edma0 {
+	status = "okay";
+};
+
+&uart4 {
+	current-speed = <115200>;
+	pinctrl-0 = <&uart4_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&enet {
+	pinctrl-0 = <&enet_default>;
+	pinctrl-names = "default";
+	ptp {
+		/* Be aware that PTC16 and PTC17 are also used for uart3 */
+		status = "disabled";
+		pinctrl-0 = <&ptp_default>;
+		pinctrl-names = "default";
+	};
+	status = "okay";
+};
+
+&adc0 {
+	compatible = "nxp,kinetis-adc16-edma";
+	max-channels = <3>; /* Maximum number of ADC channels in the sampling sequence */
+	dmas =  <&edma0 0 40>, <&edma0 0 60>;
+	dma-names = "RESULT", "CH";
+	sample-interval = <18>; /* 18 us */
+	#io-channel-cells = <2>; /* IO channels - main channel, alternate channel */
+	status = "okay";
+};
+
+&adc1 {
+	status = "disabled";
+};
+
+&temp0 {
+	io-channels = <&adc0 26 0>, <&adc0 27 0>;
+};
+
+/*
+&temp1 {
+	io-channels = <&adc1 26 0>, <&adc1 27 0>;
+};
+*/
+
+&flash0 {
+	/*
+	* For more information, see:
+	* http://docs.zephyrproject.org/latest/guides/dts/index.html#flash-partitions
+	*/
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0x00010000>;
+			read-only;
+		};
+
+		/*
+		* The flash starting at 0x00010000 and ending at
+		* 0x0001ffff (sectors 16-31) is reserved for use
+		* by the application.
+		*/
+		storage_partition: partition@1e000 {
+			label = "storage";
+			reg = <0x0001e000 0x00002000>;
+		};
+
+		slot0_partition: partition@20000 {
+			label = "image-0";
+			reg = <0x00020000 0x00060000>;
+		};
+		slot1_partition: partition@80000 {
+			label = "image-1";
+			reg = <0x00080000 0x00060000>;
+		};
+		scratch_partition: partition@e0000 {
+			label = "image-scratch";
+			reg = <0x000e0000 0x00020000>;
+		};
+	};
+};
