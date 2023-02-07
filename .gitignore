@@ -62,3 +62,10 @@ TAGS
 tags
 
 .idea
+
+# zero-fimware
+zephyr/
+modules/
+!modules/zero/platform
+saved-target.mk
+compile_commands.json
