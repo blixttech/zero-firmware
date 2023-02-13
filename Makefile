@@ -71,7 +71,7 @@ mem-usage: app
 	cd $(APP_DIR) && $(WEST) build -t puncover 
 
 flash: app
-	cd $(APP_DIR) && $(WEST) flash $(APP_HEX)
+	cd $(APP_DIR) && $(WEST) flash --hex-file $(APP_HEX)
 
 clean:
 	rm -rf $(APP_BUILD_DIR)

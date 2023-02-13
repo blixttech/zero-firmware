@@ -1,0 +1,51 @@
+description: Kinetis LPTMR ADC Trigger
+
+compatible: "nxp,kinetis-adc-trigger-lptmr"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  clk-source:
+    type: int
+    required: true
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: Prescaler clock source (0 to 3)
+
+  clk-divider:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+    description: Prescaler
+
+  "#trigger-cells":
+    type: int
+    description: Number of items to expect in a trigger specifier
+
+trigger-cells:
+  - sim-config

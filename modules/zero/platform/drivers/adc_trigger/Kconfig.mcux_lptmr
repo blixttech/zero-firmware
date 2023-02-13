@@ -1,0 +1,15 @@
+config ADC_TRIGGER_MCUX_LPTMR
+	bool "MCUX LPTMR ADC Trigger driver"
+	default y
+	depends on DT_HAS_NXP_KINETIS_ADC_TRIGGER_LPTMR_ENABLED
+	help
+	  Enable the MCUX LPTMR ADC Trigger driver.
+
+if ADC_TRIGGER_MCUX_LPTMR
+
+config COUNTER_MCUX_LPTMR
+	default y
+	help
+	  This is to override Zephyr's built-in configuration.
+
+endif # ADC_TRIGGER_MCUX_LPTMR

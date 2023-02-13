@@ -8,4 +8,6 @@ else()
     zephyr_library()
 endif()
 
-zephyr_library_sources_ifdef(CONFIG_ADC_DMA_MCUX	adc_dma_mcux.c)
+zephyr_include_directories(.)
+zephyr_library_sources_ifdef(CONFIG_DMA_MCUX_EDMA	dma_mcux_edma.c)
+

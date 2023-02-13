@@ -1,0 +1,4 @@
+if DMA_MCUX_EDMA
+
+
+endif # DMA_MCUX_EDMA

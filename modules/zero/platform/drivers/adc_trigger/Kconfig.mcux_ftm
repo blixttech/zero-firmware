@@ -1,0 +1,15 @@
+config ADC_TRIGGER_MCUX_FTM
+	bool "MCUX FTM ADC Trigger driver"
+	default y
+	depends on DT_HAS_NXP_KINETIS_ADC_TRIGGER_FTM_ENABLED
+	help
+	  Enable the MCUX ADC Trigger driver.
+
+if ADC_TRIGGER_MCUX_FTM
+
+config PWM_MCUX_FTM
+	default y
+	help
+	  This is to override Zephyr's built-in configuration.
+
+endif # ADC_TRIGGER_MCUX_FTM

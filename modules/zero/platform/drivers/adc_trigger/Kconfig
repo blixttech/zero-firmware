@@ -1,0 +1,2 @@
+rsource "Kconfig.mcux_ftm"
+rsource "Kconfig.mcux_lptmr"

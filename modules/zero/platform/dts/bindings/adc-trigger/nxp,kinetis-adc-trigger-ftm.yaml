@@ -1,0 +1,41 @@
+description: Kinetis FTM ADC Trigger
+
+compatible: "nxp,kinetis-adc-trigger-ftm"
+
+include: nxp,kinetis-ftm.yaml
+
+properties:
+  clock-source:
+    type: int
+    required: true
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: Clock source of the FTM
+
+  clk-divider:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+
+  trigger-source:
+    type: int
+    required: true
+    description: Channels to be used as the trigger source
+
+  "#trigger-cells":
+    type: int
+    description: Number of items to expect in a trigger specifier
+
+trigger-cells:
+  - sim-config

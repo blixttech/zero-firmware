@@ -42,4 +42,25 @@
 			slew-rate = "fast";
 		};
 	};
+
+	adc0_default: adc0_default {
+		group0 {
+			pinmux = <ADC0_SE14_PTC0>, /* I_LOW_GAIN */
+				<ADC0_SE15_PTC1>, /* I_HIGH_GAIN */
+				<ADC0_SE4b_PTC2>; /* V_MAINS */
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+
+	adc1_default: adc1_default {
+		group0 {
+			pinmux = <ADC1_SE5a_PTE1>, /* T_MOSFET_IN */
+				<ADC1_SE5b_PTC9>, /* T_MOSFET_OUT */
+				<ADC1_SE14_PTB10>; /* T_AMBIENT */
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+
 };

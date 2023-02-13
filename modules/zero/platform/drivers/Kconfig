@@ -1,3 +1,15 @@
+menuconfig ADC_TRIGGER
+	bool "ADC Trigger driver"
+	default y
+
 if ADC
 rsource "adc/Kconfig"
 endif # ADC
+
+if ADC_TRIGGER
+rsource "adc_trigger/Kconfig"
+endif # ADC_TRIGGER
+
+if DMA
+rsource "dma/Kconfig"
+endif # DMA

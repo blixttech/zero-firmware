@@ -11,29 +11,51 @@ properties:
   interrupts:
     required: true
 
-  #triggers:
-  #  required: true
-  #  type: phandle-array
-  #  description: The trigger used
+  triggers:
+    required: true
+    type: phandle-array
+    description: The trigger used
 
   clk-source:
     type: int
     required: false
-    description: Use alternate clock reference source
+    description: ADC clock source
+
+  clk-divider:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: Clock divider
+
+  long-sample:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+    description: Long sample mode
+
+  high-speed:
+    type: boolean
+    required: false
+    description: If use high speed
 
   max-channels:
     required: true
     type: int
     description: Maximum number of ADC channels to be used by the driver
 
-  sample-interval:
-    required: true
-    type: int
-    description: Sample interval (us)
-
   "#io-channel-cells":
-    const: 2
+    type: int
+    required: true
 
 io-channel-cells:
-  - input
-  - muxsel
+  - main
+  - alt

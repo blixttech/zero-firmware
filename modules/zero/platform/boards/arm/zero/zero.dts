@@ -1,6 +1,9 @@
 /dts-v1/;
 
 #include <nxp/nxp_k6x.dtsi>
+#include <dt-bindings/adc/kinetis-adc.h>
+#include <dt-bindings/timer/kinetis-lptmr.h>
+#include <dt-bindings/timer/kinetis-ftm.h>
 #include "zero-pinctrl.dtsi"
 
 / {
@@ -14,6 +17,37 @@
 		zephyr,console = &uart4;
 		zephyr,shell-uart = &uart4;
 		zephyr,uart-pipe = &uart4;
+	};
+
+	soc {
+		/* LPTMR is not in nxp_k6x.dtsi. */
+		lptmr0: lptmr@40040000 {
+			compatible = "nxp,kinetis-adc-trigger-lptmr";
+			reg = <0x40040000 0x10>;
+			clocks = <&sim KINETIS_SIM_BUS_CLK 0x1038 0>;
+			interrupts = <58 0>;
+			clk-source = <KINETIS_LPTMR_PRESCALER_CLOCK_0>; /* MCGIRCLK */
+			clk-divider = <KINETIS_LPTMR_PRESCALE_GLITCH_0>; /* divide by 2 */
+			#trigger-cells = <1>;
+		};
+	};
+
+	breaker {
+		aread: aread {
+			compatible = "blixt,breaker-aread";
+			io-channels = <&adc0 14 KINETIS_ADC16_CHANNEL_MUX_A>, /* I_LOW_GAIN */
+				<&adc0 15 KINETIS_ADC16_CHANNEL_MUX_A>, /* I_HIGH_GAIN */
+				<&adc0 4  KINETIS_ADC16_CHANNEL_MUX_B>, /* V_MAINS */
+				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_A>, /* T_MOSFET_IN */
+				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_B>, /* T_MOSFET_OUT */
+				<&adc1 14 KINETIS_ADC16_CHANNEL_MUX_A>; /* T_AMBIENT */
+			io-channel-names = "I_LOW_GAIN",
+					"I_HIGH_GAIN",
+					"V_MAINS",
+					"T_MOSFET_IN",
+					"T_MOSFET_OUT",
+					"T_AMBIENT";
+		};
 	};
 };
 
@@ -71,27 +105,61 @@
 
 &adc0 {
 	compatible = "nxp,kinetis-adc16-edma";
-	max-channels = <3>; /* Maximum number of ADC channels in the sampling sequence */
-	dmas =  <&edma0 0 40>, <&edma0 0 60>;
-	dma-names = "RESULT", "CH";
-	sample-interval = <18>; /* 18 us */
-	#io-channel-cells = <2>; /* IO channels - main channel, alternate channel */
+	dmas = <&edma0 0 40>, <&edma0 0 60>; /* Format: <dma_instance, multiplexer, source> */
+	dma-names = "RESULT", "CHANNEL";
+	triggers = <&ftm1 KINETIS_ADC16_TRIGGER_FTM_1>;
+	max-channels = <3>;
+	clk-source = <KINETIS_ADC16_CLOCK_SOURCE_ALT_1>;
+	clk-divider = <KINETIS_ADC16_CLOCK_DIVIDER_8>;
+	long-sample = <KINETIS_ADC16_LONG_SAMPLE_CYCLE_10>;
+	pinctrl-0 = <&adc0_default>;
+	pinctrl-names = "default";
 	status = "okay";
+	#io-channel-cells = <2>;
 };
 
 &adc1 {
-	status = "disabled";
+	compatible = "nxp,kinetis-adc16-edma";
+	dmas = <&edma0 0 41>, <&edma0 0 61>; /* Format: <dma_instance, multiplexer, source> */
+	dma-names = "RESULT", "CHANNEL";
+	triggers = <&lptmr0 KINETIS_ADC16_TRIGGER_LPTMR>;
+	max-channels = <3>;
+	clk-source = <KINETIS_ADC16_CLOCK_SOURCE_ALT_1>;
+	clk-divider = <KINETIS_ADC16_CLOCK_DIVIDER_8>;
+	long-sample = <KINETIS_ADC16_LONG_SAMPLE_CYCLE_10>;
+	pinctrl-0 = <&adc1_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	#io-channel-cells = <2>;
 };
+
 
 &temp0 {
-	io-channels = <&adc0 26 0>, <&adc0 27 0>;
+	io-channels = <&adc0 26 KINETIS_ADC16_CHANNEL_MUX_A>,
+		<&adc0 27 KINETIS_ADC16_CHANNEL_MUX_A>;
+	io-channel-names = "SENSOR", "BANDGAP";
 };
 
-/*
+
 &temp1 {
-	io-channels = <&adc1 26 0>, <&adc1 27 0>;
+	io-channels = <&adc1 26 KINETIS_ADC16_CHANNEL_MUX_A>,
+		<&adc1 27 KINETIS_ADC16_CHANNEL_MUX_A>;
+	io-channel-names = "SENSOR", "BANDGAP";
 };
-*/
+
+
+&ftm1 {
+	compatible = "nxp,kinetis-adc-trigger-ftm";
+	clock-source = <KINETIS_FTM_FIXED_CLK>;
+	clk-divider = <KINETIS_FTM_PRESCALE_DIVIDE_1>;
+	trigger-source = <KINETIS_FTM_CHNL_0_TRIGGER>;
+	#trigger-cells = <1>;
+	status = "okay";
+};
+
+&lptmr0 {
+	status = "okay";
+};
 
 &flash0 {
 	/*

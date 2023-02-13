@@ -1,4 +1,5 @@
 #include "services.h"
+
 #include <zephyr/kernel.h>
 
 #ifdef CONFIG_MCUMGR_SMP_UDP
@@ -22,17 +23,7 @@ int services_init(void)
 #endif
 
 #ifdef CONFIG_MCUMGR_CMD_IMG_MGMT
-	{
-		int r;
-		struct image_version version;
-		img_mgmt_register_group();
-		r = img_mgmt_my_version(&version);
-		if (!r) {
-			LOG_INF("Firmware version %" PRIu8 ".%" PRIu8 ".%" PRIu16 " (%" PRIu32 ")",
-				version.iv_major, version.iv_minor, version.iv_revision,
-				version.iv_build_num);
-		}
-	}
+	img_mgmt_register_group();
 #endif
 
 #ifdef CONFIG_MCUMGR_SMP_UDP

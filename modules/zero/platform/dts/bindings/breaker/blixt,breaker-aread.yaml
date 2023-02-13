@@ -1,0 +1,13 @@
+description: ADC channels of the Blixt Breaker
+
+compatible: "blixt,breaker-aread"
+
+include: base.yaml
+
+properties:
+  io-channels:
+    type: phandle-array
+    required: true
+  io-channel-names:
+    type: string-array
+    required: true
