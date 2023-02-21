@@ -16,17 +16,16 @@
 #define CONFIG_OFFSET		CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TC_DEF
 #define MONITOR_WORK_INTERVAL	CONFIG_BCB_TRIP_CURVE_DEFAULT_MONITOR_INTERVAL
 #define MAX_CURVE_POINTS	CONFIG_BCB_TRIP_CURVE_DEFAULT_MAX_POINTS
-#define SCALE_DURATION(d)	((uint16_t)(((d)*1000) / MONITOR_WORK_INTERVAL))
 #define LOG_LEVEL 		CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
 // clang-format on
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(bcb_tc_default);
 
-typedef struct __attribute__((packed)) tc_def_config {
-	uint8_t limit_hw; /**< Hardware current limit. */
-	uint8_t num_points; /**< Number of points of the trip curve. */
+typedef struct tc_def_config {
 	bcb_tc_pt_t points[MAX_CURVE_POINTS];
+	uint8_t num_points; /**< Number of points of the trip curve. */
+	uint8_t limit_hw; /**< Hardware current limit. */
 } tc_def_config_t;
 
 struct curve_data {
@@ -43,11 +42,20 @@ struct curve_data {
 static struct curve_data curve_data;
 const struct bcb_tc trip_curve_default;
 
+static inline void curve_reset()
+{
+	int i;
+
+	for (i = 0; i < curve_data.config.num_points; i++) {
+		curve_data.spent_duration[i] = 0;
+	}
+}
+
 static void on_monitor_work(struct k_work *work)
 {
 	int i;
 	bool should_trip = false;
-	uint16_t current = (uint16_t)(bcb_msmnt_get_current_rms() / 1000); /* Convert to amperes. */
+	uint32_t current = bcb_msmnt_get_current_rms();
 
 	if (!curve_data.config.num_points) {
 		goto shedule_monitor;
@@ -59,13 +67,12 @@ static void on_monitor_work(struct k_work *work)
 
 	for (i = 0; i < curve_data.config.num_points; i++) {
 		if (current >= curve_data.config.points[i].i) {
-			curve_data.spent_duration[i]++;
+			curve_data.spent_duration[i] += MONITOR_WORK_INTERVAL;
+			if (curve_data.spent_duration[i] >= curve_data.config.points[i].d) {
+				should_trip = true;
+			}
 		} else {
 			curve_data.spent_duration[i] = 0;
-		}
-
-		if (curve_data.spent_duration[i] >= curve_data.config.points[i].d) {
-			should_trip = true;
 		}
 	}
 
@@ -90,39 +97,38 @@ static inline void load_default_config(void)
 	/* Number of points of the trip curve */
 #if MAX_CURVE_POINTS == 16
 	curve_data.config.num_points = 16;
-	/* Duration values are calculated in multiples of 100ms */
-	curve_data.config.points[0].i = 18;
-	curve_data.config.points[0].d = SCALE_DURATION(5400.0f);
-	curve_data.config.points[1].i = 20;
-	curve_data.config.points[1].d = SCALE_DURATION(1600.0f);
-	curve_data.config.points[2].i = 22;
-	curve_data.config.points[2].d = SCALE_DURATION(500.0f);
-	curve_data.config.points[3].i = 24;
-	curve_data.config.points[3].d = SCALE_DURATION(180.0f);
-	curve_data.config.points[4].i = 26;
-	curve_data.config.points[4].d = SCALE_DURATION(90.0f);
-	curve_data.config.points[5].i = 28;
-	curve_data.config.points[5].d = SCALE_DURATION(50.0f);
-	curve_data.config.points[6].i = 30;
-	curve_data.config.points[6].d = SCALE_DURATION(30.0f);
-	curve_data.config.points[7].i = 32;
-	curve_data.config.points[7].d = SCALE_DURATION(20.0f);
-	curve_data.config.points[8].i = 34;
-	curve_data.config.points[8].d = SCALE_DURATION(13.0f);
-	curve_data.config.points[9].i = 36;
-	curve_data.config.points[9].d = SCALE_DURATION(8.5f);
-	curve_data.config.points[10].i = 38;
-	curve_data.config.points[10].d = SCALE_DURATION(6.0f);
-	curve_data.config.points[11].i = 40;
-	curve_data.config.points[11].d = SCALE_DURATION(4.2f);
-	curve_data.config.points[12].i = 42;
-	curve_data.config.points[12].d = SCALE_DURATION(2.8f);
-	curve_data.config.points[13].i = 44;
-	curve_data.config.points[13].d = SCALE_DURATION(1.9f);
-	curve_data.config.points[14].i = 46;
-	curve_data.config.points[14].d = SCALE_DURATION(1.4f);
-	curve_data.config.points[15].i = 48;
-	curve_data.config.points[15].d = SCALE_DURATION(1.0f);
+	curve_data.config.points[0].i = 18000;
+	curve_data.config.points[0].d = 5400000;
+	curve_data.config.points[1].i = 20000;
+	curve_data.config.points[1].d = 1600000;
+	curve_data.config.points[2].i = 22000;
+	curve_data.config.points[2].d = 500000;
+	curve_data.config.points[3].i = 24000;
+	curve_data.config.points[3].d = 180000;
+	curve_data.config.points[4].i = 26000;
+	curve_data.config.points[4].d = 90000;
+	curve_data.config.points[5].i = 28000;
+	curve_data.config.points[5].d = 50000;
+	curve_data.config.points[6].i = 30000;
+	curve_data.config.points[6].d = 30000;
+	curve_data.config.points[7].i = 32000;
+	curve_data.config.points[7].d = 20000;
+	curve_data.config.points[8].i = 34000;
+	curve_data.config.points[8].d = 13000;
+	curve_data.config.points[9].i = 36000;
+	curve_data.config.points[9].d = 8500;
+	curve_data.config.points[10].i = 38000;
+	curve_data.config.points[10].d = 6000;
+	curve_data.config.points[11].i = 40000;
+	curve_data.config.points[11].d = 4200;
+	curve_data.config.points[12].i = 42000;
+	curve_data.config.points[12].d = 2800;
+	curve_data.config.points[13].i = 44000;
+	curve_data.config.points[13].d = 1900;
+	curve_data.config.points[14].i = 46000;
+	curve_data.config.points[14].d = 1400;
+	curve_data.config.points[15].i = 48000;
+	curve_data.config.points[15].d = 1000;
 #else
 #warning The default trip curve with 16-points is disabled
 	curve_data.params.num_points = 0;
@@ -211,7 +217,9 @@ static int trip_curve_close(void)
 		return -ENOTSUP;
 	}
 
+	curve_reset();
 	bcb_tc_def_msm_event(BCB_TC_DEF_EV_CMD_CLOSE, NULL);
+	k_delayed_work_submit(&curve_data.monitor_work, K_MSEC(MONITOR_WORK_INTERVAL));
 
 	return 0;
 }
@@ -223,6 +231,7 @@ static int trip_curve_open(void)
 	}
 
 	bcb_tc_def_msm_event(BCB_TC_DEF_EV_CMD_OPEN, NULL);
+	k_delayed_work_cancel(&curve_data.monitor_work);
 
 	return 0;
 }
@@ -312,7 +321,7 @@ static int trip_curve_set_callback(bcb_tc_callback_handler_t callback)
 	return 0;
 }
 
-static int validate_points(const bcb_tc_pt_t *data, uint16_t points)
+static int validate_points(const bcb_tc_pt_t *data, uint8_t points)
 {
 	int i;
 
@@ -333,44 +342,33 @@ static int validate_points(const bcb_tc_pt_t *data, uint16_t points)
 	return 0;
 }
 
-static int bcb_trip_curve_default_set_points(const bcb_tc_pt_t *data, uint16_t points)
+static int bcb_trip_curve_default_set_points(const bcb_tc_pt_t *points, uint8_t count)
 {
-	if (validate_points(data, points) < 0) {
+	if (validate_points(points, count) != 0) {
 		LOG_ERR("invalid curve points");
 		return -ENOTSUP;
 	}
 
-	if (points > MAX_CURVE_POINTS) {
+	if (count > MAX_CURVE_POINTS) {
 		LOG_ERR("Not enough space for curve points");
 		return -ENOMEM;
 	}
 
-	curve_data.config.num_points = points;
-	memcpy(&curve_data.config.points, data, sizeof(bcb_tc_pt_t) * points);
+	curve_data.config.num_points = count;
+	memcpy(&curve_data.config.points, points, sizeof(bcb_tc_pt_t) * count);
 
 	return store_config();
 }
 
-static int bcb_trip_curve_default_get_points(bcb_tc_pt_t *data, uint16_t points)
+static int bcb_trip_curve_default_get_points(bcb_tc_pt_t *points, uint8_t *count)
 {
-	if (!data) {
-		LOG_ERR("invalid destination");
-		return -ENOTSUP;
+	if (*count > curve_data.config.num_points) {
+		*count = curve_data.config.num_points;
 	}
 
-	if (points > MAX_CURVE_POINTS) {
-		LOG_ERR("invalid number of curve points");
-		return -EINVAL;
-	}
-
-	memcpy(data, &curve_data.config.points, sizeof(bcb_tc_pt_t) * points);
+	memcpy(points, &curve_data.config.points[0], sizeof(bcb_tc_pt_t) * (*count));
 
 	return 0;
-}
-
-static uint16_t bcb_trip_curve_default_get_point_count(void)
-{
-	return curve_data.config.num_points;
 }
 
 static void on_callback_work(struct k_work *work)
@@ -394,7 +392,6 @@ const struct bcb_tc trip_curve_default = {
 	.set_callback = trip_curve_set_callback,
 	.set_points = bcb_trip_curve_default_set_points,
 	.get_points = bcb_trip_curve_default_get_points,
-	.get_point_count = bcb_trip_curve_default_get_point_count,
 };
 
 const bcb_tc_t* bcb_tc_get_default(void)

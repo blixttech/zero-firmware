@@ -300,6 +300,7 @@ static void load_default_config(void)
 	msm_data.config.csom = BCB_TC_DEF_MSM_CSOM_NONE;
 	msm_data.config.rec_enabled = false;
 	msm_data.config.rec_attempts = 0;
+	msm_data.config.rec_delay = 1;
 }
 
 int bcb_tc_def_msm_init(struct k_work *notify_work)

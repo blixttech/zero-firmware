@@ -10,7 +10,7 @@ if(NOT DTS_ROOT)
     get_filename_component(DTS_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 endif()
 
-get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os/zephyr" ABSOLUTE)
+get_filename_component(ZEPHYR_BASE "${CMAKE_CURRENT_LIST_DIR}/../zephyr-os" ABSOLUTE)
 set(ENV{ZEPHYR_BASE} "${ZEPHYR_BASE}")
 
 list(APPEND ZEPHYR_EXTRA_MODULES

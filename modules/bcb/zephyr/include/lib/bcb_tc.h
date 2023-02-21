@@ -25,9 +25,9 @@ typedef enum {
 	BCB_TC_CAUSE_UVP
 } bcb_tc_cause_t;
 
-typedef struct __attribute__((packed)) bcb_tc_pt {
-	uint16_t i; /**< Current (A) */
-	uint16_t d; /**< Duration (this is a scaled value) */
+typedef struct bcb_tc_pt {
+	uint32_t i; /**< Current (A) */
+	uint32_t d; /**< Duration (Milliseconds) */
 } bcb_tc_pt_t;
 
 typedef struct bcb_tc bcb_tc_t;
@@ -42,9 +42,8 @@ typedef bcb_tc_cause_t (*bcb_tc_cause_get_t)(void);
 typedef int (*bcb_tc_limit_hw_set_t)(uint8_t limit);
 typedef uint8_t (*bcb_tc_limit_hw_get_t)(void);
 typedef int (*bcb_tc_callback_set_t)(bcb_tc_callback_handler_t callback);
-typedef int (*bcb_tc_points_set_t)(const bcb_tc_pt_t *data, uint16_t points);
-typedef int (*bcb_tc_points_get_t)(bcb_tc_pt_t *data, uint16_t points);
-typedef uint16_t (*bcb_tc_point_count_get_t)(void);
+typedef int (*bcb_tc_points_set_t)(const bcb_tc_pt_t *data, uint8_t points);
+typedef int (*bcb_tc_points_get_t)(bcb_tc_pt_t *data, uint8_t *points);
 
 struct bcb_tc {
 	bcb_tc_init_t init;
@@ -58,7 +57,6 @@ struct bcb_tc {
 	bcb_tc_callback_set_t set_callback;
 	bcb_tc_points_set_t set_points;
 	bcb_tc_points_get_t get_points;
-	bcb_tc_point_count_get_t get_point_count;
 };
 
 #ifdef __cplusplus

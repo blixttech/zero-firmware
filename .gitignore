@@ -53,3 +53,5 @@ tags
 # We don't need to include zephyr-os related stuff since
 # they are downloaded/cloned by west
 zephyr-os
+modules/*
+!modules/bcb
