@@ -12,29 +12,29 @@ manifest:
   # Only add a remote if different from the default
   projects:
     - name: cmsis
-      revision: 093de61c2a7d12dc9253daf8692f61f793a9254a
+      revision: 74981bf893e8b10931464b9945e2143d99a3f0a3
       path: modules/hal/cmsis
     - name: hal_nxp
-      revision: 708c95825b0d5279620935a1356299fff5dfbc6e
+      revision: d957472002a3758154f402e982d95ce90cf58e12
       path: modules/hal/nxp
     - name: mbedtls
-      revision: 7fed49c9b9f983ad6416986661ef637459723bcb
+      revision: 6e166050075688fd3cf3d0cb3fc34a1c52df2496
       path: modules/crypto/mbedtls
     - name: mcuboot
-      revision: 13f63976bca672ee018f9d55f1e31f02f4135b64
+      revision: 750678e33819b95756203e5db1ba827baee35708
       path: modules/bootloader/mcuboot
     - name: zcbor
-      revision: a0d6981f14d4001d6f0d608d1a427f9bc6bb6d02
+      revision: 0.6.0
       path: modules/lib/zcbor
     - name: zephyr
-      revision: 4256cd41df6c60f1832fd2deb14edc30ac7debab
+      revision: zephyr-v3.3.0
       path: zephyr
       west-commands: scripts/west-commands.yml
       import: false
-    - name: zero-coap-payload
+    - name: zero-control-messages
       remote: blixttech
-      revision: 039583add86d0da04bdc0123d4224e0bcd5fd967
-      path: modules/zero/coap-payload
+      revision: 7e2fda793f12eeda6d792e5acae5aa05e6671589
+      path: modules/zero/zc-messages
 
   self:
     path: manifest
