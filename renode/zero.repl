@@ -3,8 +3,7 @@ using sysbus
 $name?="BLIXT Breaker"
 $name?="Zero"
 emulation CreateSwitch "switch1"
-emulation CreateIPv4Network "192.168.1.1" 24 "192.168.1.2" "192.168.1.2"
-#emulation CreateTap "tap0" "tap0"
+emulation CreateTap "tap0" "tap0"
 #emulation LogEthernetTraffic
 
 mach create $name
