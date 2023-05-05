@@ -23,6 +23,10 @@ manifest:
     - name: mcuboot
       revision: 750678e33819b95756203e5db1ba827baee35708
       path: modules/bootloader/mcuboot
+    - name: nanopb
+      remote: blixttech
+      revision: nanopb-0.4.7-zephyr-3.x
+      path: modules/lib/nanopb
     - name: zcbor
       revision: 0.6.0
       path: modules/lib/zcbor
@@ -33,8 +37,8 @@ manifest:
       import: false
     - name: zero-control-messages
       remote: blixttech
-      revision: 7e2fda793f12eeda6d792e5acae5aa05e6671589
-      path: modules/zero/zc-messages
+      revision: zephyr-3.x
+      path: modules/zero/zc_messages
 
   self:
     path: manifest
