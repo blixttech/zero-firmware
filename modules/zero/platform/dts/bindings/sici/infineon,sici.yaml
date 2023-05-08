@@ -1,0 +1,63 @@
+description: |
+  Infineon Serial Inspection and Configuration Interface (SICI)
+
+compatible: "infineon,sici"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  uart:
+    required: true
+    type: phandles
+    description: The UART to be used.
+
+  uart-baud-enable:
+    required: false
+    type: int
+    default: 9600
+    description: The UART baudrate for enabling the interface.
+
+  uart-byte-enable:
+    required: false
+    type: int
+    default: 0xfe
+    description: The UART byte to be transmitted for enabling the interface.
+
+  uart-baud-bit:
+    required: false
+    type: int
+    default: 115200
+    description: The UART baudrate for sending/receiving a bit.
+
+  uart-byte-sbit-0:
+    required: false
+    type: int
+    default: 0xfc
+    description: The UART byte to be transmitted for sending bit-0.
+
+  uart-byte-sbit-1:
+    required: false
+    type: int
+    default: 0xc0
+    description: The UART byte to be transmitted for sending bit-1.
+
+  uart-byte-rbit:
+    required: false
+    type: int
+    default: 0xfc
+    description: The UART byte to be transmitted for receiving a bit.
+
+  power-gpios:
+    required: true
+    type: phandle-array
+    description: The GPIO pin to control the power supply of the device.
+
+  pinctrl-0:
+    required: true
+    type: phandles
+    description: Pin configurations when the SICI is disabled (default).
+
+  pinctrl-1:
+    required: true
+    type: phandles
+    description: Pin configurations when the SICI is activated.
