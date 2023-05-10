@@ -63,6 +63,7 @@ typedef struct __attribute__((packed)) bcb_msm_config {
 	bcb_tc_def_msm_csom_t csom; /**< Closed-state operation mode. */
 	bool rec_enabled; /**< Set to true if recovery is enabled. */
 	uint16_t rec_attempts; /**< Number of recovery attempts. */
+	uint16_t rec_duration; /**< Recovery duration in micro seconds. */
 } bcb_tc_def_msm_config_t;
 
 /**

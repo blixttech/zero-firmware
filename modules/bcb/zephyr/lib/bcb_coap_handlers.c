@@ -390,10 +390,11 @@ static int send_tc_def_config(struct sockaddr *addr, uint16_t id, const uint8_t 
 		bcb_tc_def_csom_mod_config_get(&mod_config);
 
 		r = snprintk((char *)(payload + total), sizeof(payload) - total,
-			     ",%" PRIu8 ",%05" PRIu16 ",%" PRIu8 ",%03" PRIu8 ",%03" PRIu8,
+			     ",%" PRIu8 ",%05" PRIu16 ",%" PRIu16 ",%" PRIu8 ",%03" PRIu8
+			     ",%03" PRIu8,
 			     msm_config.rec_enabled, msm_config.rec_attempts,
-			     (uint8_t)msm_config.csom, mod_config.zdc_closed,
-			     mod_config.zdc_period);
+			     msm_config.rec_duration, (uint8_t)msm_config.csom,
+			     mod_config.zdc_closed, mod_config.zdc_period);
 
 		if (r < 0) {
 			return r;
@@ -457,6 +458,12 @@ int bcb_coap_handlers_tc_def_post(struct coap_resource *resource, struct coap_pa
 		options[i].value[opt_end] = '\0';
 		if (options[i].len > 4 && strncmp(options[i].value, "rec=", 4) == 0) {
 			msm_config.rec_attempts = strtoul((char *)&options[i].value[4], NULL, 0);
+			msm_set = true;
+			continue;
+		}
+
+		if (options[i].len > 6 && strncmp(options[i].value, "recdu=", 6) == 0) {
+			msm_config.rec_duration = strtoul((char *)&options[i].value[6], NULL, 0);
 			msm_set = true;
 			continue;
 		}

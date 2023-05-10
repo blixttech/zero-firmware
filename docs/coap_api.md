@@ -118,6 +118,7 @@ None.
 | :--- | :--- |
 | `recen` | Enable/disable recovery. Values: <ul><li>0 &ndash; Disable</li><li> 1 &ndash; Enable</li></ul> |
 | `rec` | Set the number of recovery attempts. Values: 0 &ndash; 65535 |
+| `recdu` | Set the recovery duration (in microseconds). Values: 0 &ndash; 65535 |
 | `csom` | Set the close-state operation mode. Values:  <ul><li>0 &ndash; Disabled</li><li> 1 &ndash; Sine wave modulation control</li></ul> |
 | `csomcl` | Applicable only for sine wave modulation control mode. </br>Set the number of voltage zero-crossings that the switch stays closed. Values: 1 &ndash; 254  |
 | `csomper` | Applicable only for sine wave modulation control mode. </br>Set the number of voltage zero-crossings to be considered as a period. Values: 2 &ndash; 255  |
@@ -128,9 +129,10 @@ None.
 | 0 &ndash; 2 | Refer to the [response](#response-3) format of [tc](#tc) resource. |
 | 3 | Indicates if the recovery is enabled. Refer to the POST parameter description of `recen` field. |
 | 4 | Number of recovery attempts. Refer to the POST parameter description of `rec` field. |
-| 5 | Close-state operation mode. Refer to the POST parameter description of `csom` field. |
-| 6 | Number of voltage zero-crossings that the switch stays closed. Refer to the POST parameter description of `csomcl` field. |
-| 7 | Number of voltage zero-crossings to be considered as a period. Refer to the POST parameter description of `csomper` field. |
+| 5 | Recovery duration (in microseconds). Refer to the POST parameter description of `recdu` field. |
+| 6 | Close-state operation mode. Refer to the POST parameter description of `csom` field. |
+| 7 | Number of voltage zero-crossings that the switch stays closed. Refer to the POST parameter description of `csomcl` field. |
+| 8 | Number of voltage zero-crossings to be considered as a period. Refer to the POST parameter description of `csomper` field. |
 
 ## Developer note
 This API is subjected to change to group the functionalities among CoAP resources in a more meaningful way.
