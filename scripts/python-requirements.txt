@@ -1,3 +1,4 @@
+numpy
 imgtool
 cmake
 tk
@@ -13,3 +14,5 @@ pyocd
 cbor
 puncover
 anytree
+west
+protobuf-compiler
