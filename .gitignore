@@ -64,10 +64,11 @@ tags
 .idea
 
 # zero-fimware
-zephyr
-modules/*
-!modules/zero
-modules/zero/*
-!modules/zero/platform
+/zephyr
+modules/bootloader
+modules/crypto
+modules/hal
+modules/lib
+modules/zero/zc_messages
 saved-target.mk
 compile_commands.json
