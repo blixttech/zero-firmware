@@ -1,6 +1,5 @@
 numpy
 imgtool
-cmake
 tk
 setuptools
 wheel
@@ -9,10 +8,9 @@ edt
 pyelftools
 pykwalify
 west
-ninja
 pyocd
 cbor
 puncover
 anytree
 west
-protobuf-compiler
+
