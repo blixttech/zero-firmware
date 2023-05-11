@@ -1,5 +1,7 @@
+# Last known to work versions
+
 puncover==0.2.2
-imgtool
-pyelftools
-pyocd
-west
+imgtool==1.10.0
+pyelftools==0.29
+pyocd==0.35.0
+west==1.0.0
