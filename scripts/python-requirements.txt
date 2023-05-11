@@ -1,15 +1,5 @@
-numpy
+puncover==0.2.2
 imgtool
-tk
-setuptools
-wheel
-pyyaml
-edt
 pyelftools
-pykwalify
-west
 pyocd
-cbor
-puncover
-anytree
 west
