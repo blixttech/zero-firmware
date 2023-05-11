@@ -94,7 +94,7 @@ We use [``conda``](https://docs.conda.io/en/latest/index.html) environment/packa
 
 * Install required python packages with `pip`.
     ```bash
-    pip install -r python-requirements.txt
+    pip install -r scripts/python-requirements.txt
     ```
 
 * Update zephyr modules with `west`.
