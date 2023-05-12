@@ -19,11 +19,15 @@ LOG_MODULE_REGISTER(adc_test);
 #define Z_ADC_CHANNEL_ALT(node_label, ch_name)                                                     \
 	DT_PHA_BY_NAME(DT_NODELABEL(node_label), io_channels, ch_name, alt)
 
+#define Z_ADC_CHANNEL_TYPE(node_label, ch_name)                                                    \
+	DT_PHA_BY_NAME(DT_NODELABEL(node_label), io_channels, ch_name, type)
+
 #define Z_ADC_SEQ_ADD(inst, node_label, ch_name)                                                   \
 	do {                                                                                       \
 		struct adc_dma_channel_config config;                                              \
 		config.channel = Z_ADC_CHANNEL(node_label, ch_name);                               \
 		config.alt_channel = Z_ADC_CHANNEL_ALT(node_label, ch_name);                       \
+		config.type = Z_ADC_CHANNEL_TYPE(node_label, ch_name);                             \
 		const struct device *dev =                                                         \
 			device_get_binding(Z_ADC_DEV_LABEL(node_label, ch_name));                  \
 		if (dev == Z_ADC_DEV(inst)) {                                                      \

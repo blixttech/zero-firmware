@@ -25,6 +25,12 @@ LOG_MODULE_REGISTER(adc_mcux_edma);
 	(((uint8_t)(((uint8_t)(x)) << ADC_MCUX_ALT_CH_SHIFT)) & ADC_MCUX_ALT_CH_MASK)
 #define ADC_MCUX_GET_ALT_CH(x) (((uint8_t)(x)&ADC_MCUX_ALT_CH_MASK) >> ADC_MCUX_ALT_CH_SHIFT)
 
+#define ADC_MCUX_CH_TYPE_MASK  (0x40U)
+#define ADC_MCUX_CH_TYPE_SHIFT (6U)
+#define ADC_MCUX_CH_TYPE(x)                                                                        \
+	(((uint8_t)(((uint8_t)(x)) << ADC_MCUX_CH_TYPE_SHIFT)) & ADC_MCUX_CH_TYPE_MASK)
+#define ADC_MCUX_GET_CH_TYPE(x) (((uint8_t)(x)&ADC_MCUX_CH_TYPE_MASK) >> ADC_MCUX_CH_TYPE_SHIFT)
+
 /**
  * This structure maps ADC registers starting from SC1A to CFG2.
  * SC1A and CFG2 registers specify the main and alternate ADC channels.
@@ -134,7 +140,8 @@ static inline void set_channel_mux_regs(const struct adc_mcux_config *config,
 	for (i = 0; i < data->seq_len - 1; i++) {
 		reg_masked = config->base->SC1[0] & ~ADC_SC1_ADCH_MASK;
 		data->channel_mux_regs[i].SC1A =
-			reg_masked | ADC_SC1_ADCH(ADC_MCUX_GET_CH(data->adc_channels[i + 1]));
+			reg_masked | ADC_SC1_ADCH(ADC_MCUX_GET_CH(data->adc_channels[i + 1])) |
+			ADC_SC1_DIFF(ADC_MCUX_GET_CH_TYPE(data->adc_channels[i + 1]));
 		data->channel_mux_regs[i].SC1B = config->base->SC1[1];
 
 		data->channel_mux_regs[i].CFG1 = config->base->CFG1;
@@ -147,8 +154,9 @@ static inline void set_channel_mux_regs(const struct adc_mcux_config *config,
 
 	/* Load channel multiplexer registers with the first channel in the sequence. */
 	reg_masked = config->base->SC1[0] & ~ADC_SC1_ADCH_MASK;
-	data->channel_mux_regs[i].SC1A =
-		reg_masked | ADC_SC1_ADCH(ADC_MCUX_GET_CH(data->adc_channels[0]));
+	data->channel_mux_regs[i].SC1A = reg_masked |
+					 ADC_SC1_ADCH(ADC_MCUX_GET_CH(data->adc_channels[0])) |
+					 ADC_SC1_DIFF(ADC_MCUX_GET_CH_TYPE(data->adc_channels[0]));
 	data->channel_mux_regs[i].SC1B = config->base->SC1[1];
 
 	data->channel_mux_regs[i].CFG1 = config->base->CFG1;
@@ -433,8 +441,9 @@ static int adc_mcux_add_channel(const struct device *device,
 		return -EINVAL;
 	}
 
-	data->adc_channels[sequence_index] =
-		ADC_MCUX_CH(channel_config->channel) | ADC_MCUX_ALT_CH(channel_config->alt_channel);
+	data->adc_channels[sequence_index] = ADC_MCUX_CH(channel_config->channel) |
+					     ADC_MCUX_ALT_CH(channel_config->alt_channel) |
+					     ADC_MCUX_CH_TYPE(channel_config->type);
 
 	return 0;
 }

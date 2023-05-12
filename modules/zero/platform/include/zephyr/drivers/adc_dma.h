@@ -64,6 +64,7 @@ struct adc_dma_sampling_config {
 struct adc_dma_channel_config {
 	uint8_t channel; /* Main ADC channel */
 	uint8_t alt_channel; /* Alternate ADC channel */
+	uint8_t type; /* Single ended or differential ADC channel */
 };
 
 typedef int (*adc_dma_api_start)(const struct device *dev,

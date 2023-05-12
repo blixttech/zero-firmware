@@ -35,12 +35,12 @@
 	breaker {
 		aread: aread {
 			compatible = "blixt,breaker-aread";
-			io-channels = <&adc0 14 KINETIS_ADC16_CHANNEL_MUX_A>, /* I_LOW_GAIN */
-				<&adc0 15 KINETIS_ADC16_CHANNEL_MUX_A>, /* I_HIGH_GAIN */
-				<&adc0 4  KINETIS_ADC16_CHANNEL_MUX_B>, /* V_MAINS */
-				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_A>, /* T_MOSFET_IN */
-				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_B>, /* T_MOSFET_OUT */
-				<&adc1 14 KINETIS_ADC16_CHANNEL_MUX_A>; /* T_AMBIENT */
+			io-channels = <&adc0 14 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>, /* I_LOW_GAIN */
+				<&adc0 15 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>, /* I_HIGH_GAIN */
+				<&adc0 4  KINETIS_ADC16_CHANNEL_MUX_B KINETIS_ADC16_CHANNEL_TYPE_SE>, /* V_MAINS */
+				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>, /* T_MOSFET_IN */
+				<&adc1 5  KINETIS_ADC16_CHANNEL_MUX_B KINETIS_ADC16_CHANNEL_TYPE_SE>, /* T_MOSFET_OUT */
+				<&adc1 14 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>; /* T_AMBIENT */
 			io-channel-names = "I_LOW_GAIN",
 					"I_HIGH_GAIN",
 					"V_MAINS",
@@ -115,7 +115,7 @@
 	pinctrl-0 = <&adc0_default>;
 	pinctrl-names = "default";
 	status = "okay";
-	#io-channel-cells = <2>;
+	#io-channel-cells = <3>;
 };
 
 &adc1 {
@@ -130,20 +130,20 @@
 	pinctrl-0 = <&adc1_default>;
 	pinctrl-names = "default";
 	status = "okay";
-	#io-channel-cells = <2>;
+	#io-channel-cells = <3>;
 };
 
 
 &temp0 {
-	io-channels = <&adc0 26 KINETIS_ADC16_CHANNEL_MUX_A>,
-		<&adc0 27 KINETIS_ADC16_CHANNEL_MUX_A>;
+	io-channels = <&adc0 26 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>,
+		<&adc0 27 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>;
 	io-channel-names = "SENSOR", "BANDGAP";
 };
 
 
 &temp1 {
-	io-channels = <&adc1 26 KINETIS_ADC16_CHANNEL_MUX_A>,
-		<&adc1 27 KINETIS_ADC16_CHANNEL_MUX_A>;
+	io-channels = <&adc1 26 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>,
+		<&adc1 27 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>;
 	io-channel-names = "SENSOR", "BANDGAP";
 };
 
