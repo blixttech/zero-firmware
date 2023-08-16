@@ -2,6 +2,16 @@ menuconfig ADC_TRIGGER
 	bool "ADC Trigger driver"
 	default y
 
+config ADC
+	default y
+	help
+	  This is to override Zephyr's built-in configuration.
+
+config DMA
+	default y
+	help
+	  This is to override Zephyr's built-in configuration.
+
 if ADC
 rsource "adc/Kconfig"
 endif # ADC
