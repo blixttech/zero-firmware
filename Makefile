@@ -23,19 +23,19 @@ APP_KEY_PAIR := $(SOURCE_ROOT_DIR)/modules/bootloader/mcuboot/root-rsa-2048.pem
 
 include $(SOURCE_ROOT_DIR)/scripts/makefiles/identify-target.mk
 
-app_makefile := $(SOURCE_ROOT_DIR)/scripts/makefiles/apps/$(APP).mk
-ifeq ($(wildcard $(app_makefile)),)
-    $(error Cannot find application makefile)
-endif
-
-include $(app_makefile)
-
 board_makefile := $(SOURCE_ROOT_DIR)/scripts/makefiles/boards/$(BOARD).mk
 ifeq ($(wildcard $(board_makefile)),)
     $(error Cannot find board makefile)
 endif
 
 include $(board_makefile)
+
+app_makefile := $(SOURCE_ROOT_DIR)/scripts/makefiles/apps/$(APP).mk
+ifeq ($(wildcard $(app_makefile)),)
+    $(error Cannot find application makefile)
+endif
+
+include $(app_makefile)
 
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
@@ -46,6 +46,7 @@ CMAKE_ARGS += -DZEPHYR_BASE=$(ZEPHYR_BASE)
 CMAKE_ARGS += -DBOARD_ROOT=$(BOARD_ROOT_DIR)
 CMAKE_ARGS += -DDTS_ROOT=$(DTS_ROOT_DIR)
 CMAKE_ARGS += -DCONFIG_STACK_USAGE=y
+CMAKE_ARGS += -DCONFIG_BUILD_OUTPUT_HEX=y
 CMAKE_ARGS += -DSYSCALL_INCLUDE_DIRS=$(subst $(SPACE),;,$(SYSCALL_INCLUDE_DIRS))
 CMAKE_ARGS += -DZEPHYR_EXTRA_MODULES=$(subst $(SPACE),;,$(REPO_MODULES_DIRS))
 
