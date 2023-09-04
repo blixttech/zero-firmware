@@ -61,14 +61,14 @@ The following parameters are extracted from the programming guide of TLI4971.
 | **Parameter** | **Symbol** | **Min** |  **Typical** | **Max** | **Unit** 
 |---|---|---|---|---|---|
 | Interface enable time | $t_{ifen}$ | 100 | 150 | 400 | $us$ 
-| Period time of a bit | $T$ | 40 | $t_1\_x+t_2\_x$ | 7500 | us
+| Period time of a bit | $T$ | 40 | $t_{1\_x}+t_{2\_x}$ | 7500 | us
 | Low time - bit 0 | $t_{1\_0}$ | 28 | 33 | 38 | % of $T$ 
 | High time - bit 0 | $t_{2\_0}$ | 62 | 67 | 72 | % of $T$
 | Low time - bit 1 | $t_{1\_1}$ | 62 | 67 | 72 | % of $T$
 | High time - bit 1 | $t_{2\_1}$ | 28 | 33 | 38 | % of $T$
 | Low time before read | $t_3$ | 10 | - | 30 | % of $t_4$
 | Read time | $t_r$ | 50 | - | 80 | % of $t_4$
-| Response time | $t_4$ | $2*abs(t_1\_x-t_2\_x)$ | - | - | $us$
+| Response time | $t_4$ | $2*abs(t_{1\_x}-t_{2\_x})$ | - | - | $us$
 | Time between 2 bits | $t_5$ | 1 | $T-t_4$ | 5400 | $us$
 | Max high time | $t_{high}$ | - | - | 5400 | us
 | Max low time | $t_{low}$ | - | - | 5400 | us
