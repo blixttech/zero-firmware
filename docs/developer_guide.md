@@ -102,6 +102,22 @@ We use [``conda``](https://docs.conda.io/en/latest/index.html) environment/packa
     west update
     ```
 
-## Coding practices
+## Compiling & flashing
 
-To be updated.
+### Compiling
+
+```bash
+make APP=<application> BOARD=<board>
+```
+
+#### Supported applications & boards:
+| **Application** | **Boards** |
+|---|---|
+| bootloader | zero, frdm_k64f |
+| zero | zero |
+
+### Flashing
+
+```bash
+make APP=<application> BOARD=<board> flash
+```
