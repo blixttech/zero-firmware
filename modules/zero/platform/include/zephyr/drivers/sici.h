@@ -51,14 +51,16 @@ static inline int z_impl_sici_power(const struct device *dev, bool on)
  * @brief Enable/disable the SICI interface of the connected device.
  *
  * When enabling, followings happen in order.
- * 1. Apply specified multiplexer settings on the SICI communication pins of the MCU.
- * 2. Send the enter-interface command.
+ * 1. Apply specified pin control settings on the communication pins of the MCU.
+ * 2. Enable SICI communication line.
+ * 3. Send the enter-interface command.
  *
  * When disabling, followings happen in order.
- * 1. Leave SICI mode by pulling communication line for 6 ms.
- * 2. Disable SICI communication pins on the MCU (high impedance mode).
+ * 1. Leave SICI mode by pulling communication line up for 6 ms.
+ * 2. Disable SICI communication line.
+ * 3. Apply specified pin control settings on the communication pins of the MCU. 
  *
- * Note that the connected device accepts the enter-interface command only after a power on
+ * Note that the connected device may accept the enter-interface command only after a power on
  * (about 100 us after the power on).
  * Therefore, call @ref sici_power function to toggle the power to the device prior to calling
  * this function.
@@ -71,7 +73,7 @@ static inline int z_impl_sici_power(const struct device *dev, bool on)
  */
 __syscall int sici_enable(const struct device *dev, bool enable);
 
-__syscall int z_impl_sici_enable(const struct device *dev, bool enable)
+static inline int z_impl_sici_enable(const struct device *dev, bool enable)
 {
 	const struct sici_driver_api *api = (const struct sici_driver_api *)dev->api;
 
@@ -93,7 +95,7 @@ __syscall int z_impl_sici_enable(const struct device *dev, bool enable)
  */
 __syscall int sici_transfer(const struct device *dev, uint16_t in, uint16_t *out);
 
-__syscall int z_impl_sici_transfer(const struct device *dev, uint16_t in, uint16_t *out)
+static inline int z_impl_sici_transfer(const struct device *dev, uint16_t in, uint16_t *out)
 {
 	const struct sici_driver_api *api = (const struct sici_driver_api *)dev->api;
 

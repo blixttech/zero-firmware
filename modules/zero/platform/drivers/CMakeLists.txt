@@ -9,3 +9,7 @@ endif()
 if(CONFIG_DMA)
     add_subdirectory(dma)
 endif()
+
+if(CONFIG_SICI)
+    add_subdirectory(sici)
+endif()

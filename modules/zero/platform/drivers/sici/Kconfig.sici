@@ -1,6 +1,6 @@
 config SICI
 	bool "Infineon SICI driver"
-	default y
+	default n
 	depends on DT_HAS_INFINEON_SICI_ENABLED
 	help
 	  Enable Infineon SICI driver.

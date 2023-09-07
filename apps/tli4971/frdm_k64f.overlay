@@ -1,0 +1,146 @@
+#include <dt-bindings/adc/kinetis-adc.h>
+#include <dt-bindings/timer/kinetis-lptmr.h>
+#include <dt-bindings/timer/kinetis-ftm.h>
+
+/ {
+	soc {
+		/* LPTMR is not in nxp_k6x.dtsi. */
+		lptmr0: lptmr@40040000 {
+			compatible = "nxp,kinetis-adc-trigger-lptmr";
+			reg = <0x40040000 0x10>;
+			clocks = <&sim KINETIS_SIM_BUS_CLK 0x1038 0>;
+			interrupts = <58 0>;
+			clk-source = <KINETIS_LPTMR_PRESCALER_CLOCK_0>; /* MCGIRCLK */
+			clk-divider = <KINETIS_LPTMR_PRESCALE_GLITCH_0>; /* divide by 2 */
+			#trigger-cells = <1>;
+		};
+	};
+
+	breaker {
+		sici0: sici0 {
+			compatible = "infineon,sici";
+			uart = <&uart4>;
+			pwr-en_gpios = <&gpiod 0 GPIO_ACTIVE_LOW>;
+			com-en-gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
+			com-gpios = <&gpioe 24 GPIO_ACTIVE_HIGH>;
+			pinctrl-0 = <&sici0_default &uart4_default>;
+			pinctrl-1 = <&uart4_default>;
+			pinctrl-2 = <&uart4_sici>;
+			pinctrl-names = "default", "activation", "communication";
+			status = "okay";
+		};
+
+		aread: aread {
+			compatible = "blixt,breaker-aread";
+			io-channels = <&adc0 0 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_DF>; /* I_MAINS */
+			io-channel-names = "I_MAINS";
+		};
+	};
+};
+
+&pinctrl {
+	uart4_default: uart4_default {
+		group0 {
+			pinmux = <PTE24>,
+				<PTE25>;
+			drive-strength = "low";
+			drive-open-drain;
+			bias-pull-up;
+			slew-rate = "fast";
+		};
+	};
+
+	uart4_sici: uart4_sici {
+		group0 {
+			pinmux = <UART4_TX_PTE24>,
+				<UART4_RX_PTE25>;
+			drive-strength = "low";
+			drive-open-drain;
+			bias-pull-up;
+			slew-rate = "fast";
+		};
+	};
+
+	sici0_default: sici0_default {
+		group0 {
+			pinmux = <PTD0>,	/* Power pin */
+				<PTC12>;	/* Communication enable pin */
+			drive-strength = "low";
+			slew-rate = "fast";
+		};
+	};
+
+	adc0_default: adc0_default {
+		group0 {
+			/* ADC0_DM0/ADC1_DM3 and ADC0_DP0/ADC1_DP3 pins are connected 
+			   to ADC0 by detault.
+			 */
+		};
+	};
+};
+
+&adc0 {
+	compatible = "nxp,kinetis-adc16-edma";
+	dmas = <&edma0 0 40>, <&edma0 0 60>; /* Format: <dma_instance, multiplexer, source> */
+	dma-names = "RESULT", "CHANNEL";
+	triggers = <&ftm1 KINETIS_ADC16_TRIGGER_FTM_1>;
+	max-channels = <3>;
+	clk-source = <KINETIS_ADC16_CLOCK_SOURCE_ALT_1>;
+	clk-divider = <KINETIS_ADC16_CLOCK_DIVIDER_8>;
+	long-sample = <KINETIS_ADC16_LONG_SAMPLE_CYCLE_10>;
+	pinctrl-0 = <&adc0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	#io-channel-cells = <3>;
+};
+
+&adc1 {
+	compatible = "nxp,kinetis-adc16-edma";
+	dmas = <&edma0 0 41>, <&edma0 0 61>; /* Format: <dma_instance, multiplexer, source> */
+	dma-names = "RESULT", "CHANNEL";
+	triggers = <&lptmr0 KINETIS_ADC16_TRIGGER_LPTMR>;
+	max-channels = <3>;
+	clk-source = <KINETIS_ADC16_CLOCK_SOURCE_ALT_1>;
+	clk-divider = <KINETIS_ADC16_CLOCK_DIVIDER_8>;
+	long-sample = <KINETIS_ADC16_LONG_SAMPLE_CYCLE_10>;
+	pinctrl-0 = <&adc1_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	#io-channel-cells = <3>;
+};
+
+
+&temp0 {
+	io-channels = <&adc0 26 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>,
+		<&adc0 27 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>;
+	io-channel-names = "SENSOR", "BANDGAP";
+};
+
+
+&temp1 {
+	io-channels = <&adc1 26 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>,
+		<&adc1 27 KINETIS_ADC16_CHANNEL_MUX_A KINETIS_ADC16_CHANNEL_TYPE_SE>;
+	io-channel-names = "SENSOR", "BANDGAP";
+};
+
+
+&ftm1 {
+	compatible = "nxp,kinetis-adc-trigger-ftm";
+	clock-source = <KINETIS_FTM_FIXED_CLK>;
+	clk-divider = <KINETIS_FTM_PRESCALE_DIVIDE_1>;
+	trigger-source = <KINETIS_FTM_CHNL_0_TRIGGER>;
+	#trigger-cells = <1>;
+	status = "okay";
+};
+
+&lptmr0 {
+	status = "okay";
+};
+
+&uart4 {
+	current-speed = <115200>;
+	pinctrl-0 = <&uart4_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+

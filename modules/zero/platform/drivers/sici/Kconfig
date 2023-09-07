@@ -1,1 +1,8 @@
+config SICI_INIT_PRIORITY
+	int "SICI init priority"
+	default KERNEL_INIT_PRIORITY_DEVICE
+	help
+	  SICI driver device initialization priority.
+    
 rsource "Kconfig.sici"
+rsource "Kconfig.tlx4971"

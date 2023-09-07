@@ -23,3 +23,5 @@ endif # ADC_TRIGGER
 if DMA
 rsource "dma/Kconfig"
 endif # DMA
+
+rsource "sici/Kconfig"

@@ -1,0 +1,115 @@
+description: |
+  Infineon TLx4971 family devices.
+
+compatible: "infineon,tli4971"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  range:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    description: The measurement range.
+
+  op-mode:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: The operating mode.
+
+  ocd1-deglitch:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+    description: The deglitching time of the over-current channel 1.
+
+  ocd2-deglitch:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+    description: The deglitching time of the over-current channel 2.
+
+  ocd-comp-hyst:
+    type: int
+    required: false
+    description: Over-current detection hysteresis setting.
+
+  ocd1-thrsh:
+    type: int
+    required: false
+    description: The threshold level of the over-current detection channel 1.
+
+  ocd2-thrsh:
+    type: int
+    required: false
+    description: The threshold level of the over-current detection channel 2.
+
+  vref-ext:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: External voltage reference settings.
+
+  ocd1-enable:
+    type: boolean
+    default: true
+    description: Enable over-current channel 1.
+
+  ocd2-enable:
+    type: boolean
+    default: true
+    description: Enable over-current channel 2.
+
+  vref-gpios:
+    required: false
+    type: phandle-array
+    description: The GPIO pin to enable/disable the external voltage reference.
+
+  ocd1-gpios:
+    required: false
+    type: phandle-array
+    description: The GPIO pin for over-current channel 1 interrupt.
+
+  ocd2-gpios:
+    required: false
+    type: phandle-array
+    description: The GPIO pin for over-current channel 2 interrupt.
