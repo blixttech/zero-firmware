@@ -125,6 +125,7 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 {
 	const struct sici_config *config;
 	struct sici_data *data;
+	int r;
 
 	if (!dev) {
 		return -ENODEV;
@@ -144,7 +145,7 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 		 * Apply interface activation pin configurations (set to GPIO mode).
 		 * Pulldown com pin.
 		 * Enable communication pin (if applicable).
-		 * Wait 100 us.
+		 * Wait 1 ms.
 		 * Power on device.
 		 * Wait T_EN + T_LOW us.
 		 * Apply communication pin configurations (set UART mode).
@@ -158,10 +159,10 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 		gpio_pin_set_dt(&config->com_pin, 0);
 
 		if (config->com_en_pin.port) {
-			gpio_pin_set_dt(&config->com_en_pin, 0);
+			gpio_pin_set_dt(&config->com_en_pin, 1);
 		}
 
-		k_usleep(100);
+		k_msleep(1);
 		gpio_pin_set_dt(&config->pwr_en_pin, 1);
 		k_usleep(T_EN + T_LOW);
 		pinctrl_apply_state(config->pincfg, PINCTRL_STATE_COMMUNICATION);
@@ -169,13 +170,19 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 
 		if (sici_transfer_impl(dev, CMD_ENTER_IF, &rx_data)) {
 			LOG_ERR("cannot send ENTER_IF");
-			return -EIO;
+			r = -EIO;
+			goto cleanup;
 		}
 
 		if (!rx_data) {
 			LOG_ERR("invalid response to ENTER_IF: %" PRIu16, rx_data);
-			return -EIO;
+			r = -EIO;
+			goto cleanup;
 		}
+
+		data->enabled = true;
+		r = 0;
+		goto success;
 
 	} else {
 		if (!data->enabled) {
@@ -192,15 +199,19 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 		gpio_pin_configure_dt(&config->com_pin, GPIO_OUTPUT);
 		gpio_pin_set_dt(&config->com_pin, 0);
 		k_msleep(6);
-
-		if (config->com_en_pin.port) {
-			gpio_pin_set_dt(&config->com_en_pin, 0);
-		}
-
-		pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
+		r = 0;
+		data->enabled = false;
 	}
 
-	return 0;
+cleanup:
+	if (config->com_en_pin.port) {
+		gpio_pin_set_dt(&config->com_en_pin, 0);
+	}
+
+	pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
+
+success:
+	return r;
 }
 
 static int sici_init(const struct device *dev)
@@ -231,7 +242,7 @@ static int sici_init(const struct device *dev)
 
 	/* Need to send two bytes over the UART to send one bit in SICI. */
 	data->bit_timeout = (1e6 * 10 * 2) / data->uart_cfg.baudrate;
-	//data->bit_timeout *= 2;
+	data->bit_timeout *= 2;
 	LOG_DBG("bit timeout: %" PRIu32 " us", data->bit_timeout);
 
 	if (uart_configure(config->uart, &data->uart_cfg) != 0) {
@@ -249,18 +260,19 @@ static const struct sici_driver_api sici_api = {
 };
 
 #define GPIO_DT_SPEC_INST_COM_GET(n)                                                               \
-	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, com_gpios), (GPIO_DT_SPEC_INST_GET(n, com_gpios)), (0))
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, com_gpios), (GPIO_DT_SPEC_INST_GET(n, com_gpios)),    \
+		    ({0}))
 
 #define GPIO_DT_SPEC_INST_COM_EN_GET(n)                                                            \
 	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, com_en_gpios),                                        \
-		    (GPIO_DT_SPEC_INST_GET(n, com_en_gpios)), (0))
+		    (GPIO_DT_SPEC_INST_GET(n, com_en_gpios)), ({0}))
 
 #define SICI_INST_DEFINE(n)                                                                        \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static struct sici_config sici_config_##n = {                                              \
 		.uart = DEVICE_DT_GET(DT_INST_PHANDLE(n, uart)),                                   \
 		.pwr_en_pin = GPIO_DT_SPEC_INST_GET(n, pwr_en_gpios),                              \
-		.com_en_pin = GPIO_DT_SPEC_INST_COM_GET(n),                                        \
+		.com_en_pin = GPIO_DT_SPEC_INST_COM_EN_GET(n),                                     \
 		.com_pin = GPIO_DT_SPEC_INST_COM_GET(n),                                           \
 		.baud_bit = DT_INST_PROP(n, baud_bit),                                             \
 		.byte_sbit0 = DT_INST_PROP(n, byte_sbit0),                                         \

@@ -1,6 +1,6 @@
 config TLX4971
 	bool "Infineon TLX4971 driver"
 	default n
-	depends on DT_HAS_INFINEON_TLX4971_ENABLED && DT_HAS_INFINEON_SICI_ENABLED
+	depends on DT_HAS_INFINEON_TLX4971_ENABLED
 	help
 	  Enable Infineon TLX4971 driver.

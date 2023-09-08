@@ -28,6 +28,11 @@
 			pinctrl-2 = <&uart4_sici>;
 			pinctrl-names = "default", "activation", "communication";
 			status = "okay";
+
+			sensor0: sensor0 {
+				compatible = "infineon,tlx4971";
+				status = "okay";
+			};
 		};
 
 		aread: aread {

@@ -2,6 +2,7 @@ description: |
   Infineon Serial Inspection and Configuration Interface (SICI)
 
 compatible: "infineon,sici"
+bus: sici
 
 include: [base.yaml, pinctrl-device.yaml]
 

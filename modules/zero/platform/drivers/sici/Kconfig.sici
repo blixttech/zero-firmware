@@ -4,3 +4,9 @@ config SICI
 	depends on DT_HAS_INFINEON_SICI_ENABLED
 	help
 	  Enable Infineon SICI driver.
+
+config SICI_INIT_PRIORITY
+	int "SICI init priority"
+	default KERNEL_INIT_PRIORITY_DEVICE
+	help
+	  SICI driver device initialization priority.

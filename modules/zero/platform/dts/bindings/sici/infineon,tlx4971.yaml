@@ -1,7 +1,8 @@
 description: |
   Infineon TLx4971 family devices.
 
-compatible: "infineon,tli4971"
+compatible: "infineon,tlx4971"
+on-bus: sici
 
 include: [base.yaml, pinctrl-device.yaml]
 
@@ -91,12 +92,10 @@ properties:
 
   ocd1-enable:
     type: boolean
-    default: true
     description: Enable over-current channel 1.
 
   ocd2-enable:
     type: boolean
-    default: true
     description: Enable over-current channel 2.
 
   vref-gpios:
