@@ -32,6 +32,7 @@ struct sici_config {
 	uint8_t byte_sbit0;
 	uint8_t byte_sbit1;
 	uint8_t byte_rbit;
+	uint8_t byte_rbit_thrsh;
 };
 
 struct sici_data {
@@ -45,32 +46,34 @@ static inline int sici_tx_rx_bit(const struct device *dev, const uint8_t tx_bit,
 	const struct sici_config *config = dev->config;
 	const struct sici_data *data = dev->data;
 	uint64_t end;
-	uint8_t dummy;
 	uint8_t tx_bytes[2];
-	uint8_t rx_bytes[2] = {0};
+	uint8_t rx_byte;
 
 	tx_bytes[0] = tx_bit ? config->byte_sbit1 : config->byte_sbit0;
 	tx_bytes[1] = config->byte_rbit;
 
-	end = sys_clock_timeout_end_calc(K_USEC(data->bit_timeout));
-
-	while (uart_poll_in(config->uart, &dummy) == 0) {
+	while (uart_poll_in(config->uart, &rx_byte) == 0) {
 		/* poll in any buffered data */
 	}
+
+	end = sys_clock_timeout_end_calc(K_USEC(data->bit_timeout));
+	rx_byte = 0;
 
 	for (int i = 0; i < 2; i++) {
 		int r;
 
-		uart_poll_out(config->uart, tx_bytes[0]);
+		uart_poll_out(config->uart, tx_bytes[i]);
 
 		do {
-			r = uart_poll_in(config->uart, &rx_bytes[0]);
+			r = uart_poll_in(config->uart, &rx_byte);
 		} while (r != 0 && end > k_uptime_ticks());
 
 		if (r) {
 			return r;
 		}
 	}
+
+	*rx_bit = rx_byte < config->byte_rbit_thrsh ? 1 : 0;
 
 	return 0;
 }
@@ -145,7 +148,7 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 		 * Apply interface activation pin configurations (set to GPIO mode).
 		 * Pulldown com pin.
 		 * Enable communication pin (if applicable).
-		 * Wait 1 ms.
+		 * Wait 1 ms until VDD goes low.
 		 * Power on device.
 		 * Wait T_EN + T_LOW us.
 		 * Apply communication pin configurations (set UART mode).
@@ -175,7 +178,7 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 		}
 
 		if (!rx_data) {
-			LOG_ERR("invalid response to ENTER_IF: %" PRIu16, rx_data);
+			LOG_ERR("invalid response to ENTER_IF: %" PRIx16, rx_data);
 			r = -EIO;
 			goto cleanup;
 		}
@@ -242,7 +245,7 @@ static int sici_init(const struct device *dev)
 
 	/* Need to send two bytes over the UART to send one bit in SICI. */
 	data->bit_timeout = (1e6 * 10 * 2) / data->uart_cfg.baudrate;
-	data->bit_timeout *= 2;
+	data->bit_timeout += (data->bit_timeout >> 1);
 	LOG_DBG("bit timeout: %" PRIu32 " us", data->bit_timeout);
 
 	if (uart_configure(config->uart, &data->uart_cfg) != 0) {
@@ -278,6 +281,7 @@ static const struct sici_driver_api sici_api = {
 		.byte_sbit0 = DT_INST_PROP(n, byte_sbit0),                                         \
 		.byte_sbit1 = DT_INST_PROP(n, byte_sbit1),                                         \
 		.byte_rbit = DT_INST_PROP(n, byte_rbit),                                           \
+		.byte_rbit_thrsh = DT_INST_PROP(n, byte_rbit_thrsh),                               \
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                       \
 	};                                                                                         \
                                                                                                    \

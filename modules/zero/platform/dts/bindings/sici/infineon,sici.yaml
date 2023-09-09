@@ -12,18 +12,6 @@ properties:
     type: phandles
     description: The UART to be used.
 
-  #  baud-enable:
-  #    required: false
-  #    type: int
-  #    default: 9600
-  #    description: The UART baudrate for enabling the interface.
-  #
-  #  byte-enable:
-  #    required: false
-  #    type: int
-  #    default: 0xfe
-  #    description: The UART byte to be transmitted for enabling the interface.
-
   baud-bit:
     required: false
     type: int
@@ -47,6 +35,12 @@ properties:
     type: int
     default: 0xfe
     description: The UART byte to be transmitted for receiving a bit.
+
+  byte-rbit-thrsh:
+    required: false
+    type: int
+    default: 0xf0
+    description: Values less than this is treated as bit 1. Otherwise bit 0.
 
   pwr-en_gpios:
     required: true

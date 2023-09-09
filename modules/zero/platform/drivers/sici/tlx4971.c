@@ -22,6 +22,7 @@ struct tlx4971_drv_config {
 };
 
 struct tlx4971_drv_data {
+	uint16_t config_regs[3];
 };
 
 static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_config *config)
@@ -37,11 +38,31 @@ static int tlx4971_set_config_impl(const struct device *dev, const struct tlx497
 static int tlx4971_init(const struct device *dev)
 {
 	const struct tlx4971_drv_config *config = dev->config;
+	struct tlx4971_drv_data *data = dev->data;
+	uint16_t out = 0;
 
 	if (sici_enable(config->sici, true)) {
 		LOG_ERR("unable to enable interface");
 		return -EIO;
 	}
+
+	/* Power down ISM */
+	sici_transfer(config->sici, 0x8250, &out);
+	sici_transfer(config->sici, 0x8000, &out);
+
+	/* Disable failure indication */
+	sici_transfer(config->sici, 0x8010, &out);
+	sici_transfer(config->sici, 0x0000, &out);
+
+	/* Read EEPROM registers 0x40 to 0x42 */
+	sici_transfer(config->sici, 0x0400, &out);
+	sici_transfer(config->sici, 0x0410, &data->config_regs[0]);
+	sici_transfer(config->sici, 0x0420, &data->config_regs[1]);
+	sici_transfer(config->sici, 0xFFFF, &data->config_regs[2]);
+
+	LOG_DBG("config_reg[0]: 0x%" PRIx16, data->config_regs[0]);
+	LOG_DBG("config_reg[1]: 0x%" PRIx16, data->config_regs[1]);
+	LOG_DBG("config_reg[2]: 0x%" PRIx16, data->config_regs[2]);
 
 	k_msleep(2);
 
