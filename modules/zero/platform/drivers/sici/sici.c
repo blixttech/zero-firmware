@@ -111,6 +111,7 @@ static int sici_transfer_impl(const struct device *dev, uint16_t in, uint16_t *o
 
 	config = dev->config;
 	data = dev->data;
+	*out = 0;
 
 	for (int i = 0; i < 16; i++) {
 		tx_bit = (in & (1U << i)) ? 1U : 0;
@@ -177,7 +178,7 @@ static int sici_enable_impl(const struct device *dev, bool enable)
 			goto cleanup;
 		}
 
-		if (!rx_data) {
+		if (rx_data) {
 			LOG_ERR("invalid response to ENTER_IF: %" PRIx16, rx_data);
 			r = -EIO;
 			goto cleanup;

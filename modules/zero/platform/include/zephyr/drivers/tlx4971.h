@@ -22,6 +22,7 @@ enum tlx4971_range {
 	TLX4971_RANGE_100,
 	TLX4971_RANGE_75,
 	TLX4971_RANGE_50,
+	TLX4971_RANGE_37_5,
 	TLX4971_RANGE_25
 };
 
@@ -35,6 +36,7 @@ enum tlx4971_opmode {
 struct tlx4971_config {
 	enum tlx4971_range range;
 	enum tlx4971_opmode opmode;
+	bool is_temp;
 };
 
 typedef int (*tlx4971_get_config_t)(const struct device *dev, struct tlx4971_config *config);
