@@ -11,6 +11,7 @@
 #ifndef _ZEPHYR_INCLUDE_DRIVERS_TLX4971_H_
 #define _ZEPHYR_INCLUDE_DRIVERS_TLX4971_H_
 
+#include <stdint.h>
 #include <zephyr/device.h>
 
 #ifdef __cplusplus
@@ -36,6 +37,10 @@ enum tlx4971_opmode {
 struct tlx4971_config {
 	enum tlx4971_range range;
 	enum tlx4971_opmode opmode;
+	bool ocd1_en;
+	bool ocd2_en;
+	uint16_t ocd1_deglitch;
+	uint16_t ocd2_deglitch;
 	bool is_temp;
 };
 
