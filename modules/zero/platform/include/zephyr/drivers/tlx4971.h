@@ -34,14 +34,35 @@ enum tlx4971_opmode {
 	TLX4971_OPMODE_SE
 };
 
+enum tlx4971_deglitch {
+	TLX4971_DEGLITCH_0 = 0,
+	TLX4971_DEGLITCH_500,
+	TLX4971_DEGLITCH_1000,
+	TLX4971_DEGLITCH_1500,
+	TLX4971_DEGLITCH_2000,
+	TLX4971_DEGLITCH_2500,
+	TLX4971_DEGLITCH_3000,
+	TLX4971_DEGLITCH_3500,
+	TLX4971_DEGLITCH_4000,
+	TLX4971_DEGLITCH_4500,
+	TLX4971_DEGLITCH_5000,
+	TLX4971_DEGLITCH_5500,
+	TLX4971_DEGLITCH_6000,
+	TLX4971_DEGLITCH_6500,
+	TLX4971_DEGLITCH_7000,
+	TLX4971_DEGLITCH_7500
+};
+
 struct tlx4971_config {
-	enum tlx4971_range range;
-	enum tlx4971_opmode opmode;
-	bool ocd1_en;
-	bool ocd2_en;
-	uint16_t ocd1_deglitch;
-	uint16_t ocd2_deglitch;
-	bool is_temp;
+	enum tlx4971_range range;	     /**< Measurement range. */
+	enum tlx4971_opmode opmode;	     /**< Output mode. */
+	bool ocd1_en;			     /**< Enable OCD1 output. */
+	bool ocd2_en;			     /**< Enable OCD2 output. */
+	uint8_t ocd1_thrsh;		     /**< OCD1 threshold in A. */
+	uint8_t ocd2_thrsh;		     /**< OCD2 threshold in A. */
+	enum tlx4971_deglitch ocd1_deglitch; /**< Deglitch time for OCD1. */
+	enum tlx4971_deglitch ocd2_deglitch; /**< Deglitch time for OCD2. */
+	bool is_temp;			     /**< Write to temporary registers. */
 };
 
 typedef int (*tlx4971_get_config_t)(const struct device *dev, struct tlx4971_config *config);

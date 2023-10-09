@@ -1,3 +1,4 @@
+#include <stdint.h>
 #define DT_DRV_COMPAT infineon_tlx4971
 
 #include <zephyr/kernel.h>
@@ -35,7 +36,7 @@ LOG_MODULE_REGISTER(tlx4971);
 #define REG0_MEAS_RANGE(x)		(((uint16_t)(((uint16_t)(x)) << REG0_MEAS_RANGE_SHIFT)) & REG0_MEAS_RANGE_MASK)
 #define REG0_OP_MODE_MASK		(0x0060U)
 #define REG0_OP_MODE_SHIFT		(5U)
-#define REG0_OP(x)			(((uint16_t)(((uint16_t)(x)) << REG0_OP_MODE_SHIFT)) & REG0_OP_MODE_MASK)
+#define REG0_OP_MODE(x)			(((uint16_t)(((uint16_t)(x)) << REG0_OP_MODE_SHIFT)) & REG0_OP_MODE_MASK)
 #define REG0_OCD1_DEGLITCH_MASK		(0x0380U)
 #define REG0_OCD1_DEGLITCH_SHIFT	(7U)
 #define REG0_OCD1_DEGLITCH(x)   	(((uint16_t)(((uint16_t)(x)) << REG0_OCD1_DEGLITCH_SHIFT)) & REG0_OCD1_DEGLITCH_MASK)
@@ -79,6 +80,13 @@ LOG_MODULE_REGISTER(tlx4971);
 #define REG2_RATIO_GAIN_OFF(x)		(((uint16_t)(((uint16_t)(x)) << REG2_RATIO_GAIN_OFF_SHIFT)) & REG2_RATIO_GAIN_OFF_MASK)
 /* clang-format on */
 
+struct ocd_thrsh_item {
+	float a;
+	float b;
+	uint8_t min;
+	uint8_t max;
+};
+
 struct tlx4971_drv_config {
 	const struct device *sici;
 	struct gpio_dt_spec vref_en_pin;
@@ -87,10 +95,151 @@ struct tlx4971_drv_config {
 	const struct pinctrl_dev_config *pincfg;
 };
 
+const static struct ocd_thrsh_item ocd1_thrshs[] = {
+	{.a = 19.669f, .b = -5.420f, .min = 0x13, .max = 0x27},
+	{.a = 16.251f, .b = -5.314f, .min = 0x0f, .max = 0x1f},
+	{.a = 12.168f, .b = -5.543f, .min = 0x0a, .max = 0x16},
+	{.a = 20.999f, .b = -6.248f, .min = 0x14, .max = 0x29},
+	{.a = 16.006f, .b = -7.010f, .min = 0x0d, .max = 0x1d},
+	{.a = 10.663f, .b = -6.160f, .min = 0x07, .max = 0x12},
+};
+
+const static struct ocd_thrsh_item ocd2_thrshs[] = {
+	{.a = 40.554f, .b = -6.109f, .min = 0x0e, .max = 0x2d},
+	{.a = 33.555f, .b = -5.610f, .min = 0x0b, .max = 0x24},
+	{.a = 25.342f, .b = -5.674f, .min = 0x07, .max = 0x1a},
+	{.a = 43.436f, .b = -7.882f, .min = 0x0e, .max = 0x2e},
+	{.a = 31.336f, .b = -6.419f, .min = 0x09, .max = 0x21},
+	{.a = 10.112f, .b = -6.723f, .min = 0x04, .max = 0x14},
+};
+
 struct tlx4971_drv_data {
 	uint16_t regs[3]; /**< Holds values of configurable registers. */
 	uint8_t crc_ro;	  /**< Holds CRC for the read-only registers. */
 };
+
+static bool set_meas_range(uint16_t *reg, const enum tlx4971_range range)
+{
+	uint8_t value;
+
+	switch (range) {
+	case TLX4971_RANGE_120:
+		value = 0x05;
+		break;
+	case TLX4971_RANGE_100:
+		value = 0x06;
+		break;
+	case TLX4971_RANGE_75:
+		value = 0x08;
+		break;
+	case TLX4971_RANGE_50:
+		value = 0x0c;
+		break;
+	case TLX4971_RANGE_37_5:
+		value = 0x10;
+		break;
+	case TLX4971_RANGE_25:
+		value = 0x18;
+		break;
+	default:
+		LOG_ERR("invalid full-scale range %" PRIu8, range);
+		return false;
+	}
+
+	*reg = (*reg & (~REG0_MEAS_RANGE_MASK)) | REG0_MEAS_RANGE(value);
+	return true;
+}
+
+static bool get_meas_range(const uint8_t value, enum tlx4971_range *range)
+{
+
+	switch (value) {
+	case 0x05:
+		*range = TLX4971_RANGE_120;
+		break;
+	case 0x06:
+		*range = TLX4971_RANGE_100;
+		break;
+	case 0x08:
+		*range = TLX4971_RANGE_75;
+		break;
+	case 0x0c:
+		*range = TLX4971_RANGE_50;
+		break;
+	case 0x10:
+		*range = TLX4971_RANGE_37_5;
+		break;
+	case 0x18:
+		*range = TLX4971_RANGE_25;
+		break;
+	default:
+		LOG_ERR("invalid full-scale range 0x%" PRIu8, value);
+		return false;
+	}
+
+	return true;
+}
+
+static int get_ocd_thrshs(const uint16_t reg, struct tlx4971_config *config)
+{
+
+	return 0;
+}
+
+static bool set_ocd_thrshs(uint16_t *reg, const struct tlx4971_config *config)
+{
+
+	const struct ocd_thrsh_item *ocd1_thrsh = &ocd1_thrshs[config->range];
+	const struct ocd_thrsh_item *ocd2_thrsh = &ocd2_thrshs[config->range];
+	float scaler;
+	uint8_t ocd1_reg;
+	uint8_t ocd2_reg;
+
+	switch (config->range) {
+	case TLX4971_RANGE_120:
+		scaler = 120.0f;
+		break;
+	case TLX4971_RANGE_100:
+		scaler = 100.0f;
+		break;
+	case TLX4971_RANGE_75:
+		scaler = 75.0f;
+		break;
+	case TLX4971_RANGE_50:
+		scaler = 50.0f;
+		break;
+	case TLX4971_RANGE_37_5:
+		scaler = 37.5f;
+		break;
+	case TLX4971_RANGE_25:
+		scaler = 25.0f;
+		break;
+	default:
+		LOG_ERR("invalid full-scale range %" PRIu8, config->range);
+		return false;
+	}
+
+	ocd1_reg = (uint8_t)((ocd1_thrsh->a * config->ocd1_thrsh / scaler) + ocd1_thrsh->b + 0.5f);
+	ocd2_reg = (uint8_t)((ocd2_thrsh->a * config->ocd2_thrsh / scaler) + ocd2_thrsh->b + 0.5f);
+
+	if (ocd1_thrsh->min > ocd1_reg || ocd1_thrsh->max < ocd1_reg) {
+		LOG_ERR("ocd1 out of range 0x%" PRIx8, ocd1_reg);
+		return false;
+	}
+
+	if (ocd2_thrsh->min > ocd2_reg || ocd2_thrsh->max < ocd2_reg) {
+		LOG_ERR("ocd2 out of range 0x%" PRIx8, ocd2_reg);
+		return false;
+	}
+
+	LOG_DBG("ocd1: 0x%" PRIx8, ocd1_reg);
+	LOG_DBG("ocd2: 0x%" PRIx8, ocd2_reg);
+
+	*reg = (*reg & (~REG1_OCD1_THRSH_MASK)) | REG1_OCD1_THRSH(ocd1_reg);
+	*reg = (*reg & (~REG1_OCD2_THRSH_MASK)) | REG1_OCD2_THRSH(ocd2_reg);
+
+	return true;
+}
 
 static uint8_t crc8_reg(uint16_t data, uint8_t crc)
 {
@@ -255,35 +404,57 @@ static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_conf
 		return r;
 	}
 
-	switch (data->regs[0] & 0x1f) {
-	case 0x05:
-		config->range = TLX4971_RANGE_120;
-		break;
-	case 0x06:
-		config->range = TLX4971_RANGE_100;
-		break;
-	case 0x08:
-		config->range = TLX4971_RANGE_75;
-		break;
-	case 0x0c:
-		config->range = TLX4971_RANGE_50;
-		break;
-	case 0x10:
-		config->range = TLX4971_RANGE_37_5;
-		break;
-	case 0x18:
-		config->range = TLX4971_RANGE_25;
-		break;
-	default:
-		LOG_WRN("invalid range");
+	memset(config, 0, sizeof(struct tlx4971_config));
+
+	if (!get_meas_range(((data->regs[0] & REG0_MEAS_RANGE_MASK) >> REG0_MEAS_RANGE_SHIFT),
+			    &config->range)) {
+		return -EINVAL;
 	}
+
+	config->opmode = (data->regs[0] & REG0_OP_MODE_MASK) >> REG0_OP_MODE_SHIFT;
+	config->ocd1_en = (data->regs[0] & REG0_OCD1_EN_MASK) >> REG0_OCD1_EN_SHIFT;
+	config->ocd2_en = (data->regs[0] & REG0_OCD2_EN_MASK) >> REG0_OCD2_EN_SHIFT;
+	config->ocd1_deglitch =
+		(data->regs[0] & REG0_OCD1_DEGLITCH_MASK) >> REG0_OCD1_DEGLITCH_SHIFT;
+	config->ocd2_deglitch =
+		(data->regs[0] & REG0_OCD2_DEGLITCH_MASK) >> REG0_OCD2_DEGLITCH_SHIFT;
+	config->is_temp = false;
 
 	return 0;
 }
 
 static int tlx4971_set_config_impl(const struct device *dev, const struct tlx4971_config *config)
 {
-	return 0;
+
+	struct tlx4971_drv_data *data;
+
+	if (!dev) {
+		return -ENODEV;
+	}
+
+	if (!config) {
+		return -EINVAL;
+	}
+
+	data = dev->data;
+
+	if (!set_meas_range(&data->regs[0], config->range)) {
+		return -EINVAL;
+	}
+
+	if (!set_ocd_thrshs(&data->regs[1], config)) {
+		return -EINVAL;
+	}
+
+	data->regs[0] = (data->regs[0] & (~REG0_OP_MODE_MASK)) | REG0_OP_MODE(config->opmode);
+	data->regs[0] = (data->regs[0] & (~REG0_OCD1_EN_MASK)) | REG0_OCD1_EN(config->ocd1_en);
+	data->regs[0] = (data->regs[0] & (~REG0_OCD2_EN_MASK)) | REG0_OCD1_EN(config->ocd2_en);
+	data->regs[0] = (data->regs[0] & (~REG0_OCD1_DEGLITCH_MASK)) |
+			REG0_OCD1_DEGLITCH(config->ocd1_deglitch);
+	data->regs[0] = (data->regs[0] & (~REG0_OCD2_DEGLITCH_MASK)) |
+			REG0_OCD2_DEGLITCH(config->ocd2_deglitch);
+
+	return set_regs(dev, config->is_temp);
 }
 
 static int tlx4971_init(const struct device *dev)
