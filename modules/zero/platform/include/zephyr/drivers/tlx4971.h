@@ -58,8 +58,8 @@ struct tlx4971_config {
 	enum tlx4971_opmode opmode;	     /**< Output mode. */
 	bool ocd1_en;			     /**< Enable OCD1 output. */
 	bool ocd2_en;			     /**< Enable OCD2 output. */
-	uint8_t ocd1_thrsh;		     /**< OCD1 threshold in A. */
-	uint8_t ocd2_thrsh;		     /**< OCD2 threshold in A. */
+	uint16_t ocd1_level;		     /**< OCD1 trigger level in A. */
+	uint16_t ocd2_level;		     /**< OCD2 trigger level in A. */
 	enum tlx4971_deglitch ocd1_deglitch; /**< Deglitch time for OCD1. */
 	enum tlx4971_deglitch ocd2_deglitch; /**< Deglitch time for OCD2. */
 	bool is_temp;			     /**< Write to temporary registers. */

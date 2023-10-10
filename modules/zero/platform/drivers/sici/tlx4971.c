@@ -1,4 +1,3 @@
-#include <stdint.h>
 #define DT_DRV_COMPAT infineon_tlx4971
 
 #include <zephyr/kernel.h>
@@ -10,6 +9,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/timing/timing.h>
+#include <math.h>
 
 // #define LOG_LEVEL CONFIG_SICI_LOG_LEVEL
 #define LOG_LEVEL LOG_LEVEL_DBG
@@ -80,11 +80,42 @@ LOG_MODULE_REGISTER(tlx4971);
 #define REG2_RATIO_GAIN_OFF(x)		(((uint16_t)(((uint16_t)(x)) << REG2_RATIO_GAIN_OFF_SHIFT)) & REG2_RATIO_GAIN_OFF_MASK)
 /* clang-format on */
 
-struct ocd_thrsh_item {
+/**
+ *
+ * r = R*f*[1-(h/t)]
+ * t = a*f + b
+ * Where:
+ *     r    : Release point (in A)
+ *     R    : Full-scale range (in A)
+ *     f    : Threshold factor
+ *     t    : Value of OCD_thrsh register field
+ *     h    : Value of OCD_comp_hyst register field
+ *     a, b : Parameters of fitted f vs t curve
+ *
+ * 0 = t^2 - [b+h+(r*a/R)]*t + b*h
+ * t = [l +- square_root(n)] / (2)
+ * Where:
+ *     l = b + h + (r*a/R)
+ *     m = b*h
+ *     n = l^2 - 4*m
+ */
+
+struct ocd_curve_item {
 	float a;
 	float b;
 	uint8_t min;
 	uint8_t max;
+};
+
+struct ocd_calc_info {
+	float a;
+	float b;
+	float R;
+	float h;
+	uint16_t r;
+	uint8_t t;
+	uint8_t t_min;
+	uint8_t t_max;
 };
 
 struct tlx4971_drv_config {
@@ -95,7 +126,7 @@ struct tlx4971_drv_config {
 	const struct pinctrl_dev_config *pincfg;
 };
 
-const static struct ocd_thrsh_item ocd1_thrshs[] = {
+const static struct ocd_curve_item ocd1_curves[] = {
 	{.a = 19.669f, .b = -5.420f, .min = 0x13, .max = 0x27},
 	{.a = 16.251f, .b = -5.314f, .min = 0x0f, .max = 0x1f},
 	{.a = 12.168f, .b = -5.543f, .min = 0x0a, .max = 0x16},
@@ -104,7 +135,7 @@ const static struct ocd_thrsh_item ocd1_thrshs[] = {
 	{.a = 10.663f, .b = -6.160f, .min = 0x07, .max = 0x12},
 };
 
-const static struct ocd_thrsh_item ocd2_thrshs[] = {
+const static struct ocd_curve_item ocd2_curves[] = {
 	{.a = 40.554f, .b = -6.109f, .min = 0x0e, .max = 0x2d},
 	{.a = 33.555f, .b = -5.610f, .min = 0x0b, .max = 0x24},
 	{.a = 25.342f, .b = -5.674f, .min = 0x07, .max = 0x1a},
@@ -118,7 +149,7 @@ struct tlx4971_drv_data {
 	uint8_t crc_ro;	  /**< Holds CRC for the read-only registers. */
 };
 
-static bool set_meas_range(uint16_t *reg, const enum tlx4971_range range)
+static bool set_meas_range(struct tlx4971_drv_data *data, const enum tlx4971_range range)
 {
 	uint8_t value;
 
@@ -146,12 +177,14 @@ static bool set_meas_range(uint16_t *reg, const enum tlx4971_range range)
 		return false;
 	}
 
-	*reg = (*reg & (~REG0_MEAS_RANGE_MASK)) | REG0_MEAS_RANGE(value);
+	data->regs[0] = (data->regs[0] & (~REG0_MEAS_RANGE_MASK)) | REG0_MEAS_RANGE(value);
+
 	return true;
 }
 
-static bool get_meas_range(const uint8_t value, enum tlx4971_range *range)
+static bool get_meas_range(const struct tlx4971_drv_data *data, enum tlx4971_range *range)
 {
+	uint8_t value = (data->regs[0] & REG0_MEAS_RANGE_MASK) >> REG0_MEAS_RANGE_SHIFT;
 
 	switch (value) {
 	case 0x05:
@@ -173,70 +206,167 @@ static bool get_meas_range(const uint8_t value, enum tlx4971_range *range)
 		*range = TLX4971_RANGE_25;
 		break;
 	default:
-		LOG_ERR("invalid full-scale range 0x%" PRIu8, value);
+		LOG_ERR("invalid meas_rng 0x%" PRIu8, value);
 		return false;
 	}
 
 	return true;
 }
 
-static int get_ocd_thrshs(const uint16_t reg, struct tlx4971_config *config)
+static bool calculate_level(struct ocd_calc_info *info)
 {
+	if (info->t == 0 || info->a == 0.0f) {
+		return false;
+	}
 
-	return 0;
+	info->r = roundf(info->R * (info->t - info->b) * (info->t - info->h) / (info->a * info->t));
+
+	return true;
 }
 
-static bool set_ocd_thrshs(uint16_t *reg, const struct tlx4971_config *config)
+static bool get_ocd_levels(const struct tlx4971_drv_data *data, struct tlx4971_config *config)
 {
+	struct ocd_calc_info info;
 
-	const struct ocd_thrsh_item *ocd1_thrsh = &ocd1_thrshs[config->range];
-	const struct ocd_thrsh_item *ocd2_thrsh = &ocd2_thrshs[config->range];
-	float scaler;
-	uint8_t ocd1_reg;
-	uint8_t ocd2_reg;
+	info.h = (data->regs[1] & REG1_OCD_COMP_HYST_MASK) >> REG1_OCD_COMP_HYST_SHIFT;
 
 	switch (config->range) {
 	case TLX4971_RANGE_120:
-		scaler = 120.0f;
+		info.R = 120.0f;
 		break;
 	case TLX4971_RANGE_100:
-		scaler = 100.0f;
+		info.R = 100.0f;
 		break;
 	case TLX4971_RANGE_75:
-		scaler = 75.0f;
+		info.R = 75.0f;
 		break;
 	case TLX4971_RANGE_50:
-		scaler = 50.0f;
+		info.R = 50.0f;
 		break;
 	case TLX4971_RANGE_37_5:
-		scaler = 37.5f;
+		info.R = 37.5f;
 		break;
 	case TLX4971_RANGE_25:
-		scaler = 25.0f;
+		info.R = 25.0f;
 		break;
 	default:
 		LOG_ERR("invalid full-scale range %" PRIu8, config->range);
 		return false;
 	}
 
-	ocd1_reg = (uint8_t)((ocd1_thrsh->a * config->ocd1_thrsh / scaler) + ocd1_thrsh->b + 0.5f);
-	ocd2_reg = (uint8_t)((ocd2_thrsh->a * config->ocd2_thrsh / scaler) + ocd2_thrsh->b + 0.5f);
+	info.a = ocd1_curves[config->range].a;
+	info.b = ocd1_curves[config->range].b;
+	info.t = (data->regs[1] & REG1_OCD1_THRSH_MASK) >> REG1_OCD1_THRSH_SHIFT;
 
-	if (ocd1_thrsh->min > ocd1_reg || ocd1_thrsh->max < ocd1_reg) {
-		LOG_ERR("ocd1 out of range 0x%" PRIx8, ocd1_reg);
+	if (!calculate_level(&info)) {
+		LOG_ERR("ocd1 level caculation failed");
 		return false;
 	}
 
-	if (ocd2_thrsh->min > ocd2_reg || ocd2_thrsh->max < ocd2_reg) {
-		LOG_ERR("ocd2 out of range 0x%" PRIx8, ocd2_reg);
+	config->ocd1_level = info.r;
+
+	info.a = ocd2_curves[config->range].a;
+	info.b = ocd2_curves[config->range].b;
+	info.t = (data->regs[1] & REG1_OCD2_THRSH_MASK) >> REG1_OCD2_THRSH_SHIFT;
+
+	if (!calculate_level(&info)) {
+		LOG_ERR("ocd2 level caculation failed");
 		return false;
 	}
 
-	LOG_DBG("ocd1: 0x%" PRIx8, ocd1_reg);
-	LOG_DBG("ocd2: 0x%" PRIx8, ocd2_reg);
+	config->ocd2_level = info.r;
 
-	*reg = (*reg & (~REG1_OCD1_THRSH_MASK)) | REG1_OCD1_THRSH(ocd1_reg);
-	*reg = (*reg & (~REG1_OCD2_THRSH_MASK)) | REG1_OCD2_THRSH(ocd2_reg);
+	return true;
+}
+
+static bool calculate_thrsh(struct ocd_calc_info *info)
+{
+	float l;
+	float n;
+	uint8_t t1, t2;
+
+	l = info->b + info->h + (info->r * info->a / info->R);
+	n = (l * l) - (4 * info->b * info->h);
+
+	if (n > 0.0f) {
+		float sq = sqrtf(n);
+		t1 = roundf((l + sq) / 2);
+		t2 = roundf((l - sq) / 2);
+	} else if (n == 0.0f) {
+		t1 = roundf(l / 2);
+		t2 = 0;
+	} else {
+		return false;
+	}
+
+	if (info->t_min <= t1 && info->t_max >= t1) {
+		info->t = t1;
+	} else if (info->t_min <= t2 && info->t_max >= t2) {
+		info->t = t2;
+	} else {
+		return false;
+	}
+
+	return true;
+}
+
+static bool set_ocd_thrshs(struct tlx4971_drv_data *data, const struct tlx4971_config *config)
+{
+	struct ocd_calc_info info;
+
+	info.h = (data->regs[1] & REG1_OCD_COMP_HYST_MASK) >> REG1_OCD_COMP_HYST_SHIFT;
+
+	switch (config->range) {
+	case TLX4971_RANGE_120:
+		info.R = 120.0f;
+		break;
+	case TLX4971_RANGE_100:
+		info.R = 100.0f;
+		break;
+	case TLX4971_RANGE_75:
+		info.R = 75.0f;
+		break;
+	case TLX4971_RANGE_50:
+		info.R = 50.0f;
+		break;
+	case TLX4971_RANGE_37_5:
+		info.R = 37.5f;
+		break;
+	case TLX4971_RANGE_25:
+		info.R = 25.0f;
+		break;
+	default:
+		LOG_ERR("invalid full-scale range %" PRIu8, config->range);
+		return false;
+	}
+
+	info.a = ocd1_curves[config->range].a;
+	info.b = ocd1_curves[config->range].b;
+	info.t_min = ocd1_curves[config->range].min;
+	info.t_max = ocd1_curves[config->range].max;
+	info.r = config->ocd1_level;
+
+	if (!calculate_thrsh(&info)) {
+		LOG_ERR("ocd1_thrsh caculation failed");
+		return false;
+	}
+
+	LOG_DBG("ocd1_thrsh: 0x%" PRIx8, info.t);
+	data->regs[1] = (data->regs[1] & (~REG1_OCD1_THRSH_MASK)) | REG1_OCD1_THRSH(info.t);
+
+	info.a = ocd2_curves[config->range].a;
+	info.b = ocd2_curves[config->range].b;
+	info.t_min = ocd2_curves[config->range].min;
+	info.t_max = ocd2_curves[config->range].max;
+	info.r = config->ocd2_level;
+
+	if (!calculate_thrsh(&info)) {
+		LOG_ERR("ocd2_thrsh caculation failed");
+		return false;
+	}
+
+	LOG_DBG("ocd2_thrsh: 0x%" PRIx8, info.t);
+	data->regs[1] = (data->regs[1] & (~REG1_OCD2_THRSH_MASK)) | REG1_OCD2_THRSH(info.t);
 
 	return true;
 }
@@ -404,10 +534,17 @@ static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_conf
 		return r;
 	}
 
+	LOG_DBG("regs[0]: 0x%" PRIx16, data->regs[0]);
+	LOG_DBG("regs[1]: 0x%" PRIx16, data->regs[1]);
+	LOG_DBG("regs[2]: 0x%" PRIx16, data->regs[2]);
+
 	memset(config, 0, sizeof(struct tlx4971_config));
 
-	if (!get_meas_range(((data->regs[0] & REG0_MEAS_RANGE_MASK) >> REG0_MEAS_RANGE_SHIFT),
-			    &config->range)) {
+	if (!get_meas_range(data, &config->range)) {
+		return -EINVAL;
+	}
+
+	if (!get_ocd_levels(data, config)) {
 		return -EINVAL;
 	}
 
@@ -419,6 +556,15 @@ static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_conf
 	config->ocd2_deglitch =
 		(data->regs[0] & REG0_OCD2_DEGLITCH_MASK) >> REG0_OCD2_DEGLITCH_SHIFT;
 	config->is_temp = false;
+
+	LOG_DBG("range: %" PRIu8, config->range);
+	LOG_DBG("opmode: %" PRIu8, config->opmode);
+	LOG_DBG("ocd1_level: %" PRIu16, config->ocd1_level);
+	LOG_DBG("ocd2_level: %" PRIu16, config->ocd2_level);
+	LOG_DBG("ocd1_en: %" PRIu8, config->ocd1_en);
+	LOG_DBG("ocd2_en: %" PRIu8, config->ocd2_en);
+	LOG_DBG("ocd1_deglitch: %" PRIu8, config->ocd1_deglitch);
+	LOG_DBG("ocd2_deglitch: %" PRIu8, config->ocd2_deglitch);
 
 	return 0;
 }
@@ -438,17 +584,17 @@ static int tlx4971_set_config_impl(const struct device *dev, const struct tlx497
 
 	data = dev->data;
 
-	if (!set_meas_range(&data->regs[0], config->range)) {
+	if (!set_meas_range(data, config->range)) {
 		return -EINVAL;
 	}
 
-	if (!set_ocd_thrshs(&data->regs[1], config)) {
+	if (!set_ocd_thrshs(data, config)) {
 		return -EINVAL;
 	}
 
 	data->regs[0] = (data->regs[0] & (~REG0_OP_MODE_MASK)) | REG0_OP_MODE(config->opmode);
 	data->regs[0] = (data->regs[0] & (~REG0_OCD1_EN_MASK)) | REG0_OCD1_EN(config->ocd1_en);
-	data->regs[0] = (data->regs[0] & (~REG0_OCD2_EN_MASK)) | REG0_OCD1_EN(config->ocd2_en);
+	data->regs[0] = (data->regs[0] & (~REG0_OCD2_EN_MASK)) | REG0_OCD2_EN(config->ocd2_en);
 	data->regs[0] = (data->regs[0] & (~REG0_OCD1_DEGLITCH_MASK)) |
 			REG0_OCD1_DEGLITCH(config->ocd1_deglitch);
 	data->regs[0] = (data->regs[0] & (~REG0_OCD2_DEGLITCH_MASK)) |
@@ -459,18 +605,13 @@ static int tlx4971_set_config_impl(const struct device *dev, const struct tlx497
 
 static int tlx4971_init(const struct device *dev)
 {
-	// const struct tlx4971_drv_config *config = dev->config;
-	struct tlx4971_drv_data *data = dev->data;
 	int r;
+	struct tlx4971_config config;
 
-	r = fetch_regs(dev);
+	r = tlx4971_get_config_impl(dev, &config);
 	if (r) {
 		return r;
 	}
-
-	LOG_DBG("config_reg[0]: 0x%" PRIx16, data->regs[0]);
-	LOG_DBG("config_reg[1]: 0x%" PRIx16, data->regs[1]);
-	LOG_DBG("config_reg[2]: 0x%" PRIx16, data->regs[2]);
 
 	return 0;
 }
