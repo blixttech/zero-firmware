@@ -446,7 +446,7 @@ static int fetch_regs(const struct device *dev)
 	sici_enable(config->sici, false);
 
 	if ((data->regs[2] & REG2_CRC_MASK) != REG2_CRC(crc8_all(dev))) {
-		LOG_ERR("CRC mistach");
+		LOG_ERR("crc mismatch");
 		return -EIO;
 	}
 
