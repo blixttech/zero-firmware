@@ -8,8 +8,7 @@
 #include <zephyr/logging/log.h>
 #include <stdint.h>
 
-// #define LOG_LEVEL CONFIG_SICI_LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_SICI_LOG_LEVEL
 LOG_MODULE_REGISTER(sici);
 
 #define PINCTRL_STATE_ACTIVATION    PINCTRL_STATE_PRIV_START

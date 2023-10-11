@@ -17,9 +17,9 @@ properties:
       - 3
       - 4
       - 5
-    description: The measurement range.
+    description: The measurement range setting.
 
-  op-mode:
+  opmode:
     type: int
     required: false
     enum:
@@ -27,7 +27,7 @@ properties:
       - 1
       - 2
       - 3
-    description: The operating mode.
+    description: The analogue output operating mode setting.
 
   ocd1-deglitch:
     type: int
@@ -41,7 +41,7 @@ properties:
       - 5
       - 6
       - 7
-    description: The deglitching time of the over-current channel 1.
+    description: The deglitch time setting for OCD1.
 
   ocd2-deglitch:
     type: int
@@ -63,52 +63,32 @@ properties:
       - 13
       - 14
       - 15
-    description: The deglitching time of the over-current channel 2.
+    description: The deglitch time setting for OCD2.
 
-  ocd-comp-hyst:
+  ocd1-level:
     type: int
     required: false
-    description: Over-current detection hysteresis setting.
+    description: The threshold level for OCD1 in amperes.
 
-  ocd1-thrsh:
+  ocd2-level:
     type: int
     required: false
-    description: The threshold level of the over-current detection channel 1.
-
-  ocd2-thrsh:
-    type: int
-    required: false
-    description: The threshold level of the over-current detection channel 2.
-
-  vref-ext:
-    type: int
-    required: false
-    enum:
-      - 0
-      - 1
-      - 2
-      - 3
-    description: External voltage reference settings.
+    description: The threshold level for OCD2 in amperes.
 
   ocd1-enable:
     type: boolean
-    description: Enable over-current channel 1.
+    description: Enable OCD1.
 
   ocd2-enable:
     type: boolean
-    description: Enable over-current channel 2.
+    description: Enable OCD2.
 
-  vref-gpios:
+  prgm-gpios:
     required: false
     type: phandle-array
-    description: The GPIO pin to enable/disable the external voltage reference.
+    description: The GPIO pin to apply programming voltage.
 
-  ocd1-gpios:
+  error-gpios:
     required: false
     type: phandle-array
-    description: The GPIO pin for over-current channel 1 interrupt.
-
-  ocd2-gpios:
-    required: false
-    type: phandle-array
-    description: The GPIO pin for over-current channel 2 interrupt.
+    description: The GPIO pin to indicate error status (e.g. combined output of OCD1 & OCD2 pins).
