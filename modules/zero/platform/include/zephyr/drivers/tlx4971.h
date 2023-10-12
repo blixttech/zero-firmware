@@ -53,6 +53,14 @@ enum tlx4971_deglitch {
 	TLX4971_DEGLITCH_7500
 };
 
+enum tlx4971_vref_ext {
+	TLX4971_VREF_EXT_1V65 = 0,
+	TLX4971_VREF_EXT_1V2,
+	TLX4971_VREF_EXT_1V5,
+	TLX4971_VREF_EXT_1V8
+};
+
+
 struct tlx4971_config {
 	enum tlx4971_range range;	     /**< Measurement range. */
 	enum tlx4971_opmode opmode;	     /**< Output mode. */
@@ -62,6 +70,7 @@ struct tlx4971_config {
 	uint16_t ocd2_level;		     /**< OCD2 trigger level in A. */
 	enum tlx4971_deglitch ocd1_deglitch; /**< Deglitch time for OCD1. */
 	enum tlx4971_deglitch ocd2_deglitch; /**< Deglitch time for OCD2. */
+	enum tlx4971_vref_ext vref_ext;      /**< External reference voltage. */
 	bool is_temp;			     /**< Write to temporary registers. */
 };
 

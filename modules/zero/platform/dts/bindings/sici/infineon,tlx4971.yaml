@@ -83,6 +83,16 @@ properties:
     type: boolean
     description: Enable OCD2.
 
+  vref-ext:
+    type: int
+    required: false
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+    description: External reference voltage setting for semi-differential mode.
+
   prgm-gpios:
     required: false
     type: phandle-array

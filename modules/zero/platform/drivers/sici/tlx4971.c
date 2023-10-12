@@ -176,7 +176,7 @@ static inline int set_meas_range(struct tlx4971_drv_data *data, enum tlx4971_ran
 		value = 0x18;
 		break;
 	default:
-		LOG_ERR("invalid full-scale range %" PRIu8, range);
+		LOG_ERR("invalid full-scale range: %" PRIu8, range);
 		return -EINVAL;
 	}
 
@@ -209,9 +209,36 @@ static inline int get_meas_range(const struct tlx4971_drv_data *data, enum tlx49
 		*range = TLX4971_RANGE_25;
 		break;
 	default:
-		LOG_ERR("invalid meas_rng 0x%" PRIu8, value);
+		LOG_ERR("invalid meas_rng: 0x%" PRIu8, value);
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+static inline int set_vref_ext(struct tlx4971_drv_data *data, enum tlx4971_vref_ext vref)
+{
+	uint8_t value;
+
+	switch (vref) {
+	case TLX4971_VREF_EXT_1V65:
+		value = 0;
+		break;
+	case TLX4971_VREF_EXT_1V2:
+		value = 0x01;
+		break;
+	case TLX4971_VREF_EXT_1V5:
+		value = 0x02;
+		break;
+	case TLX4971_VREF_EXT_1V8:
+		value = 0x03;
+		break;
+	default:
+		LOG_ERR("invalid tlx4971_vref_ext: %" PRIu8, vref);
+		return -EINVAL;
+	}
+
+	data->regs[2] = (data->regs[2] & (~REG2_VREF_EXT_MASK)) | REG2_VREF_EXT(value);
 
 	return 0;
 }
@@ -240,7 +267,7 @@ static inline int set_comp_hyst(struct tlx4971_drv_data *data, enum tlx4971_rang
 		value = 0x03;
 		break;
 	default:
-		LOG_ERR("invalid full-scale range %" PRIu8, range);
+		LOG_ERR("invalid full-scale range: %" PRIu8, range);
 		return -EINVAL;
 	}
 
@@ -631,6 +658,7 @@ static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_conf
 		(data->regs[0] & REG0_OCD1_DEGLITCH_MASK) >> REG0_OCD1_DEGLITCH_SHIFT;
 	config->ocd2_deglitch =
 		(data->regs[0] & REG0_OCD2_DEGLITCH_MASK) >> REG0_OCD2_DEGLITCH_SHIFT;
+	config->vref_ext = (data->regs[2] & REG2_VREF_EXT_MASK) >> REG2_VREF_EXT_SHIFT;
 	config->is_temp = false;
 
 	LOG_DBG("range: %" PRIu8, config->range);
@@ -641,6 +669,7 @@ static int tlx4971_get_config_impl(const struct device *dev, struct tlx4971_conf
 	LOG_DBG("ocd2_en: %" PRIu8, config->ocd2_en);
 	LOG_DBG("ocd1_deglitch: %" PRIu8, config->ocd1_deglitch);
 	LOG_DBG("ocd2_deglitch: %" PRIu8, config->ocd2_deglitch);
+	LOG_DBG("vref_ext: %" PRIu8, config->vref_ext);
 
 	return 0;
 }
@@ -683,6 +712,10 @@ static int tlx4971_set_config_impl(const struct device *dev, const struct tlx497
 	}
 
 	if (set_ocd_thrshs(data, config)) {
+		return -EINVAL;
+	}
+
+	if (set_vref_ext(data, config->vref_ext)) {
 		return -EINVAL;
 	}
 
@@ -753,6 +786,10 @@ static const struct tlx4971_driver_api drv_api = {.get_config = tlx4971_get_conf
 	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, ocd##_enable),                                        \
 		    (GPIO_DT_SPEC_INST_GET(n, ocd##o_enable)), (d))
 
+#define GET_VREF_EXT(n)                                                                            \
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, vref_ext), (GPIO_DT_SPEC_INST_GET(n, vref_ext)),      \
+		    (TLX4971_VREF_EXT_1V65))
+
 #define TLX4971_INST_DEFINE(n)                                                                     \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static struct tlx4971_drv_config drv_config_##n = {                                        \
@@ -764,6 +801,7 @@ static const struct tlx4971_driver_api drv_api = {.get_config = tlx4971_get_conf
 		.ini_cfg.ocd2_level = GET_OCD_LEVEL(n, 2, 50),                                     \
 		.ini_cfg.ocd1_en = GET_OCD_EN(n, 1, true),                                         \
 		.ini_cfg.ocd2_en = GET_OCD_EN(n, 2, true),                                         \
+		.ini_cfg.vref_ext = GET_VREF_EXT(n),                                               \
 		.ini_cfg.is_temp = true,                                                           \
 		.sici = DEVICE_DT_GET(DT_INST_BUS(n)),                                             \
 		.prgm_pin = GPIO_DT_SPEC_INST_PRGM_GET(n),                                         \
