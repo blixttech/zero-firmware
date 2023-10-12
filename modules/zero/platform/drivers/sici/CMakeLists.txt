@@ -8,5 +8,6 @@ else()
     zephyr_library()
 endif()
 
-zephyr_library_sources_ifdef(CONFIG_SICI	sici.c)
-zephyr_library_sources_ifdef(CONFIG_TLX4971	tlx4971.c)
+zephyr_library_sources_ifdef(CONFIG_SICI            sici.c)
+zephyr_library_sources_ifdef(CONFIG_TLX4971         tlx4971.c)
+zephyr_library_sources_ifdef(CONFIG_TLX4971_SHELL   tlx4971_shell.c)

@@ -11,8 +11,7 @@
 #include <zephyr/timing/timing.h>
 #include <math.h>
 
-// #define LOG_LEVEL CONFIG_SICI_LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL CONFIG_SICI_LOG_LEVEL
 LOG_MODULE_REGISTER(tlx4971);
 
 /* clang-format off */

@@ -4,3 +4,14 @@ config TLX4971
 	depends on DT_HAS_INFINEON_TLX4971_ENABLED
 	help
 	  Enable Infineon TLX4971 driver.
+
+if TLX4971
+
+config TLX4971_SHELL
+	bool "TLX4971 shell"
+	default n
+	depends on SHELL
+	help
+	  Enable the TLX4971 shell.
+
+endif # TLX4971
