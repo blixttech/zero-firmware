@@ -212,6 +212,7 @@ static int trip_curve_close(void)
 	}
 
 	bcb_tc_def_msm_event(BCB_TC_DEF_EV_CMD_CLOSE, NULL);
+	k_delayed_work_submit(&curve_data.monitor_work, K_MSEC(MONITOR_WORK_INTERVAL));
 
 	return 0;
 }
@@ -223,6 +224,7 @@ static int trip_curve_open(void)
 	}
 
 	bcb_tc_def_msm_event(BCB_TC_DEF_EV_CMD_OPEN, NULL);
+	k_delayed_work_cancel(&curve_data.monitor_work);
 
 	return 0;
 }
