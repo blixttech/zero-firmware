@@ -189,7 +189,7 @@ static inline void msm_on_sw_opened_at_closed(void)
 	msm_data.state = BCB_TC_DEF_MSM_STATE_CLOSE_WAIT;
 
 	if (!msm_data.is_ac_supply) {
-		k_delayed_work_submit(&msm_data.recovery_work, K_MSEC(RECOVERY_WORK_TIMEOUT));
+		k_delayed_work_submit(&msm_data.recovery_work, K_USEC(msm_data.config.rec_delay));
 	}
 }
 
@@ -300,7 +300,7 @@ static void load_default_config(void)
 	msm_data.config.csom = BCB_TC_DEF_MSM_CSOM_NONE;
 	msm_data.config.rec_enabled = false;
 	msm_data.config.rec_attempts = 0;
-	msm_data.config.rec_delay = 1;
+	msm_data.config.rec_delay = 1000 * RECOVERY_WORK_TIMEOUT;
 }
 
 int bcb_tc_def_msm_init(struct k_work *notify_work)
