@@ -53,12 +53,26 @@ static struct bcb_coap_data bcb_coap_data = {
                         }),
         },
         {   .get = bcb_coap_handlers_status_get,
+	    .post = bcb_coap_handlers_status_post,
             .notify = bcb_coap_handlers_status_notify,
             .user_data = &((struct coap_core_metadata){
                             .attributes = BCB_COAP_RESOURCE_STATUS_ATTRIBUTES,
                         }),
             .path = BCB_COAP_RESOURCE_STATUS_PATH,
         },
+        {   .post = bcb_coap_handlers_config_post,
+            .user_data = &((struct coap_core_metadata){
+                            .attributes = BCB_COAP_RESOURCE_CONFIG_ATTRIBUTES,
+                        }),
+            .path = BCB_COAP_RESOURCE_CONFIG_PATH,
+        },
+        {   .post = bcb_coap_handlers_device_post,
+            .user_data = &((struct coap_core_metadata){
+                            .attributes = BCB_COAP_RESOURCE_DEVICE_ATTRIBUTES,
+                        }),
+            .path = BCB_COAP_RESOURCE_DEVICE_PATH,
+        },
+#if 0
         {   .get = bcb_coap_handlers_switch_get,
             .post = bcb_coap_handlers_switch_post,
             .user_data = &((struct coap_core_metadata){
@@ -80,6 +94,7 @@ static struct bcb_coap_data bcb_coap_data = {
                         }),
             .path = BCB_COAP_RESOURCE_TC_PATH,
         },
+#endif
         { },
     },
 };

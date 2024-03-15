@@ -4,10 +4,10 @@ BINARY_DIR := $(SOURCE_ROOT_DIR)/build
 
 # TODO: Create an overlay config file to set the key pair for MCUBoot bootloader
 #       and Zero application 
-KEY_PAIR := $(SOURCE_ROOT_DIR)/zephyr-os/bootloader/mcuboot/root-rsa-2048.pem
+KEY_PAIR := $(SOURCE_ROOT_DIR)/modules/bootloader/mcuboot/root-rsa-2048.pem
 
 # Bootloader variables
-MCUBOOT_APP_DIR := $(SOURCE_ROOT_DIR)/zephyr-os/bootloader/mcuboot/boot/zephyr
+MCUBOOT_APP_DIR := $(SOURCE_ROOT_DIR)/modules/bootloader/mcuboot/boot/zephyr
 MCUBOOT_BOARD_ROOT := $(SOURCE_ROOT_DIR)
 MCUBOOT_DTS_ROOT := $(SOURCE_ROOT_DIR)
 MCUBOOT_EXTRA_MODULES := $(SOURCE_ROOT_DIR)/modules/bcb
