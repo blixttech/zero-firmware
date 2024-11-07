@@ -1,5 +1,7 @@
 # CoAP API
 
+## DEPRECATED
+
 CoAP API consists of following resources.  
 
 | Resource | Supported request type |
