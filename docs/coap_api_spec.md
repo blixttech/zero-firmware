@@ -111,6 +111,8 @@ Request:
     Verb: GET 
     
     Endpoint: coap://<zero-sg-ip-address>/.well-known/core
+
+    Data Format: String of Bytes
     
     Payload Content: None
 
@@ -135,14 +137,22 @@ Response:
     
     Endpoint: coap://<zero-sg-ip-address>/version
     
-    Payload Content: None
+    Payload Response Example:
+    
+        NONE
 
     Content-Format: 30001
 
 #### Response:
 
     Format: Protobuf Encoded Text
-    Value: 
+
+    Value:
+
+        version {
+            uuid: "\000\000\000\000\000\000\000\000\123EN\000\000\000p"
+            link_addr: "\000\000\000\000\000\000"
+        }
 
 
 ### `status` - GET, Observable
@@ -157,13 +167,41 @@ Response:
     
     Endpoint: coap://<zero-sg-ip-address>/example
     
-    Payload Content: None
+    Payload Response Example:
+
+        NONE
 
     Content-Format: 30001
 #### Response:
 
     Format: Protobuf Encoded Data
+    
     Value: 
+
+        status {
+            uptime: 3226188
+            switch_state: ZC_SWITCH_STATE_CLOSED
+            device_state: ZC_DEVICE_STATE_CLOSED
+            cause: ZC_TRIP_CAUSE_EXT
+            current: 21
+            voltage: 233900
+            freq: 50022
+            temp {
+                value: 30
+            }
+            temp {
+                loc: ZC_TEMP_LOC_MCU_1
+                value: 34
+            }
+            temp {
+                loc: ZC_TEMP_LOC_BRD_1
+                value: 30
+            }
+            temp {
+                loc: ZC_TEMP_LOC_BRD_2
+                value: 31
+            }
+        }
 
 
 ### `config` - GET, POST
@@ -187,7 +225,7 @@ Response:
     Format: Protobuf Encoded Data
     Value: 
 
-### `device` - GET, POST
+### `device` - POST
 
 **Observations:**
 - This endpoint forms the reply content using Protobuf, that shall be decoded.
