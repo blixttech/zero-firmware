@@ -125,7 +125,9 @@ This endpoint responds a list of every availabe endpoint to be called.
 #### Response:
 
     Format: Unencoded Text
-    Value: </version>;ct=30001,</status>;obs;ct=30001,</config>;ct=30001,</device>;ct=30001
+    
+    Value: 
+        </version>;ct=30001,</status>;obs;ct=30001,</config>;ct=30001,</device>;ct=30001
 
 
 ### `version` - GET 
@@ -134,7 +136,7 @@ This endpoint responds a list of every availabe endpoint to be called.
 - This endpoint forms the reply content using Protobuf, that shall be decoded.
 
 #### Use:
-This endpoint provides the version specifications of the device.
+This endpoint provides the version specifications of the device. Such as hardware and software versions.
 
 #### Request:
 
@@ -142,7 +144,7 @@ This endpoint provides the version specifications of the device.
     
     Endpoint: coap://<zero-sg-ip-address>/version
     
-    Payload Response Example:
+    Payload Content:
     
         NONE
 
@@ -152,7 +154,7 @@ This endpoint provides the version specifications of the device.
 
     Format: Protobuf Encoded Text
 
-    Value:
+    Value (Decoded):
 
         version {
             uuid: "\000\000\000\000\000\000\000\000\123EN\000\000\000p"
@@ -163,7 +165,7 @@ This endpoint provides the version specifications of the device.
 ### `status` - GET, Observable
 
 **Observations:**
-- This endpoint has to be called using a ProtoBuf Payload.
+- This endpoint forms the reply content using Protobuf, that shall be decoded.
 - This endpoint can be used to the client to register as an obsever.
 - To have the client registered as observer, be sure to have an open endpoint to get the requests back from the device.
 
@@ -173,7 +175,7 @@ state of the switch, last switching cause, voltage, current, frequency, board an
 
 #### Request:
 
-    Verb: VERB
+    Verb: GET
     
     Endpoint: coap://<zero-sg-ip-address>/example
     
@@ -182,11 +184,12 @@ state of the switch, last switching cause, voltage, current, frequency, board an
         NONE
 
     Content-Format: 30001
+
 #### Response:
 
     Format: Protobuf Encoded Data
     
-    Value: 
+    Value (Decoded): 
 
         status {
             uptime: 3226188
@@ -221,19 +224,44 @@ state of the switch, last switching cause, voltage, current, frequency, board an
 - This endpoint has to be called using a ProtoBuf encoded payload.
 - The of the Content-Format option in the CoAP must be set, with the value as 30001.
 
+#### Use:
+
+Retrieve or Set the Switching gear configurations.
+The operation of getting or setting changes according to the content of the Protobuf message inside the payload.
+
+Here you can check also tripping time, over and under voltage configurations and more.
+
 #### Request:
 
-    Verb: VERB
+    Verb: POST
     
     Endpoint: coap://<zero-sg-ip-address>/example
     
-    Payload Content: None
+    Payload Content:
+
+    req {
+        get_config {
+            ocp_hw {
+            }
+        }
+    }
 
     Content-Format: 30001
+
 #### Response:
 
     Format: Protobuf Encoded Data
+
     Value: 
+    
+    res {
+        config {
+            ocp_hw {
+            limit: 60
+            rec_delay: 1000
+            }
+        }
+    }
 
 ### `device` - POST
 
@@ -242,40 +270,29 @@ state of the switch, last switching cause, voltage, current, frequency, board an
 - This endpoint has to be called using a ProtoBuf encoded payload.
 - The of the Content-Format option in the CoAP must be set, with the value as 30001.
 
-#### Request:
+#### Use:
 
-    Verb: VERB
-    
-    Endpoint: coap://<zero-sg-ip-address>/example
-    
-    Payload Content: None
-
-    Content-Format: 30001
-#### Response:
-
-    Format: Protobuf Encoded Data
-    Value: 
-
-API Specification Documentation
-Request and Response Details
-Tripping Time and Over+voltage in API Status
-Package Call Frequency
-
-
-
-### `example` - VERB
+Perform device operations, such as closing and opening the contact, or just toggling its state.
 
 #### Request:
 
-    Verb: VERB
+    Verb: POST
     
     Endpoint: coap://<zero-sg-ip-address>/example
     
-    Payload Content: None
+    Payload Content Example:
+
+    cmd {
+        cmd: ZC_DEVICE_CMD_TOGGLE
+    }
 
     Content-Format: 30001
 
 #### Response:
 
     Format: Protobuf Encoded Data
+
     Value: 
+
+    error {
+    }
