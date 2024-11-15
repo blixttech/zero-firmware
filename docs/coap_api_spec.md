@@ -104,9 +104,13 @@ There are no other verbs implemented to be used in the device's firmware.
 
 ### `.well-known/core` - GET
 
+**Observations:**
+- It also informs the Content-Type/Content-Format to be used on each as needed, described above.
+
+#### Use:
 This endpoint responds a list of every availabe endpoint to be called.
 
-Request:
+#### Request:
 
     Verb: GET 
     
@@ -118,18 +122,19 @@ Request:
 
     Content-Format: None
 
-Response:
+#### Response:
 
     Format: Unencoded Text
     Value: </version>;ct=30001,</status>;obs;ct=30001,</config>;ct=30001,</device>;ct=30001
-
-**Note:** it also informs the Content-Type/Content-Format to be used on each as needed, described above.
 
 
 ### `version` - GET 
 
 **Observations:**
 - This endpoint forms the reply content using Protobuf, that shall be decoded.
+
+#### Use:
+This endpoint provides the version specifications of the device.
 
 #### Request:
 
@@ -159,7 +164,12 @@ Response:
 
 **Observations:**
 - This endpoint has to be called using a ProtoBuf Payload.
-- This endpoint can be used to the client to register as an obsever. 
+- This endpoint can be used to the client to register as an obsever.
+- To have the client registered as observer, be sure to have an open endpoint to get the requests back from the device.
+
+#### Use:
+This endpoint provides the statuses of the device, such as operation time,
+state of the switch, last switching cause, voltage, current, frequency, board and components temperatures and so on...
 
 #### Request:
 
@@ -204,7 +214,7 @@ Response:
         }
 
 
-### `config` - GET, POST
+### `config` - POST
 
 **Observations:**
 - This endpoint forms the reply content using Protobuf, that shall be decoded.
