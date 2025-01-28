@@ -1,0 +1,274 @@
+syntax = "proto3";
+
+/* Control message API version. */
+enum ZCApiVersion {
+	ZC_API_VERSION_1 = 0; /* API version 1. */
+	ZC_API_VERSION_2 = 1; /* API version 2 (not in use yet). */
+}
+
+/* The state of the power switch. */
+enum ZCSwitchState {
+	ZC_SWITCH_STATE_OPENED = 0; /* Switch openned */
+	ZC_SWITCH_STATE_CLOSED = 1; /* Switch closed */
+}
+
+/* The state of the trip curve. */
+enum ZCDeviceState {
+	ZC_DEVICE_STATE_UNDEFINED = 0; /* Undefined. */
+	ZC_DEVICE_STATE_OPENED	  = 1; /* Device is in opened state. */
+	ZC_DEVICE_STATE_CLOSED	  = 2; /* Device is in closed state. */
+	ZC_DEVICE_STATE_STANDBY	  = 3; /* Device is in standby state. */
+	ZC_DEVICE_STATE_TRANSIENT = 4; /* Device is in transient state. */
+}
+
+/* The event caused the device to trip. */
+enum ZCTripCause {
+	ZC_TRIP_CAUSE_NONE	  = 0;
+	ZC_TRIP_CAUSE_EXT	  = 1; /* External/user event. */
+	ZC_TRIP_CAUSE_OCP_HW	  = 2; /* Hardware-based over current protection. */
+	ZC_TRIP_CAUSE_OCP_CURVE	  = 3; /* Trip curve-based over current protection. */
+	ZC_TRIP_CAUSE_OCP_HW_TEST = 4; /* Hardware-based over current protection test. */
+	ZC_TRIP_CAUSE_OTP	  = 5; /* Over temperature protection */
+	ZC_TRIP_CAUSE_UVP	  = 6; /* Under voltage protection */
+	ZC_TRIP_CAUSE_OVP	  = 7; /* Over voltage protection */
+	ZC_TRIP_CAUSE_UFP	  = 8; /* Under frequency protection */
+	ZC_TRIP_CAUSE_OFP	  = 9; /* Over frequency protection */
+}
+
+/* Current flow direction. */
+enum ZCFlowDirection {
+	ZC_FLOW_DIRECTION_FORWARD  = 0; /* Forward current flow. */
+	ZC_FLOW_DIRECTION_BACKWARD = 1; /* Backward current flow. */
+}
+
+enum ZCDeviceCmd {
+	ZC_DEVICE_CMD_OPEN   = 0; /* Open the power switch. */
+	ZC_DEVICE_CMD_CLOSE  = 1; /* Close the power switch. */
+	ZC_DEVICE_CMD_TOGGLE = 2; /* Toggle the power switch. */
+}
+
+/* Temperature sensor location. */
+enum ZCTempLoc {
+	ZC_TEMP_LOC_AMB	  = 0; /* Ambient temperature. */
+	ZC_TEMP_LOC_MCU_1 = 1; /* MCU 1 temperature. */
+	ZC_TEMP_LOC_MCU_2 = 2; /* MCU 2 temperature. */
+	ZC_TEMP_LOC_MCU_3 = 3; /* MCU 3 temperature. */
+	ZC_TEMP_LOC_MCU_4 = 4; /* MCU 4 temperature. */
+	ZC_TEMP_LOC_BRD_1 = 5; /* Temeperature of board 1. */
+	ZC_TEMP_LOC_BRD_2 = 6; /* Temeperature of board 2. */
+	ZC_TEMP_LOC_BRD_3 = 7; /* Temeperature of board 3. */
+	ZC_TEMP_LOC_BRD_4 = 8; /* Temeperature of board 4. */
+}
+
+/* Calibration type. */
+enum ZCCalibType {
+	ZC_CALIB_TYPE_VOLTAGE_1 = 0; /* Voltage 1 calibration. */
+	ZC_CALIB_TYPE_VOLTAGE_2 = 1; /* Voltage 2 calibration. */
+	ZC_CALIB_TYPE_CURRENT_1 = 2; /* Current 1 calibration. */
+	ZC_CALIB_TYPE_CURRENT_2 = 3; /* Current 2 calibration. */
+}
+
+/* API version and device information. */
+message ZCVersion {
+	ZCApiVersion api	 = 1; /* API version. */
+	optional bytes uuid	 = 2; /* UUID of the device. */
+	optional bytes sw_ver	 = 3; /* Firmware version number. */
+	optional bytes hw_ver	 = 4; /* Hardware version numbers. */
+	optional bytes link_addr = 5; /* Link address of the device. */
+	optional bool sec_en	 = 6; /* Set to true if secure access is enabled. */
+}
+
+/* Temperature. */
+message ZCTemperature {
+	ZCTempLoc loc = 1; /* Location of the temperature measured. */
+	int32 value   = 2; /* Temperature reading in Celsius. */
+}
+
+/* Device status. */
+message ZCStatus {
+	uint32 uptime		    = 1; /* Uptime in milliseconds. */
+	ZCSwitchState switch_state  = 2; /* Switch state. */
+	ZCDeviceState device_state  = 3; /* Device state. */
+	ZCTripCause cause	    = 4; /* Trip cause. */
+	uint32 current		    = 5; /* RMS current in milliamperes. */
+	uint32 voltage		    = 6; /* RMS voltage in millivolts. */
+	uint32 freq		    = 7; /* Supply frequency in millihertz. */
+	ZCFlowDirection direction   = 8; /* Current flow direction. */
+	repeated ZCTemperature temp = 9; /* Temperature readings. */
+}
+
+/* A point on the trip curve. */
+message ZCCurvePoint {
+	uint32 limit	= 1; /* Current limit in milliamperes. */
+	uint32 duration = 2; /* Duration to be spent in milliseconds. */
+}
+
+/* Modulation control configuration. */
+message ZCCsomModConfig {
+	uint32 closed = 1; /* Number of zero-crossings to be stay opened */
+	uint32 period = 2; /* Total number of zero-crossings to be considered as
+			      the period. */
+}
+
+/* Closed-state operation mode configuration. */
+message ZCCsomConfig {
+	bool enabled = 1; /* Set to true if CSOM enabled. */
+	oneof config {
+		ZCCsomModConfig mod = 2;
+	}
+}
+
+/* Trip curve configuration. */
+message ZCCurveConfig {
+	repeated ZCCurvePoint points = 1; /* Trip curve points. */
+	ZCFlowDirection direction    = 2; /* Current flow direction */
+}
+
+/* Hardware-based overcurrent protection configuration. */
+message ZCOcpHwConfig {
+	uint32 limit	    = 1; /* Current limit in amperes. */
+	uint32 filter	    = 2; /* Jitter filter in nano seconds. */
+	uint32 rec_delay    = 3; /* Recovery time delay in microseconds. */
+	uint32 rec_attempts = 4; /* Number of recovery attempts. */
+	bool rec_en	    = 5; /* Set to true if recovery is enabled. */
+}
+
+/* Over/under voltage protection configuration. */
+message ZCOuvpConfig {
+	uint32 lower = 1; /* Lower limit in volts. */
+	uint32 upper = 2; /* Upper limit in volts. */
+	bool enabled = 3; /* Set to true if enabled. */
+}
+
+/* Over/under frequency protection configuration. */
+message ZCOufpConfig {
+	uint32 lower = 1; /* Lower limit in millihertz. */
+	uint32 upper = 2; /* Upper limit in millihertz. */
+	bool enabled = 3; /* Set to true if enabled. */
+}
+
+/* Notification configuration. */
+message ZCNotifConfig {
+	uint32 interval = 1; /* Notification interval in milliseconds.  */
+}
+
+/* Calibration configuration. */
+message ZCCalibConfig {
+	ZCCalibType type = 1;
+	bytes arg	 = 2;
+}
+
+/* Device configuration. */
+message ZCConfig {
+	oneof config {
+		ZCCurveConfig curve  = 1;
+		ZCCsomConfig csom    = 2; /* Closed-state operation mode. */
+		ZCOcpHwConfig ocp_hw = 3; /* Over current protection. */
+		ZCOuvpConfig ouvp    = 4; /* Over/under voltage protection. */
+		ZCOufpConfig oufp    = 5; /* Over/under frequency protection. */
+		ZCNotifConfig notif  = 6; /* Notification. */
+		ZCCalibConfig calib  = 7; /* Calibration. */
+	}
+}
+
+/* Version request. */
+message ZCRequestVersion {
+	uint32 null = 1;
+}
+
+/* Status request. */
+message ZCRequestStatus {
+	uint32 null = 1;
+}
+
+/* Device command request. */
+message ZCRequestDeviceCmd {
+	ZCDeviceCmd cmd = 1;
+}
+
+/* Set configuration request */
+message ZCRequestSetConfig {
+	ZCConfig config = 1;
+}
+
+/* Get curve configuration request. */
+message ZCRequestGetConfigCurve {
+	ZCFlowDirection direction = 1;
+}
+
+/* Get closed-state operation mode configuration request. */
+message ZCRequestGetConfigCsom {
+	uint32 null = 1;
+}
+
+/* Get hardware-based overcurrent protection configuration request. */
+message ZCRequestGetConfigOcpHw {
+	uint32 null = 1;
+}
+
+/* Get over/under voltage protection configuration request. */
+message ZCRequestGetConfigOuvp {
+	uint32 null = 1;
+}
+
+/* Get over/under frequency protection configuration request. */
+message ZCRequestGetConfigOufp {
+	uint32 null = 1;
+}
+
+/* Get notification configuration request. */
+message ZCRequestGetConfigNotif {
+	uint32 null = 1;
+}
+
+/* Get calibration configuration request. */
+message ZCRequestGetConfigCalib {
+	ZCCalibType type = 1;
+}
+
+/* Get configuration. */
+message ZCRequestGetConfig {
+	oneof config {
+		ZCRequestGetConfigCurve curve  = 1; /* Trip curve */
+		ZCRequestGetConfigCsom csom    = 2; /* Closed-state operation mode. */
+		ZCRequestGetConfigOcpHw ocp_hw = 3; /* Over current protection. */
+		ZCRequestGetConfigOuvp ouvp    = 4; /* Over/under voltage protection. */
+		ZCRequestGetConfigOufp oufp    = 5; /* Over/under frequency protection. */
+		ZCRequestGetConfigNotif notif  = 6; /* Notification. */
+		ZCRequestGetConfigCalib calib  = 7; /* Calibration. */
+	}
+}
+
+/* Error/status information. */
+message ZCError {
+	uint32 code = 1; /* Non-zero values indicates an error condition. */
+}
+
+/* Reponse message. */
+message ZCResponse {
+	oneof res {
+		ZCVersion version = 1;
+		ZCStatus status	  = 2;
+		ZCConfig config	  = 3;
+		ZCError error	  = 4;
+	}
+}
+
+/* Request message. */
+message ZCRequest {
+	oneof req {
+		ZCRequestVersion version      = 1;
+		ZCRequestStatus status	      = 2;
+		ZCRequestDeviceCmd cmd	      = 3;
+		ZCRequestSetConfig set_config = 4;
+		ZCRequestGetConfig get_config = 5;
+	}
+}
+
+/* Control message. */
+message ZCMessage {
+	oneof msg {
+		ZCRequest req  = 1;
+		ZCResponse res = 2;
+	}
+}
