@@ -1,0 +1,15 @@
+ZCVersion.uuid			max_size:16
+ZCVersion.sw_ver		max_size:3
+ZCVersion.hw_ver		max_size:4
+ZCVersion.link_addr		max_size:8
+ZCStatus.temp			max_count:4
+ZCCurveConfig.points		max_count:16
+ZCCalibConfig.arg		max_size:8
+ZCApiVersion			long_names:false
+ZCSwitchState			long_names:false
+ZCDeviceState			long_names:false
+ZCTripCause			long_names:false
+ZCFlowDirection			long_names:false
+ZCDeviceCmd			long_names:false
+ZCTempLoc			long_names:false
+ZCCalibType			long_names:false

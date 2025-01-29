@@ -1,4 +1,4 @@
-from zc_messages.zc_messages_pb2 import *
+from common.zc_messages.zc_messages_pb2 import *
 from aiocoap import *
 
 NANOPB_CONTENT_FORMAT = 30001

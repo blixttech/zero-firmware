@@ -14,6 +14,9 @@ cscope.*
 
 /*.patch
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
 # The .cache directory will be used to cache toolchain capabilities if
 # no suitable out-of-tree directory is found.
 .cache

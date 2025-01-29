@@ -23,7 +23,7 @@ If you wish to learn morea about ProtoBuf and generating libraries, you may find
 
 - [Protobuf Overview](https://protobuf.dev/overview/)
 
-### ProtoBuf - Compiling a Library
+### ProtoBuf - How to compile the library
 Have in mind that when compiling the library, if it's meant to be used with Python, 
 it is important to generate python stubs (.pyi) as well. For that the use of the flag `pyi_out` is necessary.
 - [Compiling Library - Python](https://protobuf.dev/getting-started/pythontutorial/#compiling-protocol-buffers)
@@ -31,7 +31,8 @@ it is important to generate python stubs (.pyi) as well. For that the use of the
 The Protobuf library can be generated from the following protofiles:
 - [Zero Control Messages](https://github.com/blixttech/zero-control-messages/tree/main)
 
-    The important files to do this are "zc_messages.proto" and "zc_messages.options".
+The most important files to do this are "zc_messages.proto" and "zc_messages.options". 
+*Those are included in the "proto_files" directory.*
 
 #### Protobuf - Document on Payload Translation
 - [Protobuf Python Library Reference](https://googleapis.dev/python/protobuf/latest/google/protobuf/message.html#google.protobuf.message.Message.MergeFromString)
@@ -87,10 +88,12 @@ Time to Auto De-Register | 1 Minute
 
 To query for Blixt Devices on a network, the process is quite straightforward.
 
-Sending CoAP GET requests to the  `.well-known/core` endpoint with the destination to the broadcast address
+Sending UDP CoAP GET requests to the `.well-known/core` endpoint with the destination to the broadcast address
 of the connected network should cause the devices to respond to the source address of the request.
 
-The  `.well-known/core` call is described bellow.
+There are examples in the zero_cli_tool and zero_interaction_examples/02_advanced for that process.
+
+The `.well-known/core` call is described bellow.
 
 ### Verbs Accepted by the Endpoints
 
@@ -177,7 +180,7 @@ state of the switch, last switching cause, voltage, current, frequency, board an
 
     Verb: GET
     
-    Endpoint: coap://<zero-sg-ip-address>/example
+    Endpoint: coap://<zero-sg-ip-address>/status
     
     Payload Response Example:
 
@@ -235,7 +238,7 @@ Here you can check also tripping time, over and under voltage configurations and
 
     Verb: POST
     
-    Endpoint: coap://<zero-sg-ip-address>/example
+    Endpoint: coap://<zero-sg-ip-address>/config
     
     Payload Content:
 
@@ -278,7 +281,7 @@ Perform device operations, such as closing and opening the contact, or just togg
 
     Verb: POST
     
-    Endpoint: coap://<zero-sg-ip-address>/example
+    Endpoint: coap://<zero-sg-ip-address>/device
     
     Payload Content Example:
 
@@ -296,3 +299,5 @@ Perform device operations, such as closing and opening the contact, or just togg
 
     error {
     }
+
+End of File

@@ -4,11 +4,13 @@
 import sys
 import asyncio
 
-from coap.operator import CoAP_Device
-from zc_messages.zc_messages_pb2 import *
+from common.coap.operator import CoAP_Device
+from common.zc_messages.zc_messages_pb2 import *
 
 # Makes a new instance of the Switching Gear Device
-zeroSG = CoAP_Device(addr="192.168.50.233")
+# change this address for the address of the device you wish to interact with!
+device_addr = "192.168.212.33"
+zeroSG = CoAP_Device(device_addr)
 
 
 def call_get(zero:CoAP_Device, endpoint):
@@ -79,17 +81,19 @@ def default_welcome():
     print("The intent of this tool is to assist you to learn how to \n\
     make calls to the device using CoAP\n")
 
+    print(f"Target device address is: {zeroSG}\n")
+
     input("press enter to proceed...")
 
     clear_scr()
 
     print('''
     Choose a option using numbers to call a GET endpoint:
-    0 - Well Known
-    1 - Version
-    2 - Status
-    3 - Toggle
-    4 - Config
+    0 - GET  Well Known
+    1 - GET  Version
+    2 - GET  Status
+    3 - POST Toggle
+    4 - GET  Config
     ''')
     user_opt = int(input("Option: "))
     
@@ -108,6 +112,12 @@ def default_welcome():
 
     if user_opt > 0:
         # 3 - The fields can be listed after decoded
+
+        # This example shows how to extract information of a certain field.
+        if user_opt == 1:
+            res = [f.name for f in result.DESCRIPTOR.fields]
+            print(result.res.version.uuid.hex())
+            return
         print(result.ListFields())
         return
     print(result)

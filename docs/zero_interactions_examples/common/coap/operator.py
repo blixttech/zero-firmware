@@ -1,13 +1,19 @@
 from aiocoap import *
 import logging
-from zc_messages.zc_messages_pb2 import *
+from common.zc_messages.zc_messages_pb2 import *
 
 logging.basicConfig(level=logging.INFO)
 
 class CoAP_Device:
+    '''
+    CoAP device defines an instance with the basic information of
+    a device targeted to keep a communication with.
+    '''
     
     def __init__(self, addr, content_format=30001):
-        '''Returns an instance of the CoAP Basic Parameters'''
+        '''
+        Returns an instance of the CoAP Basic Parameters
+        '''
         self.address = addr
         self.content_format = content_format
 
@@ -45,7 +51,7 @@ class CoAP_Device:
         return response.payload
 
 
-    async def zero_get_config(self, content_format=30001):
+    async def zero_get_config(self):
         req_zc_msgs = {}
         res_zc_msgs = {}
 
@@ -87,7 +93,7 @@ class CoAP_Device:
 
         for key, zc_req in req_zc_msgs.items():
             coap_req = Message(code=POST, uri =f"coap://{self.address}/config")
-            coap_req.opt.content_format = content_format
+            coap_req.opt.content_format = self.content_format
 
             print(zc_req)
 
