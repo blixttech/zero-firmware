@@ -471,6 +471,21 @@ static inline void encode_config_ocp(zc_ocp_hw_config_t *config)
 	config->rec_delay = msm_config.rec_delay;
 }
 
+static inline void encode_config_ini_state(zc_ini_state_config_t *config)
+{
+	switch (bcb_get_ini_state()) {
+	case BCB_INI_STATE_OPENED:
+		config->state = ZC_DEVICE_INI_STATE_OPENED;
+		break;
+	case BCB_INI_STATE_CLOSED:
+		config->state = ZC_DEVICE_INI_STATE_CLOSED;
+		break;
+	default:
+		config->state = ZC_DEVICE_INI_STATE_PREVIOUS;
+		break;
+	}
+}
+
 static inline int send_config(struct sockaddr *addr, pb_size_t which_config)
 {
 	int r;
@@ -532,6 +547,10 @@ static inline int send_config(struct sockaddr *addr, pb_size_t which_config)
 	case ZC_REQUEST_GET_CONFIG_CALIB_TAG:
 		error = -ENOTSUP;
 		goto send_error;
+		break;
+	case ZC_REQUEST_GET_CONFIG_INI_TAG:
+		config->which_config = ZC_CONFIG_INI_TAG;
+		encode_config_ini_state(&config->config.ini);
 		break;
 	default:
 		error = -EINVAL;
@@ -630,6 +649,28 @@ static inline int apply_config_ocp(zc_ocp_hw_config_t *config)
 	return bcb_tc_def_msm_config_set(&msm_config);
 }
 
+static inline int apply_config_ini_state(zc_ini_state_config_t *config)
+{
+	bcb_ini_state_t state;
+
+	switch (config->state) {
+	case ZC_DEVICE_INI_STATE_OPENED:
+		state = BCB_INI_STATE_OPENED;
+		break;
+	case ZC_DEVICE_INI_STATE_CLOSED:
+		state = BCB_INI_STATE_CLOSED;
+		break;
+	case ZC_DEVICE_INI_STATE_PREVIOUS:
+		state = BCB_INI_STATE_PREVIOUS;
+		break;
+	default:
+		state = BCB_INI_STATE_OPENED;
+		break;
+	}
+
+	return bcb_set_ini_state(state);
+}
+
 static inline int apply_config(struct sockaddr *addr, zc_config_t *config)
 {
 	int error = 0;
@@ -659,6 +700,9 @@ static inline int apply_config(struct sockaddr *addr, zc_config_t *config)
 	case ZC_CONFIG_CALIB_TAG:
 		error = -ENOTSUP;
 		goto send_error;
+		break;
+	case ZC_CONFIG_INI_TAG:
+		error = apply_config_ini_state(&config->config.ini);
 		break;
 	default:
 		error = -ENOTSUP;

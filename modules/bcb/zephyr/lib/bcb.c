@@ -11,6 +11,7 @@ LOG_MODULE_REGISTER(bcb);
 
 typedef struct __attribute__((packed)) bcb_state {
 	bool is_closed;
+	bcb_ini_state_t ini_state;
 } bcb_state_t;
 
 struct bcb_data {
@@ -37,6 +38,7 @@ static struct bcb_data bcb_data;
 static inline void load_default_state(void)
 {
 	bcb_data.state.is_closed = false;
+	bcb_data.state.ini_state = BCB_INI_STATE_PREVIOUS;
 }
 
 static void trip_curve_callback(const bcb_tc_t *curve, bcb_tc_cause_t type)
@@ -176,6 +178,18 @@ int bcb_toggle(void)
 	return 0;
 }
 
+int bcb_set_ini_state(bcb_ini_state_t state)
+{
+	bcb_data.state.ini_state = state;
+	k_work_submit(&bcb_data.bcb_work);
+	return 0;
+}
+
+bcb_ini_state_t bcb_get_ini_state(void)
+{
+	return bcb_data.state.ini_state;
+}
+
 bcb_tc_state_t bcb_get_state(void)
 {
 	if (!bcb_data.trip_curve) {
@@ -217,6 +231,17 @@ int bcb_set_tc(const bcb_tc_t *curve)
 	}
 
 	bcb_data.trip_curve->set_callback(trip_curve_callback);
+
+	switch (bcb_data.state.ini_state) {
+	case BCB_INI_STATE_OPENED:
+		bcb_data.state.is_closed = false;
+		break;
+	case BCB_INI_STATE_CLOSED:
+		bcb_data.state.is_closed = true;
+		break;
+	default:
+		break;
+	}
 
 	if (bcb_data.state.is_closed) {
 		return bcb_close();
