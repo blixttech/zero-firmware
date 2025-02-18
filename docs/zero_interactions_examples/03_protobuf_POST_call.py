@@ -9,42 +9,29 @@
 # Note that the POST request is a bit different, we have to first assemble
 # the payload, then we encode it, finally add to the request package, then send it.
 
-# Async library is needed since the CoAP libary that we're using works async.
 import asyncio
 import logging
 import time
 
-# Extra non-default libraries
 import aiocoap
-
-# Import the previously compiled protobuf libraries
 from common.zc_messages.zc_messages_pb2 import *
 
-# We'll be logging whatever is happening on screen, so it makes things easier to follow
 logging.basicConfig(level=logging.INFO)
 
-# Here we're keeping things really simple, asking the user to insert the
-# Blixt Zero device IP, so its easier to follow along.
-default_ip = "192.168.1.81"
-zero_ip_addr = input(f"Insert the target Zero IP (or press enter for default {default_ip}): ")
-
-if not zero_ip_addr:
-    zero_ip_addr = default_ip
-logging.info(f"Selected Target IP: {zero_ip_addr}")
-
-# Sleep, just for the sake of going slower
-time.sleep(1)
+# Here we're keeping things really simple, just add your zero ip (that can be found running example number 6)
+zero_ip_addr = "0.0.0.0"
 
 # Now let's go, we'll need the content format of the package
 # 30001 is the default value for Zero.
 content_format = "30001" # content format is not used on GET requests.
 target_endpoint = "device"
 
-# To form the complete address, we'll format it in just one string here...
 complete_address = f"coap://{zero_ip_addr}/{target_endpoint}"
 
 logging.info(f"Preparing the POST request package to {complete_address}")
 
+# Spend a minute and read how the request works AFTER you check the rest of the code.
+# For now just jump over this function
 async def zero_post_request(request_address, cf, payload):
     '''
     We made an async function here, because the aiocoap library runs async,
@@ -58,7 +45,7 @@ async def zero_post_request(request_address, cf, payload):
     zero_data = ZCMessage()
 
     # 2 - Create the Protobuf Package
-    zero_data.req.cmd.cmd = payload
+    zero_data.req.CopyFrom(payload)
 
     # 3 - Let's serialize that to send to the device
     zero_payload = zero_data.SerializeToString()
@@ -79,7 +66,9 @@ async def zero_post_request(request_address, cf, payload):
 
 # Here we create the payload before sending it. The possible payloads are already
 # determined by the ProtocolBuffer library.
-request_payload = ZCDeviceCmd.ZC_DEVICE_CMD_TOGGLE
+device_cmd = ZCDeviceCmd.ZC_DEVICE_CMD_TOGGLE
+request_cmd = ZCRequestDeviceCmd(cmd=device_cmd)
+request = ZCRequest(cmd=request_cmd)
 
 input("Press enter now, and you should see your zero toggling state...")
 
@@ -87,7 +76,7 @@ input("Press enter now, and you should see your zero toggling state...")
 logging.info(f"Waiting for the async request to return...")
 
 # So now we will be sending the payload we created and getting the response
-result = asyncio.run(zero_post_request(complete_address, content_format, request_payload))
+result = asyncio.run(zero_post_request(complete_address, content_format, request))
 
 # Let's print it and you can see how it looks encoded
 print("Encoded Package (not decoded yet):")
