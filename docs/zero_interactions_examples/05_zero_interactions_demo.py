@@ -9,7 +9,7 @@ from common.zc_messages.zc_messages_pb2 import *
 
 # Makes a new instance of the Switching Gear Device
 # change this address for the address of the device you wish to interact with!
-device_addr = "192.168.212.33"
+device_addr = "0.0.0.0"
 zeroSG = CoAP_Device(device_addr)
 
 

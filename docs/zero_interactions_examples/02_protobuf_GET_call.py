@@ -25,21 +25,12 @@ from common.zc_messages.zc_messages_pb2 import *
 # We'll be logging whatever is happening on screen, so it makes things easier to follow
 logging.basicConfig(level=logging.INFO)
 
-# Here we're keeping things really simple, asking the user to insert the
-# Blixt Zero device IP, so its easier to follow along.
-default_ip = "192.168.1.81"
-zero_ip_addr = input(f"Insert the target Zero IP (or press enter for default {default_ip}): ")
-
-if not zero_ip_addr:
-    zero_ip_addr = default_ip
-logging.info(f"Selected Target IP: {zero_ip_addr}")
-
-# Sleep, just for the sake of going slower
-time.sleep(1)
+# Here we're keeping things really simple, just add your zero ip (that can be found running example number 6)
+zero_ip_addr = "0.0.0.0"
 
 # Now let's go, we'll need the content format of the package
 # 30001 is the default value for Zero.
-# content_format = "30001" # content format is not used on GET requests.
+# content_format = "30001" # content format is not necessary on GET requests.
 target_endpoint = "status"
 
 # To form the complete address, we'll format it in just one string here...
