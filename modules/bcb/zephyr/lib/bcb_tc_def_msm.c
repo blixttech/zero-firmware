@@ -12,6 +12,7 @@
 #define CONFIG_OFFSET		CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TC_DEF_MSM
 #define SUPPLY_WORK_TIMEOUT	CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_TIMER_TIMEOUT
 #define RECOVERY_WORK_TIMEOUT	CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_TIMER_TIMEOUT
+#define RECOVERY_RESET_WORK_TIMEOUT  CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT
 #define ZD_COUNT_SUPPLY_WAIT	CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_ZD_COUNT_MIN
 #define LOG_LEVEL 		CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
 // clang-format on
@@ -42,6 +43,7 @@ struct tc_def_msm_data {
 	struct k_work *notify_work;
 	struct k_delayed_work supply_detect_work;
 	struct k_delayed_work recovery_work;
+	struct k_delayed_work recovery_reset_work;
 };
 
 static struct tc_def_msm_data msm_data;
@@ -148,6 +150,10 @@ static inline void msm_on_zd_v_rec_timer_at_close_wait(void)
 static inline void msm_on_sw_closed_at_close_wait(void)
 {
 	msm_data.state = BCB_TC_DEF_MSM_STATE_CLOSED;
+	if (msm_data.recovery_remaining < msm_data.config.rec_attempts) {
+		k_delayed_work_submit(&msm_data.recovery_reset_work,
+				      K_MSEC(RECOVERY_RESET_WORK_TIMEOUT));
+	}
 }
 
 static inline void msm_on_ocd_at_closed(void)
@@ -162,8 +168,9 @@ static inline void msm_on_ocd_at_closed(void)
 
 static inline void msm_on_sw_opened_at_closed(void)
 {
-	bcb_sw_cause_t sw_cause = bcb_sw_get_cause();
+	k_delayed_work_cancel(&msm_data.recovery_reset_work);
 
+	bcb_sw_cause_t sw_cause = bcb_sw_get_cause();
 	if (sw_cause == BCB_SW_CAUSE_EXT) {
 		/* Opened by CSOM */
 		return;
@@ -400,6 +407,12 @@ int bcb_tc_def_msm_event(bcb_tc_def_event_t event, void *arg)
 		case BCB_TC_DEF_EV_SW_OPENED: {
 			msm_on_sw_opened_at_closed();
 		} break;
+
+		case BCB_TC_DEF_EV_REC_RESET_TIMER: {
+			msm_data.recovery_remaining = msm_data.config.rec_attempts;
+			LOG_INF("Reset recovery attempts: %d",
+				msm_data.recovery_remaining);
+		} break;
 		default: {
 			/* Other events are ignored */
 		} break;
@@ -473,11 +486,17 @@ static void on_recovery_work(struct k_work *work)
 	bcb_tc_def_msm_event(BCB_TC_DEF_EV_REC_TIMER, NULL);
 }
 
+static void on_recovery_reset_work(struct k_work *work)
+{
+	bcb_tc_def_msm_event(BCB_TC_DEF_EV_REC_RESET_TIMER, NULL);
+}
+
 static int tc_def_msm_system_init()
 {
 	memset(&msm_data, 0, sizeof(msm_data));
 	k_delayed_work_init(&msm_data.supply_detect_work, on_supply_detect_work);
 	k_delayed_work_init(&msm_data.recovery_work, on_recovery_work);
+	k_delayed_work_init(&msm_data.recovery_reset_work, on_recovery_reset_work);
 	return 0;
 }
 

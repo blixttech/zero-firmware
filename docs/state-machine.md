@@ -4,7 +4,7 @@
 The following figure shows the main state machine (MSM) for the default trip curve.
 MSM models the operational behaviour of the trip curve rather than the status of the switch (opened or closed).
 
-![Main State Machine](images/default_trip_curve_state_machine_main.png "Main State Machine")
+![Main State Machine](images/Main-State-Machine.png "Main State Machine")
 
 ### States
 
@@ -27,7 +27,10 @@ MSM models the operational behaviour of the trip curve rather than the status of
 | `EV_SW_CLOSED` | The switch changed its state to "closed". |
 | `EV_SW_OPENED` | The switch changed its state to "opened". |
 | `EV_SUPPLY_TIMER` | The supply voltage detection timer expired. |
-| `EV_REC_TIMER` | The recovery timer expired. |
+| `EV_RECOVERY_TIMER` | The recovery timer expired. |
+| `EV_MAINS_OVD` | The voltage supplied to the load rise above a safe threshold. |
+| `EV_MAINS_UVD` | The voltage supplied to the load drops below a safe threshold. |
+| `EV_RECOVERY_RESET_TIMER` | the system has remained stable and the recovery process is complete. | 
 
 ### Functions
 
@@ -43,14 +46,22 @@ MSM models the operational behaviour of the trip curve rather than the status of
 | `recovery_timer_stop()` | Stop recovery timer. |
 | `zd_v_enable()` | Enable zero-cross detection for voltage. |
 | `zd_v_disable()` | Disable zero-cross detection for voltage. |
+| `zd_v_required()` | Is zero-cross detection for voltage required?. |
+| `recovery_reset_timer_start()` | Starts the timer to monitor stability after a recovery process. |
+| `recovery_reset_timer_stop()` | Stop any pending stability timer on trip events |
 
 ### Variables
-
-| Variable | Description |
+ 
+|Variable | Description |
 | :--- | :--- |
 | `zd_count` | Number of zero-crossing detections. |
 | `recovery_remaining` | Number of times remaining for recovery operation.  |
 
+### Constants
+
+|Constants | Description |
+| :--- | :--- |
+| `RECOVERY_ATTEMPTS_MAX` | Maximum number of recovery attempts before the ZERO trips. |
 
 ## Closed-state Operation Mode
 
