@@ -19,6 +19,13 @@ config BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT
     int "Default recovery reset timer timeout (ms)"
     default 2000  
 
+config BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT_MIN
+    int "Minimum recovery reset timer timeout (ms)"
+    default 100
+
+config BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT_MAX
+    int "Maximum recovery reset timer timeout (ms)"
+    default 10000
 
 menu "Timing"
 	config BCB_LIB_ETIME_SECOND

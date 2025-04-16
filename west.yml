@@ -37,7 +37,7 @@ manifest:
       path: zephyr-os
       west-commands: scripts/west-commands.yml
     - name: zero-control-messages
-      revision: 4a3d4fa7acbcc6c48a765b7028bb49d73daafe9c
+      revision: 18eae19d74183d3e0fcaa8d78c559d3dff892f60
       remote: blixttech
       path: modules/lib/zc-messages
 

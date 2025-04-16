@@ -34,7 +34,7 @@ int bcb_coap_handlers_version_get(struct coap_resource *resource, struct coap_pa
 int bcb_coap_handlers_status_get(struct coap_resource *resource, struct coap_packet *request,
 				 struct sockaddr *addr, socklen_t addr_len);
 int bcb_coap_handlers_status_post(struct coap_resource *resource, struct coap_packet *request,
-				 struct sockaddr *addr, socklen_t addr_len);
+				  struct sockaddr *addr, socklen_t addr_len);
 void bcb_coap_handlers_status_notify(struct coap_resource *resource,
 				     struct coap_observer *observer);
 int bcb_coap_handlers_config_post(struct coap_resource *resource, struct coap_packet *request,

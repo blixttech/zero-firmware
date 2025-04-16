@@ -9,12 +9,14 @@
 #include <string.h>
 
 // clang-format off
-#define CONFIG_OFFSET		CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TC_DEF_MSM
-#define SUPPLY_WORK_TIMEOUT	CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_TIMER_TIMEOUT
-#define RECOVERY_WORK_TIMEOUT	CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_TIMER_TIMEOUT
-#define RECOVERY_RESET_WORK_TIMEOUT  CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT
-#define ZD_COUNT_SUPPLY_WAIT	CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_ZD_COUNT_MIN
-#define LOG_LEVEL 		CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
+#define CONFIG_OFFSET                       CONFIG_BCB_LIB_PERSISTENT_CONFIG_OFFSET_TC_DEF_MSM
+#define SUPPLY_WORK_TIMEOUT                 CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_TIMER_TIMEOUT
+#define RECOVERY_WORK_TIMEOUT               CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_TIMER_TIMEOUT
+#define RECOVERY_RESET_WORK_TIMEOUT         CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT
+#define RECOVERY_RESET_WORK_TIMEOUT_MAX     CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT_MAX
+#define RECOVERY_RESET_WORK_TIMEOUT_MIN     CONFIG_BCB_TRIP_CURVE_DEFAULT_RECOVERY_RESET_TIMER_TIMEOUT_MIN
+#define ZD_COUNT_SUPPLY_WAIT                CONFIG_BCB_TRIP_CURVE_DEFAULT_SUPPLY_ZD_COUNT_MIN
+#define LOG_LEVEL                           CONFIG_BCB_TRIP_CURVE_DEFAULT_LOG_LEVEL
 // clang-format on
 
 LOG_MODULE_REGISTER(bcb_tc_def_msm);
@@ -152,7 +154,7 @@ static inline void msm_on_sw_closed_at_close_wait(void)
 	msm_data.state = BCB_TC_DEF_MSM_STATE_CLOSED;
 	if (msm_data.recovery_remaining < msm_data.config.rec_attempts) {
 		k_delayed_work_submit(&msm_data.recovery_reset_work,
-				      K_MSEC(RECOVERY_RESET_WORK_TIMEOUT));
+				      K_MSEC(msm_data.config.rec_reset_timeout));
 	}
 }
 
@@ -308,6 +310,7 @@ static void load_default_config(void)
 	msm_data.config.rec_enabled = false;
 	msm_data.config.rec_attempts = 0;
 	msm_data.config.rec_delay = 1000 * RECOVERY_WORK_TIMEOUT;
+	msm_data.config.rec_reset_timeout = RECOVERY_RESET_WORK_TIMEOUT;
 }
 
 int bcb_tc_def_msm_init(struct k_work *notify_work)
@@ -337,7 +340,6 @@ int bcb_tc_def_msm_init(struct k_work *notify_work)
 	msm_data.zd_count = 0;
 
 	bcb_tc_def_csom_mod_init();
-
 	return 0;
 }
 
@@ -410,8 +412,7 @@ int bcb_tc_def_msm_event(bcb_tc_def_event_t event, void *arg)
 
 		case BCB_TC_DEF_EV_REC_RESET_TIMER: {
 			msm_data.recovery_remaining = msm_data.config.rec_attempts;
-			LOG_INF("Reset recovery attempts: %d",
-				msm_data.recovery_remaining);
+			LOG_INF("Reset recovery attempts: %d", msm_data.recovery_remaining);
 		} break;
 		default: {
 			/* Other events are ignored */
@@ -450,6 +451,13 @@ int bcb_tc_def_msm_config_set(bcb_tc_def_msm_config_t *config)
 		LOG_ERR("invalid csom: %d", config->csom);
 		return -EINVAL;
 	}
+
+	if (config->rec_reset_timeout < RECOVERY_RESET_WORK_TIMEOUT_MIN ||
+	    config->rec_reset_timeout > RECOVERY_RESET_WORK_TIMEOUT_MAX) {
+		return -EINVAL;
+	}
+
+	LOG_INF("Updating Reset Timeout: %d ms", config->rec_reset_timeout);
 
 	memcpy(&msm_data.config, config, sizeof(bcb_tc_def_msm_config_t));
 
