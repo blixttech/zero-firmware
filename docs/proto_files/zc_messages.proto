@@ -126,11 +126,12 @@ message ZCCurveConfig {
 
 /* Hardware-based overcurrent protection configuration. */
 message ZCOcpHwConfig {
-	uint32 limit	    = 1; /* Current limit in amperes. */
-	uint32 filter	    = 2; /* Jitter filter in nano seconds. */
-	uint32 rec_delay    = 3; /* Recovery time delay in microseconds. */
-	uint32 rec_attempts = 4; /* Number of recovery attempts. */
-	bool rec_en	    = 5; /* Set to true if recovery is enabled. */
+	uint32 limit	    		= 1; /* Current limit in amperes. */
+	uint32 filter	    		= 2; /* Jitter filter in nano seconds. */
+	uint32 rec_delay    		= 3; /* Recovery time delay in microseconds. */
+	uint32 rec_attempts 		= 4; /* Number of recovery attempts. */
+	bool rec_en	    			= 5; /* Set to true if recovery is enabled. */
+	uint32 rec_reset_timeout	= 6; /* Recovery reset timer in milliseconds. */
 }
 
 /* Over/under voltage protection configuration. */

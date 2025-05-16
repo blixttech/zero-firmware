@@ -469,6 +469,7 @@ static inline void encode_config_ocp(zc_ocp_hw_config_t *config)
 	config->rec_en = msm_config.rec_enabled;
 	config->rec_attempts = msm_config.rec_attempts;
 	config->rec_delay = msm_config.rec_delay;
+	config->rec_reset_timeout = msm_config.rec_reset_timeout;
 }
 
 static inline void encode_config_ini_state(zc_ini_state_config_t *config)
@@ -645,6 +646,7 @@ static inline int apply_config_ocp(zc_ocp_hw_config_t *config)
 	msm_config.rec_enabled = config->rec_en;
 	msm_config.rec_attempts = config->rec_attempts;
 	msm_config.rec_delay = config->rec_delay;
+	msm_config.rec_reset_timeout = config->rec_reset_timeout;
 
 	return bcb_tc_def_msm_config_set(&msm_config);
 }

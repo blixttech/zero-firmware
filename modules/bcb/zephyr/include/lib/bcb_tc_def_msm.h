@@ -22,7 +22,7 @@ typedef enum {
 	BCB_TC_DEF_EV_SW_CLOSED,
 	BCB_TC_DEF_EV_SUPPLY_TIMER,
 	BCB_TC_DEF_EV_REC_TIMER,
-	BCB_TC_DEF_EV_REC_RESET_TIMER  
+	BCB_TC_DEF_EV_REC_RESET_TIMER
 } bcb_tc_def_event_t;
 
 /**
@@ -55,6 +55,7 @@ typedef enum {
 	BCB_TC_DEF_MSM_CSOM_NONE = 0, /**< No operation mode. */
 	BCB_TC_DEF_MSM_CSOM_MOD, /**< Modulation control operation mode. */
 	BCB_TC_DEF_MSM_CSOM_END
+
 } bcb_tc_def_msm_csom_t;
 
 /**
@@ -65,6 +66,8 @@ typedef struct bcb_msm_config {
 	bool rec_enabled; /**< Set to true if recovery is enabled. */
 	uint16_t rec_attempts; /**< Number of recovery attempts. */
 	uint32_t rec_delay; /**< Recovery delay in microseconds. */
+	uint32_t rec_reset_timeout; /**< Recovery reset timeout in milliseconds. */
+
 } bcb_tc_def_msm_config_t;
 
 /**
