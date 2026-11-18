@@ -182,7 +182,6 @@ static inline void msm_on_sw_opened_at_closed(void)
 		MSM_EV_FILTER_ADD(msm_data.ev_filter, BCB_TC_DEF_EV_ZD_V);
 		msm_data.state = BCB_TC_DEF_MSM_STATE_OPENED;
 		set_cause_from_sw_cause(sw_cause);
-		k_work_submit(msm_data.notify_work);
 		return;
 	}
 
@@ -190,7 +189,6 @@ static inline void msm_on_sw_opened_at_closed(void)
 		MSM_EV_FILTER_ADD(msm_data.ev_filter, BCB_TC_DEF_EV_ZD_V);
 		msm_data.state = BCB_TC_DEF_MSM_STATE_OPENED;
 		set_cause_from_sw_cause(sw_cause);
-		k_work_submit(msm_data.notify_work);
 		return;
 	}
 
@@ -343,13 +341,22 @@ int bcb_tc_def_msm_init(struct k_work *notify_work)
 	return 0;
 }
 
+static inline bool msm_state_is_stable(bcb_tc_def_msm_state_t state)
+{
+	return state == BCB_TC_DEF_MSM_STATE_OPENED ||
+	       state == BCB_TC_DEF_MSM_STATE_CLOSED;
+}
+
 int bcb_tc_def_msm_event(bcb_tc_def_event_t event, void *arg)
 {
 	int r = 0;
+	bcb_tc_def_msm_state_t state_prev;
 
 	if (MSM_EV_FILTERED(msm_data.ev_filter, event)) {
 		return 0;
 	}
+
+	state_prev = msm_data.state;
 
 	switch (msm_data.state) {
 	case BCB_TC_DEF_MSM_STATE_UNDEFINED: {
@@ -436,6 +443,27 @@ int bcb_tc_def_msm_event(bcb_tc_def_event_t event, void *arg)
 	default: {
 		/* Other states are ignored */
 	} break;
+	}
+
+	/*
+	 * Immediate state-change notification.
+	 *
+	 * Whenever the breaker settles into a new stable state (OPENED or
+	 * CLOSED) we notify observers right away instead of letting them wait
+	 * for the next periodic status push. This is what lets a state change on
+	 * one unit propagate to the rest of a bank in a few milliseconds rather
+	 * than up to a full status interval.
+	 *
+	 * Transient states (SUPPLY_WAIT / CLOSE_WAIT / OPEN_WAIT) are
+	 * deliberately skipped, and CSOM intra-cycle modulation keeps the public
+	 * state at CLOSED, so neither produces spurious notifications. This also
+	 * supersedes the former trip-only notifications emitted inside
+	 * msm_on_sw_opened_at_closed(): a trip is a CLOSED -> OPENED transition
+	 * and is covered here.
+	 */
+	if (msm_data.notify_work && msm_data.state != state_prev &&
+	    msm_state_is_stable(msm_data.state)) {
+		k_work_submit(msm_data.notify_work);
 	}
 
 	return r;
